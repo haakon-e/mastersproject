@@ -112,10 +112,10 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         # --- ADJUST CERTAIN PARAMETERS FOR TESTING ---
 
         # # Turn on/off scalar gravity term
-        # self._gravity_src_p = params.get("_gravity_src_p", True)
+        # self._gravity_src_p = params.get("_gravity_src_p", False)
 
         # Turn on/off gravitational effects on (Dirichlet) scalar boundary conditions
-        self._gravity_bc_p = params.get("_gravity_bc_p", True)
+        self._gravity_bc_p = params.get("_gravity_bc_p", False)
 
     def bc_type_mechanics(self, g) -> pp.BoundaryConditionVectorial:
         """
