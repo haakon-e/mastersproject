@@ -109,10 +109,10 @@ class ContactMechanicsISC(ContactMechanics):
         # --- ADJUST CERTAIN PARAMETERS FOR TESTING ---
 
         # Turn on/off mechanical gravity term
-        self._gravity_src = params.get("_gravity_src", True)
+        self._gravity_src = params.get("_gravity_src", False)
 
         # Turn on/off gravitational effects on (Neumann) mechanical boundary conditions
-        self._gravity_bc = params.get("_gravity_bc", True)
+        self._gravity_bc = params.get("_gravity_bc", False)
 
     @trace(logger)
     def create_grid(self, overwrite_grid: bool = False):
@@ -271,7 +271,7 @@ class ContactMechanicsISC(ContactMechanics):
         bc_values[:, all_bf] += bf_stress / self.scalar_scale  # Mechanical stress
 
         # --- gravitational forces ---
-        # See init-method to turn on/off gravity effects (Default: ON)
+        # See init-method to turn on/off gravity effects (Default: OFF)
         if self._gravity_bc:
             lithostatic_bc = self._adjust_stress_for_depth(g, outward_normals)
 
@@ -324,7 +324,7 @@ class ContactMechanicsISC(ContactMechanics):
         negative (i.e. the vector given will be
         pointing upwards)
         """
-        # See init-method to turn on/off gravity effects (Default: ON)
+        # See init-method to turn on/off gravity effects (Default: OFF)
         if not self._gravity_src:
             return np.zeros(self.Nd * g.num_cells)
 
