@@ -143,10 +143,10 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         # DIRICHLET
         all_bf, *_ = self.domain_boundary_sides(g)
         bc_values = np.zeros(g.num_faces)
-        depth = self._depth(g.face_centers[:, all_bf])
 
         # Hydrostatic
         if self._gravity_bc_p:
+            depth = self._depth(g.face_centers[:, all_bf])
             bc_values[all_bf] += self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
         return bc_values
 
