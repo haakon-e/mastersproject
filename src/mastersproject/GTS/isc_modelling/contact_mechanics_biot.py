@@ -35,8 +35,16 @@ logger = logging.getLogger(__name__)
 
 # TODO: Re-introduce all scaling when it is properly understood.
 class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
-    """
-    TODO: Write class description
+    """ Biot model with contact mechanics for the Grimsel Test Site ISC experiment.
+
+    This class defines the model setup for the In-Situ Stimulation and Circulation (ISC)
+    experiment at the Grimsel Test Site (GTS).
+
+    See Berge et al (2019):
+        Finite volume discretization for poroelastic media with fractures
+        modeled by contact mechanics
+    in particular, Equation (1), for details.
+
     """
 
     def __init__(self, params: dict):
@@ -125,25 +133,29 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         return super().bc_values(g)
 
     def bc_values_scalar(self, g) -> np.array:
-        """ Hydrostatic flow values
+        """ Boundary condition values - zero or hydrostatic.
+
+        Prescribe either homogenous pressure values
+        or
+        hydrostatic (depth-dependent) pressure values.
         credit: porepy paper
         """
-        # TODO: Hydrostatic scalar BC's (values).
+        # DIRICHLET
         all_bf, *_ = self.domain_boundary_sides(g)
         bc_values = np.zeros(g.num_faces)
         depth = self._depth(g.face_centers[:, all_bf])
 
-        # DIRICHLET
+        # Hydrostatic
         if self._gravity_bc_p:
             bc_values[all_bf] += self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
         return bc_values
 
     def bc_type_scalar(self, g) -> pp.BoundaryCondition:
         """ Known boundary conditions (Dirichlet)
+
+        Dirichlet scalar BCs are prescribed on all external boundaries
         """
-        # Define boundary regions
         all_bf, *_ = self.domain_boundary_sides(g)
-        # Define boundary condition on faces
         return pp.BoundaryCondition(g, all_bf, ["dir"] * all_bf.size)
 
     def source_flow_rate(self) -> float:
@@ -158,7 +170,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         Afterwards, the system is shut-in for 40 minutes.
         """
         self.simulation_protocol()
-        injection_rate = self.current_injection_rate
+        injection_rate = self.current_injection_rate  # injection rate [l / s], unscaled
         return injection_rate * pp.MILLI * (pp.METER / self.length_scale) ** self.Nd
 
     def well_cells(self) -> None:
@@ -174,18 +186,24 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         _mask = (df.shearzone == bh_sz["shearzone"]) & (
                 df.borehole == bh_sz["borehole"]
         )
+
+        # Get the intersection coordinates of the borehole and the shearzone. (unscaled)
         result = df.loc[_mask, ("x_sz", "y_sz", "z_sz")]
         if result.empty:
             raise ValueError("No intersection found.")
 
+        # Scale the intersection coordinates by length_scale. (scaled)
         pts = result.to_numpy().T / self.length_scale
         assert pts.shape[1] == 1, "Should only be one intersection"
-        tagged = False
 
+        # Loop through the grids. Tag all cells with 0.
+        # The closest discrete cell to the intersection coordinates is tagged with 1.
+        tagged = False
         for g, d in self.gb:
+            # By default: All cells are tagged with 0 (not the closest point).
             tags = np.zeros(g.num_cells)
 
-            # Get name of grid
+            # Get name of grid. See ContactMechanicsISC.create_grid() for details.
             grid_name = self.gb.node_props(g, "name")
 
             # We only tag cells in the desired fracture
