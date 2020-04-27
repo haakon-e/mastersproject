@@ -1,32 +1,23 @@
 import os
 import logging
-from typing import (  # noqa
-    Any,
+from typing import (
     Callable,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
     List,
     Mapping,
-    Optional,
-    Set,
     Tuple,
     Type,
-    TypeVar,
     Union,
+    Dict,
 )
 from pathlib import Path
 from pprint import pformat
-import functools
-import inspect
 
 import pendulum
 import porepy as pp
 import numpy as np
-import scipy.sparse as sps
-from porepy.models.contact_mechanics_biot_model import ContactMechanicsBiot
 from porepy.models.contact_mechanics_model import ContactMechanics
+
+from GTS.isc_modelling.parameter import stress_tensor
 from refinement import gb_coarse_fine_cell_mapping
 from refinement.convergence import grid_error
 
@@ -513,33 +504,3 @@ def run_models_for_convergence_study(
     return gb_list, errors
 
 
-def stress_tensor():
-    """ Stress at ISC test site
-
-    Values from Krietsch et al 2019
-    """
-
-    # Note: Negative side due to compressive stresses
-    stress_value = - np.array([13.1, 9.2, 8.7]) * pp.MEGA * pp.PASCAL
-    dip_direction = np.array([104.48, 259.05, 3.72])
-    dip = np.array([39.21, 47.90, 12.89])
-
-    def r(th, gm):
-        """ Compute direction vector of a dip (th) and dip direction (gm)."""
-        rad = np.pi / 180
-        x = np.cos(th * rad) * np.sin(gm * rad)
-        y = np.cos(th * rad) * np.cos(gm * rad)
-        z = - np.sin(th * rad)
-        return np.array([x, y, z])
-
-    rot = r(th=dip, gm=dip_direction)
-
-    # Orthogonalize the rotation matrix (which is already close to orthogonal)
-    rot, _ = np.linalg.qr(rot)
-
-    # Stress tensor in principal coordinate system
-    stress = np.diag(stress_value)
-
-    # Stress tensor in euclidean coordinate system
-    stress_eucl = np.dot(np.dot(rot, stress), rot.T)
-    return stress_eucl
