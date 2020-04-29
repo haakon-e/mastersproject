@@ -217,18 +217,18 @@ def run_abstract_model(
     return setup
 
 
-def prepare_directories(head, root=None, **kwargs):
+def prepare_directories(head, date=True, root=None, **kwargs):
     # --------------------------------------------------
     # --- DEFAULT FOLDER AND FILE RELATED PARAMETERS ---
     # --------------------------------------------------
 
     # root of modelling results: i.e. ~/mastersproject/src/mastersproject/GTS/isc_modelling/results
     _root = Path(os.path.abspath(__file__)).parent / "results"
+    root = root if root else Path(_root)
     # today's date
-    date = pendulum.now().format("YYMMDD")
+    date = pendulum.now().format("YYMMDD") if date else ""
     # build full path
-    root = root / date if root else Path(_root)
-    path = root / head
+    path = root / date / head
     # create the directory
     Path(path).mkdir(parents=True, exist_ok=True)
     return path
