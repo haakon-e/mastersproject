@@ -227,7 +227,9 @@ class ContactMechanicsISC(ContactMechanics):
             ]
         )
         distances = pp.distances.point_pointset(point, g.face_centers[:, all_bf])
-        indexes = np.argsort(distances)
+        indexes = np.argpartition(distances, self.Nd)[:self.Nd]
+        old_indexes = np.argsort(distances)
+        assert np.allclose(np.sort(indexes), np.sort(old_indexes[:self.Nd]))  # Temporary: test new argpartition method
         faces = all_bf[indexes[: self.Nd]]
         return faces
 
