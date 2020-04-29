@@ -91,22 +91,25 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         # --- PHYSICAL PARAMETERS ---
         self.set_rock_and_fluid()
 
-        self.transmissivity = {  # Unscaled
-            'S1_1': 1e-12 * pp.METER ** 2 / pp.SECOND,
-            'S1_2': 1e-12 * pp.METER ** 2 / pp.SECOND,
-            'S1_3': 1e-12 * pp.METER ** 2 / pp.SECOND,
-            'S3_1': 1e-6 * pp.METER ** 2 / pp.SECOND,
-            'S3_2': 1e-6 * pp.METER ** 2 / pp.SECOND,
-            None: 1e-14 * pp.METER ** 2 / pp.SECOND,  # 3D matrix
+        # For now, constant permeability in fractures
+        # For details on values, see "2020-04-21 Møtereferat" (Veiledningsmøte)
+        mean_frac_permeability = 4.9e-16 * pp.METER ** 2
+        mean_intact_permeability = 2e-20 * pp.METER ** 2
+        self.initial_permeability = {  # Unscaled
+            'S1_1': mean_frac_permeability,
+            'S1_2': mean_frac_permeability,
+            'S1_3': mean_frac_permeability,
+            'S3_1': mean_frac_permeability,
+            'S3_2': mean_frac_permeability,
+            None: mean_intact_permeability,  # 3D matrix
         }
-        self.aquifer_thickness = {  # Unscaled
-            'S1_1': 1000 * pp.MILLI * pp.METER,
-            'S1_2': 1000 * pp.MILLI * pp.METER,
-            'S1_3': 1000 * pp.MILLI * pp.METER,
-            'S3_1': 170 * pp.MILLI * pp.METER,
-            'S3_2': 170 * pp.MILLI * pp.METER,
-            None: 1,  # 3D matrix
+
+        # Use cubic law to compute initial apertures in fractures.
+        # k = a^2 / 12 => a=sqrt(12k)
+        self.initial_aperture = {
+            sz: np.sqrt(12*k) for sz, k in self.initial_permeability.items()
         }
+        self.initial_aperture[None] = 1  # Set 3D matrix aperture to 1.
 
         #
         # --- ADJUST CERTAIN PARAMETERS FOR TESTING ---
@@ -213,7 +216,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
                 ids, dsts = g.closest_cell(pts, return_distance=True)
                 # TODO: log distance in unscaled lengths
-                logger.info(f"Closest cell found has distance: {dsts[0]:4f}")
+                logger.info(f"Closest cell found has (unscaled) distance: {dsts[0]*self.length_scale:4f}")
 
                 # Tag the injection cell
                 tags[ids] = 1
@@ -246,70 +249,94 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         """ Scaled gravity term. """
         return super().source(g)
 
-    def set_permeability_from_transmissivity(self) -> None:
-        """ Set permeability in fracture and matrix from transmissivity
+    def set_permeability_from_aperture(self) -> None:
+        """ Set permeability by cubic law in fractures.
 
-        The formula,
-        k = T * mu / (rho * g * b)
-        where b is aquifer thickness, and T is transmissivity (see above)
-        is used.
-
-        In shear zones, we use its thickness as b.
-        In the 3D rock matrix, we use 1.
+        Currently, we simply set the initial permeability.
         """
 
+        # Scaled dynamic viscosity
         viscosity = self.fluid.dynamic_viscosity() * (pp.PASCAL / self.scalar_scale)
+
         gb = self.gb
+        param_key = self.scalar_parameter_key
         for g, d in gb:
-            permeability, aperture = self.permeability_and_aperture(g)  # scaled quantities
+            # get the shearzone
+            shearzone = self.gb.node_props(g, 'name')
 
-            # specific volume
-            specific_volume = np.power(aperture, self.Nd - g.dim)
+            # permeability [m2] (scaled)
+            k = self.initial_permeability[shearzone] * (pp.METER / self.length_scale) ** 2
 
-            diffusivity = pp.SecondOrderTensor(
-                specific_volume * permeability / viscosity * np.ones(g.num_cells)
-            )
-            d[pp.PARAMETERS][self.scalar_parameter_key]["second_order_tensor"] = diffusivity
+            # Multiply by the volume of the flattened dimension (specific volume)
+            k *= self.specific_volume(g, scaled=True)
+
+            kxx = k / viscosity
+            diffusivity = pp.SecondOrderTensor(kxx)
+            d[pp.PARAMETERS][param_key]["second_order_tensor"] = diffusivity
 
         # Normal permeability inherited from the neighboring fracture g_l
         for e, data_edge in gb.edges():
             mg = data_edge["mortar_grid"]
-            g_l, g_h = gb.nodes_of_edge(e)  # get the lower-dimensional neighbor.
+            g_l, g_h = gb.nodes_of_edge(e)  # get the neighbors
 
-            # Compute quantities from transmissivity and aquifer thickness
-            permeability, aperture = self.permeability_and_aperture(g_l)  # scaled quantities
-            _, a_h = self.permeability_and_aperture(g_h)  # scaled quantities
+            # get aperture data from lower dim neighbour
+            aperture_l = self.aperture(g_l, scaled=True)  # one value per grid cell
 
-            # We assume isotropic permeability in the fracture, i.e. the normal
-            # permeability equals the tangential one
-            kappa = permeability / viscosity * np.ones(g_l.num_cells)  # scaled k/mu
-            specific_volume = np.power(a_h, self.Nd - g_h.dim)
+            # Take trace of and then project specific volumes from g_h
+            v_h = (
+                mg.master_to_mortar_avg()
+                * np.abs(g_h.cell_faces)
+                * self.specific_volume(g_h, scaled=True)
+            )
+
+            # Get diffusivity from lower-dimensional neighbour
+            data_l = gb.node_props(g_l)
+            diffusivity = data_l[pp.PARAMETERS][param_key]["second_order_tensor"].values[0, 0]
 
             # Division through half the aperture represents taking the (normal) gradient
-            normal_diffusivity = mg.slave_to_mortar_int() * np.divide(kappa, aperture / 2) * specific_volume
-            data_edge = pp.initialize_data(
-                e,
+            normal_diffusivity = (
+                mg.slave_to_mortar_int()
+                * np.divide(diffusivity, aperture_l / 2)
+            )
+            # The interface flux is to match fluxes across faces of g_h,
+            # and therefore need to be weighted by the corresponding
+            # specific volumes
+            normal_diffusivity *= v_h
+
+            # Set the data
+            pp.initialize_data(
+                mg,
                 data_edge,
-                self.scalar_parameter_key,
+                param_key,
                 {"normal_diffusivity": normal_diffusivity},
             )
 
-    def permeability_and_aperture(self, g: pp.Grid, theta=None) -> (float, float):
-        """ Convenience function to compute permeability [m2] and aperture [m] on a grid for given values"""
-        # Compute quantities from transmissivity and aquifer thickness
+    def aperture(self, g: pp.Grid, scaled=False) -> np.ndarray:
+        """
+        Aperture is a characteristic thickness of a cell, with units [m].
+        1 in matrix, thickness of fractures and "side length" of cross-sectional
+        area/volume (or "specific volume") for intersections of co-dimension 2 and 3.
+        See also specific_volume.
+        """
+        aperture = np.ones(g.num_cells)
+        # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
         shearzone = self.gb.node_props(g, 'name')
-        transmissivity = self.transmissivity[shearzone]  # Unscaled
-        aquifer_thickness = self.aquifer_thickness[shearzone]  # Unscaled
+        aperture *= self.initial_aperture[shearzone]
 
-        # Compute unscaled quantities
-        aperture = self.fluid.aperture_from_transmissivity(T=transmissivity, b=aquifer_thickness, theta=theta)
-        permeability = self.fluid.permeability_from_transmissivity(T=transmissivity, b=aquifer_thickness, theta=theta)
+        if scaled:
+            aperture *= (pp.METER / self.length_scale)
 
-        # scaled permeability and aperture
-        scaled_permeability = permeability * (pp.METER / self.length_scale) ** 2
-        scaled_aperture = aperture * (pp.METER / self.length_scale)
+        return aperture
 
-        return scaled_permeability, scaled_aperture
+    def specific_volume(self, g: pp.Grid, scaled=False) -> np.ndarray:
+        """
+        The specific volume of a cell accounts for the dimension reduction and has
+        dimensions [m^(Nd - d)].
+        Typically equals 1 in Nd, the aperture in codimension 1 and the square/cube
+        of aperture in codimensions 2 and 3.
+        """
+        a = self.aperture(g, scaled)
+        return np.power(a, self.Nd - g.dim)
 
     def set_rock_and_fluid(self) -> None:
         """
@@ -385,9 +412,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         porosity = self.rock.POROSITY
         for g, d in gb:
             # specific volume
-            _, aperture = self.permeability_and_aperture(g)
-            scaled_aperture = aperture * (pp.METER / self.length_scale)  # scaled aperture [m]
-            specific_volume = np.power(scaled_aperture, self.Nd - g.dim)
+            specific_volume = self.specific_volume(g, scaled=True)
 
             # Boundary and source conditions
             bc = self.bc_type_scalar(g)
@@ -405,7 +430,11 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                 {
                     "bc": bc,
                     "bc_values": bc_values,
-                    "mass_weight": compressibility * porosity * specific_volume * np.ones(g.num_cells),
+                    "mass_weight": (
+                            compressibility
+                            * porosity
+                            * specific_volume
+                            * np.ones(g.num_cells)),
                     "biot_alpha": alpha,
                     "source": source_values,
                     "time_step": self.time_step,
@@ -413,7 +442,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
             )
 
         # Set permeability on grid, fracture and mortar grids.
-        self.set_permeability_from_transmissivity()
+        self.set_permeability_from_aperture()
 
     def set_viz(self):
         """ Set exporter for visualization """
