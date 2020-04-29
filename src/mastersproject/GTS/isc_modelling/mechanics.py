@@ -210,6 +210,15 @@ class ContactMechanicsISC(ContactMechanics):
             for i, sz_name in enumerate(self.shearzone_names):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
+    def grids_by_name(self, name, key='name') -> np.ndarray:
+        """ Get grid by grid bucket node property 'name'
+
+        """
+        gb = self.gb
+        grids = gb.get_grids(lambda g: gb.node_props(g, key) == name)
+
+        return grids
+
     def faces_to_fix(self, g: pp.Grid):
         """ Fix some boundary faces to dirichlet to ensure unique solution to problem.
 
