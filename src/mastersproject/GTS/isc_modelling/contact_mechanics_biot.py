@@ -33,7 +33,6 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-# TODO: Re-introduce all scaling when it is properly understood.
 class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
     """ Biot model with contact mechanics for the Grimsel Test Site ISC experiment.
 
@@ -430,7 +429,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                 {
                     "bc": bc,
                     "bc_values": bc_values,
-                    "mass_weight": (
+                    "mass_weight": (  # TODO: Simplified version off mass_weight?
                             compressibility
                             * porosity
                             * specific_volume
