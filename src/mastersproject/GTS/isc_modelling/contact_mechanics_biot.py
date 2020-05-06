@@ -525,50 +525,50 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         """ Implementation of export pvd"""
         self.viz.write_pvd(self.export_times)
 
-    def initial_condition(self):
-        """
-        Initial guess for Newton iteration, scalar variable and bc_values (for time
-        discretization).
-
-        When stimulation phase is reached, we use displacements of last solution in
-        initialize phase as initial condition for the cell displacements.
-        """
-        super().initial_condition()
-        # TODO: Set hydrostatic initial condition
-        for g, d in self.gb:
-            depth = self._depth(g.cell_centers)
-            initial_scalar_value = self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
-            d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
-
-        # TODO What hydrostatic scalar initial condition should be set on the mortar grid? lower dim value?
-        for _, d in self.gb.edges():
-            mg = d["mortar_grid"]
-            initial_value = np.zeros(mg.num_cells)
-            d[pp.STATE][self.mortar_scalar_variable] = initial_value
-
-        # TODO: Scale variables
-        if self.current_phase > 0:  # Stimulation phase
-
-            for g, d in self.gb:
-                if g.dim == self.Nd:
-                    initial_displacements = d["initial_cell_displacements"]
-                    pp.set_state(d, {self.displacement_variable: initial_displacements})
-
-            for e, d in self.gb.edges():
-                if e[0].dim == self.Nd:
-                    try:
-                        initial_displacements = d["initial_cell_displacements"]
-                    except KeyError:
-                        logger.warning("We got KeyError on d['initial_cell_displacements'].")
-                        mg = d["mortar_grid"]
-                        initial_displacements = np.zeros(mg.num_cells * self.Nd)
-                    state = {
-                        self.mortar_displacement_variable: initial_displacements,
-                        "previous_iterate": {
-                            self.mortar_displacement_variable: initial_displacements,
-                        },
-                    }
-                    pp.set_state(d, state)
+    # def initial_condition(self):
+    #     """
+    #     Initial guess for Newton iteration, scalar variable and bc_values (for time
+    #     discretization).
+    #
+    #     When stimulation phase is reached, we use displacements of last solution in
+    #     initialize phase as initial condition for the cell displacements.
+    #     """
+    #     super().initial_condition()
+    #     # TODO: Set hydrostatic initial condition
+    #     for g, d in self.gb:
+    #         depth = self._depth(g.cell_centers)
+    #         initial_scalar_value = self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
+    #         d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
+    #
+    #     # TODO What hydrostatic scalar initial condition should be set on the mortar grid? lower dim value?
+    #     for _, d in self.gb.edges():
+    #         mg = d["mortar_grid"]
+    #         initial_value = np.zeros(mg.num_cells)
+    #         d[pp.STATE][self.mortar_scalar_variable] = initial_value
+    #
+    #     # TODO: Scale variables
+    #     if self.current_phase > 0:  # Stimulation phase
+    #
+    #         for g, d in self.gb:
+    #             if g.dim == self.Nd:
+    #                 initial_displacements = d["initial_cell_displacements"]
+    #                 pp.set_state(d, {self.displacement_variable: initial_displacements})
+    #
+    #         for e, d in self.gb.edges():
+    #             if e[0].dim == self.Nd:
+    #                 try:
+    #                     initial_displacements = d["initial_cell_displacements"]
+    #                 except KeyError:
+    #                     logger.warning("We got KeyError on d['initial_cell_displacements'].")
+    #                     mg = d["mortar_grid"]
+    #                     initial_displacements = np.zeros(mg.num_cells * self.Nd)
+    #                 state = {
+    #                     self.mortar_displacement_variable: initial_displacements,
+    #                     "previous_iterate": {
+    #                         self.mortar_displacement_variable: initial_displacements,
+    #                     },
+    #                 }
+    #                 pp.set_state(d, state)
 
     @trace(logger)
     def before_newton_loop(self):
