@@ -771,7 +771,7 @@ class FlowISC(Flow):
 
     # --- Aperture related methods ---
 
-    def aperture(self, g: pp.Grid, scaled=False) -> np.ndarray:
+    def aperture(self, g: pp.Grid, scaled) -> np.ndarray:
         """
         Aperture is a characteristic thickness of a cell, with units [m].
         1 in matrix, thickness of fractures and "side length" of cross-sectional
