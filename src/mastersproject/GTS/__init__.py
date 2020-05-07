@@ -29,6 +29,7 @@ from GTS.isc_modelling.setup import (
     run_mechanics_model,
     run_biot_model,
     run_biot_gts_model,
+    run_abstract_model,
 )
 
 # --- MODELS ---
@@ -41,6 +42,18 @@ from GTS.isc_modelling.mechanics import (
 # Contact Mechanics Biot
 from GTS.isc_modelling.contact_mechanics_biot import (
     ContactMechanicsBiotISC,
+)
+
+# Flow model
+from GTS.isc_modelling.flow import (
+    Flow,
+    FlowISC,
+)
+
+# PREPARE DIRECTORIES AND PARAMETERS
+from GTS.isc_modelling.setup import (
+    prepare_directories,
+    SetupParams,
 )
 
 
