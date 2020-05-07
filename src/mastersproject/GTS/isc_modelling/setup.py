@@ -18,11 +18,12 @@ import porepy as pp
 import numpy as np
 from porepy.models.contact_mechanics_model import ContactMechanics
 
-from GTS.isc_modelling.parameter import stress_tensor
+# GTS methods
+import GTS as gts
+
+# Refinement
 from refinement import gb_coarse_fine_cell_mapping
 from refinement.convergence import grid_error
-
-import GTS as gts
 from refinement import refine_mesh
 
 # --- LOGGING UTIL ---
@@ -260,7 +261,7 @@ class SetupParams(BaseModel):
     }
 
     # Stress tensor
-    stress: np.ndarray = stress_tensor()
+    stress: np.ndarray = gts.stress_tensor()
 
     # Storage folder for grid files and visualization output
     folder_name: Path = prepare_directories(head="default/default_1")
