@@ -339,10 +339,10 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
     def set_rock_and_fluid(self) -> None:
         """
-            Set rock and fluid properties to those of granite and water.
-            We ignore all temperature effects.
-            Credits: PorePy paper
-            """
+        Set rock and fluid properties to those of granite and water.
+        We ignore all temperature effects.
+        Credits: PorePy paper
+        """
 
         super().set_rock()
 
