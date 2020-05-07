@@ -17,7 +17,8 @@ from pathlib import Path
 import pandas as pd
 import porepy as pp
 
-import GTS as gts
+from GTS.ISC_data import ISCData
+from GTS.fit_plane import plane_from_points, convex_hull
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ def convex_plane(shearzone_names, coord_system="gts", path=None) -> pd.DataFrame
         Convex polygon of projected points to best fit plane
 
     """
-    isc = gts.ISCData(path=path)
+    isc = ISCData(path=path)
 
     if isinstance(shearzone_names, str):
         shearzone_names = [shearzone_names]
@@ -56,9 +57,9 @@ def convex_plane(shearzone_names, coord_system="gts", path=None) -> pd.DataFrame
     for sz in shearzone_names:
         logger.info(f"Interpolating shearzone {sz} ...")
         point_cloud = isc.get_shearzone(sz=sz, coords=coord_system)
-        proj = gts.plane_from_points(point_cloud)  # projection
+        proj = plane_from_points(point_cloud)  # projection
 
-        convex_vertices = gts.convex_hull(proj)
+        convex_vertices = convex_hull(proj)
 
         frame = pd.DataFrame(
             data=convex_vertices.T, columns=("x_proj", "y_proj", "z_proj")
