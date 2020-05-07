@@ -342,11 +342,13 @@ class Flow(AbstractModel):
         gb = self.gb
 
         for g, d in gb:
+            add_nonpresent_dictionary(d, pp.STATE)
             # Initial value for the scalar variable.
             initial_scalar_value = np.zeros(g.num_cells)
             d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
 
         for _, d in gb.edges():
+            add_nonpresent_dictionary(d, pp.STATE)
             mg = d["mortar_grid"]
             initial_scalar_value = np.zeros(mg.num_cells)
             d[pp.STATE][self.mortar_scalar_variable] = initial_scalar_value
