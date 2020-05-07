@@ -469,8 +469,8 @@ class Flow(AbstractModel):
         A, b = self.assembler.assemble_matrix_rhs()
 
         # Estimate condition number
-        logger.debug(f"Max element in A {np.max(np.abs(A)):.2e}")
-        logger.debug(
+        logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")
+        logger.info(
             f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and "
             f"min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum."
         )
@@ -722,6 +722,7 @@ class FlowISC(Flow):
 
         return grids
 
+    @trace(logger, timeit=False, level="INFO")
     def well_cells(self) -> None:
         """
         Tag well cells with unity values, positive for injection cells and
