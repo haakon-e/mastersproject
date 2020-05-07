@@ -594,7 +594,7 @@ class GrimselGranodiorite(pp.UnitRock):
             self.YOUNG_MODULUS, self.POISSON_RATIO
         )
 
-        self.FRICTION_COEFFICIENT = 0.2  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
+        self.FRICTION_COEFFICIENT = 0.8  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
         self.POROSITY = 0.7 / 100
 
     def lithostatic_pressure(self, depth):

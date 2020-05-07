@@ -625,8 +625,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         # # end time
         # self.end_time = 0
         self.time = 0
-        self.time_step = 40 * pp.MINUTE
-        self.end_time = 40 * pp.MINUTE
+        self.time_step = 1 * pp.DAY
+        self.end_time = self.time_step * 3
 
     def prepare_main_run(self):
         """ Adjust parameters between initial run and main run
@@ -692,7 +692,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         ]
 
         # TODO: TEMPORARY CONSTANT INJECTION
-        injection_amount = [20] * 6
+        injection_amount = [1e-6] * 6
 
         # injection_amount = [
         #     0,      # Phase 0
