@@ -360,8 +360,8 @@ class Flow(AbstractModel):
         """ Is run prior to a time-stepping scheme. Use this to initialize
         discretizations, linear solvers etc.
         """
-        self.create_grid()
-        self.Nd = self.gb.dim_max()
+        self._prepare_grid()
+
         self.set_scalar_parameters()
         self.assign_variables()
         self.assign_discretizations()
@@ -370,6 +370,11 @@ class Flow(AbstractModel):
         self.initialize_linear_solver()
 
         self.set_viz()
+
+    def _prepare_grid(self):
+        """ Wrapper to create grid"""
+        self.create_grid()
+        self.Nd = self.gb.dim_max()
 
     def check_convergence(
             self, solution: np.ndarray, prev_solution: np.ndarray,
@@ -802,9 +807,18 @@ class FlowISC(Flow):
 
     def source_scalar(self, g: pp.Grid) -> np.ndarray:
         """ Well-bore source (scaled)"""
-        self.well_cells()  # tag well cells
         flow_rate = self.source_flow_rate  # scaled
         values = flow_rate * g.tags["well_cells"] * self.time_step
         return values
+
+    # --- Simulation and solvers ---
+
+    def _prepare_grid(self):
+        """ Tag well cells right after creation.
+        Called by self.prepare_simulation()
+        """
+        super()._prepare_grid()
+        self.well_cells()  # tag well cells
+
 
 
