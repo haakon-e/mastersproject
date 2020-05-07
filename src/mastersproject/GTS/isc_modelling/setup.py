@@ -250,13 +250,21 @@ class SetupParams(BaseModel):
         "mesh_size_min": 0.2 * _sz,
         "mesh_size_bound": 3 * _sz,
     }
+    # bounding_box: Dict[str, float] = {
+    #     'xmin': -20,
+    #     'xmax': 80,
+    #     'ymin': 50,
+    #     'ymax': 150,
+    #     'zmin': -25,
+    #     'zmax': 75,
+    # }
     bounding_box: Dict[str, float] = {
-        'xmin': -20,
-        'xmax': 80,
-        'ymin': 50,
-        'ymax': 150,
-        'zmin': -25,
-        'zmax': 75,
+        'xmin': -100,
+        'xmax': 200,
+        'ymin': 0,
+        'ymax': 300,
+        'zmin': -100,
+        'zmax': 200,
     }
 
     # Injection location
@@ -276,7 +284,7 @@ class SetupParams(BaseModel):
 
     # scaling coefficients
     length_scale: float = 0.05
-    scalar_scale: float = 1e12
+    scalar_scale: float = 1e10
 
     # solver
     solver: str = "direct"
