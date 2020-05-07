@@ -376,7 +376,7 @@ class Flow(AbstractModel):
             init_solution: np.ndarray, nl_params: Dict = None,
     ):
 
-        if not self._is_nonlinear_problem:
+        if not self._is_nonlinear_problem():
             # At least for the default direct solver, scipy.sparse.linalg.spsolve, no
             # error (but a warning) is raised for singular matrices, but a nan solution
             # is returned. We check for this.
@@ -514,7 +514,7 @@ class Flow(AbstractModel):
     def after_newton_failure(self, solution, errors, iteration_counter):
         """ Instead of raising error on failure, save and return available data.
         """
-        if self._is_nonlinear_problem:
+        if self._is_nonlinear_problem():
             raise ValueError("Newton iterations did not converge")
         else:
             raise ValueError("Tried solving singular matrix for the linear problem.")
@@ -568,7 +568,6 @@ class Flow(AbstractModel):
 
         return state
 
-    @property
     def _is_nonlinear_problem(self):
         """ flow problems are linear even with fractures """
         return False
