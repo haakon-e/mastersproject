@@ -21,68 +21,117 @@ import numpy as np
 import scipy.sparse as sps
 
 # --- LOGGING UTIL ---
-from util.logging_util import timer, trace
+try:
+    from src.mastersproject.util.logging_util import timer, trace
+except ImportError:
+    from util.logging_util import timer, trace
 
 logger = logging.getLogger(__name__)
 
 
-def grid_error(mappings, gb: pp.GridBucket, gb_ref: pp.GridBucket, variable, variable_dof):
-    """ Compute grid errors for a given mapping
+@trace(logger=logger)
+def grid_error(
+        gb: pp.GridBucket,
+        gb_ref: pp.GridBucket,
+        variable: List[str],
+        variable_dof: List[int],
+) -> dict:
+    """ Compute grid errors a grid bucket and refined reference grid bucket
 
-    The mapping is the one computed by gb_coarse_fine_cell_mapping()
+    Assumes that the coarse grid bucket has a node property
+    'coarse_fine_cell_mapping' assigned on each grid, which
+    maps from coarse to fine cells according to the method
+    'coarse_fine_cell_mapping(...)'.
+
+    Parameters
+    ----------
+    gb, gb_ref : pp.GridBucket
+        Coarse and fine grid buckets, respectively
+    variable : str
+        which variable to compute error over
+    variable_dof : int
+        Degrees of freedom of 'variable'.
+
+    Returns
+    -------
+    errors : dict
+        Dictionary with top level keys as node_number,
+        within which for each variable, the error is
+        reported.
     """
-    # TODO: Fix this method. Something is wrong when passing a mapping to it.
+
+    if not isinstance(variable, list):
+        variable = [variable]
+    if not isinstance(variable_dof, list):
+        variable_dof = [variable_dof]
+    assert len(variable) == len(variable_dof), "Each variable must have associated " \
+                                               "with it a number of degrees of freedom."
+    n_variables = len(variable)
+
     errors = {}
 
-    for g, g_ref, mapping in mappings:
-        # print(i, pair)
-        # g = mappings[i][0]
-        # g_ref = mappings[i][1]
-        # mapping = mappings[i][2]
+    grids = gb.get_grids()
+    grids_ref = gb_ref.get_grids()
+    n_grids = len(grids)
 
-        assert g.num_cells < g_ref.num_cells
+    for i in np.arange(n_grids):
+        g, g_ref = grids[i], grids_ref[i]
+        mapping = gb.node_props(g, "coarse_fine_cell_mapping")
 
+        # Get states
         data = gb.node_props(g)
         data_ref = gb_ref.node_props(g_ref)
-
-        errors[data['node_number']] = {}  # Initialize this dict entry
-
         states = data[pp.STATE]
         states_ref = data_ref[pp.STATE]
 
-        # TODO: Add some limitation to which keys you want to check,
-        #  or how you should compute errors over certain types of keys
-        state_keys = set(states.keys())
-        state_ref_keys = set(states_ref.keys())
-        check_keys = state_keys.intersection(state_ref_keys)
+        node_number = data["node_number"]
 
-        if variable not in check_keys:
-            logger.info(f"{variable} not present on grid number "
-                        f"{gb.node_props(g, 'node_number')} of dim {g.dim}.")
+        # Initialize errors
+        errors[node_number] = {}
 
-        sol = states[variable].reshape((-1, variable_dof))
-        mapped_sol = mapping.dot(sol).reshape((-1, 1))
-        sol_ref = states_ref[variable]
+        for var_idx in range(0, n_variables):
+            var = variable[var_idx]
+            var_dof = variable_dof[var_idx]
 
-        absolute_error = np.linalg.norm(mapped_sol - sol_ref)
+            # Check if the variable exists on both the grid and reference grid
+            state_keys = set(states.keys())
+            state_ref_keys = set(states_ref.keys())
+            check_keys = state_keys.intersection(state_ref_keys)
+            if var not in check_keys:
+                logger.info(f"{var} not present on grid number "
+                            f"{node_number} of dim {g.dim}.")
+                continue
 
-        norm_ref = np.linalg.norm(sol_ref)
-        if norm_ref < 1e-5:
-            logger.warning(f"Relative error not reportable. "
-                           f"Norm of reference solution is {norm_ref}. "
-                           f"Reporting absolute error")
-            relative_error = -1
+            # Compute errors relative to the reference grid
+            # TODO: Should the solution be divided by g.cell_volumes or similar?
+            # TODO: If scaling is used, consider that - or use the export-ready variables,
+            #   'u_exp', 'p_exp', etc.
+            sol = states[var].reshape((var_dof, -1), order='F').T  # (num_cells x var_dof)
+            mapped_sol: np.ndarray = mapping.dot(sol)  # (num_cells x variable_dof)  #.ravel(order='F')
+            sol_ref = states_ref[var].reshape((var_dof, -1), order='F').T  # (num_cells x var_dof)
 
-        relative_error = absolute_error / norm_ref
+            # axis=0 gives component-wise norm.
+            absolute_error = np.linalg.norm(mapped_sol - sol_ref, axis=0)
+            norm_ref = np.linalg.norm(sol_ref, axis=0)
 
-        errors[data['node_number']] = {variable: {'absolute_error': absolute_error,
-                                                  'relative_error': relative_error}}
+            if np.any(norm_ref < 1e-10):
+                logger.warning(f"Relative error not reportable. "
+                               f"Norm of reference solution is {norm_ref}. "
+                               f"Reporting absolute error")
+                error = absolute_error
+                is_relative = False
+            else:
+                error = absolute_error / norm_ref
+                is_relative = True
+
+            errors[node_number][var] = {
+                "error":
+                    error,
+                "is_relative":
+                    is_relative,
+                }
 
     return errors
-
-
-
-
 
 
 

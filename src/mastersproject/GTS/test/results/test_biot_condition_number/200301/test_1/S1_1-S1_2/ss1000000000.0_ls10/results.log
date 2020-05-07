@@ -1,0 +1,115 @@
+INFO:GTS.test.util:Set up logger at 2020-03-01T13:14:47+01:00
+INFO:GTS.test.util:Path to results: /home/haakon/mastersproject/src/mastersproject/GTS/test/results/test_biot_condition_number/200301/test_1/S1_1-S1_2/ss1000000000.0_ls10
+INFO:GTS.isc_modelling.contact_mechanics_biot:Initializing contact mechanics biot on ISC dataset
+INFO:GTS.isc_modelling.mechanics:Initializing contact mechanics on ISC dataset at 2020-03-01T13:14:47+01:00
+INFO:GTS.ISC_data.isc:GTS-ISC data located at: /home/haakon/mastersproject/src/mastersproject/GTS/01BasicInputData.
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling prepare_simulation
+INFO:GTS.isc_modelling.mechanics:Calling create_grid(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7ff740c0ff98>)
+INFO:GTS.ISC_data.isc:GTS-ISC data located at: /home/haakon/mastersproject/src/mastersproject/GTS/01BasicInputData.
+INFO:GTS.ISC_data.fracture:Interpolating shearzone S1_1 ...
+INFO:GTS.ISC_data.fracture:Interpolating shearzone S1_2 ...
+INFO:GTS.ISC_data.fracture:Saving vtk file of fracture network in 3D.
+INFO:porepy.fracs.fractures:Find intersection between fratures
+INFO:porepy.fracs.fractures:Found 12 intersections. Ellapsed time: 0.01617
+INFO:porepy.fracs.fractures:Split intersections
+INFO:porepy.fracs.fractures:Compile list of points and edges
+INFO:porepy.fracs.fractures:Points and edges done. Elapsed time 0.00060
+INFO:porepy.fracs.fractures:Uniquify points and edges, starting with 60 points, 48
+                    edges
+INFO:porepy.fracs.fractures:Uniquify complete. 20 points, 24 edges. Ellapsed time
+                    0.01537
+INFO:porepy.fracs.fractures:Remove edge intersections
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 0
+DEBUG:porepy.geometry.intersections:The segments are parallel
+DEBUG:porepy.geometry.intersections:Lines are colinear
+DEBUG:porepy.geometry.intersections:Colinear lines share a single point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:The segments are parallel
+DEBUG:porepy.geometry.intersections:Lines are colinear
+DEBUG:porepy.geometry.intersections:Colinear lines share a single point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 1
+DEBUG:porepy.geometry.intersections:The segments are parallel
+DEBUG:porepy.geometry.intersections:Lines are colinear
+DEBUG:porepy.geometry.intersections:Colinear lines share a single point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:The segments are parallel
+DEBUG:porepy.geometry.intersections:Lines are colinear
+DEBUG:porepy.geometry.intersections:Colinear lines share a single point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 2
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 3
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 4
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 5
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 6
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 7
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+INFO:porepy.fracs.fractures:Done with intersection removal. Elapsed time 0.05071
+INFO:porepy.fracs.fractures:Uniquify points and edges, starting with 20 points, 24
+                    edges
+INFO:porepy.fracs.fractures:Uniquify complete. 20 points, 24 edges. Ellapsed time
+                    0.01092
+INFO:porepy.fracs.fractures:Finished fracture splitting after 0.08968 seconds
+INFO:porepy.fracs.fractures:Minimal distance between points encountered is 0.11492043833968017
+INFO:porepy.fracs.fractures:Gmsh completed with status 0
+INFO:porepy.fracs.simplex:Grid creation completed. Elapsed time 0.03407430648803711
+INFO:porepy.fracs.simplex:Created 1 3-d grids with 1540 cells
+INFO:porepy.fracs.simplex:Created 2 2-d grids with 245 cells
+INFO:porepy.fracs.meshing:Assemble in bucket
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.011300086975097656
+INFO:porepy.fracs.meshing:Compute geometry
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.017348766326904297
+INFO:porepy.fracs.meshing:Split fractures
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.3048882484436035
+INFO:GTS.isc_modelling.mechanics:Finished 'create_grid' in 1.5800 secs
+INFO:GTS.isc_modelling.mechanics:'create_grid' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:Tagging grid of name: S1_2, and dimension 2
+INFO:GTS.isc_modelling.contact_mechanics_biot:Setting non-zero source value for pressure
+INFO:GTS.isc_modelling.contact_mechanics_biot:Closest cell found has distance: 0.092135
+INFO:porepy.models.contact_mechanics_biot_model:Discretize
+INFO:porepy.numerics.fv.mpsa:Split MPSA discretization into 1 parts
+DEBUG:porepy.numerics.fv.mpsa:number of ncasym eliminated: 126
+DEBUG:porepy.numerics.fv.mpsa:max igrad: 20.26957316421171
+INFO:porepy.numerics.fv.biot:Done with subproblem 0. Elapsed time 5.7686755657196045
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.014757633209228516
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.02055954933166504
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.01534271240234375
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.021104812622070312
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.014832019805908203
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.020918607711791992
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 9.943039894104004
+INFO:porepy.viz.exporter:Construct 3d grid information using numba
+INFO:GTS.isc_modelling.contact_mechanics_biot:Finished 'prepare_simulation' in 11.7491 secs
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.02209758758544922
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.0218660831451416
+INFO:GTS.test.test_biot_parameter_scaling:------------------------------------------
+INFO:GTS.test.test_biot_parameter_scaling:Max element in A 2.23e+12
+INFO:GTS.test.test_biot_parameter_scaling:Max 2.29e+12 and min 1.26e-01 A sum.
+INFO:GTS.test.test_biot_parameter_scaling:Length scale: 1.0e+01. Scalar scale: 1.0e+09.

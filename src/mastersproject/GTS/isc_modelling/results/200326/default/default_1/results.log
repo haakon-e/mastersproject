@@ -1,0 +1,337 @@
+INFO:GTS.isc_modelling.setup:Preparing setup for simulation on 2020-03-26T12:43:17+01:00
+INFO:GTS.isc_modelling.setup:Simulation parameters:
+ {'bounding_box': {'xmax': 80,
+                  'xmin': -20,
+                  'ymax': 150,
+                  'ymin': 50,
+                  'zmax': 75,
+                  'zmin': -25},
+ 'folder_name': PosixPath('/home/haakon/mastersproject/src/mastersproject/GTS/isc_modelling/results/200326/default/default_1'),
+ 'length_scale': 0.1,
+ 'mesh_args': {'mesh_size_bound': 60,
+               'mesh_size_frac': 10,
+               'mesh_size_min': 1.0},
+ 'scalar_scale': 1000000000.0,
+ 'shearzone_names': ['S1_2'],
+ 'solver': 'direct',
+ 'source_scalar_borehole_shearzone': {'borehole': 'INJ1', 'shearzone': 'S1_2'},
+ 'stress': array([[-11393046.22034133,    597621.26708787,   1842573.57669909],
+       [   597621.26708787,  -8873267.78285116,   -586150.35104884],
+       [  1842573.57669909,   -586150.35104884, -10733685.99680752]])}
+INFO:GTS.isc_modelling.contact_mechanics_biot:Initializing contact mechanics biot on ISC dataset
+INFO:GTS.isc_modelling.mechanics:Initializing contact mechanics on ISC dataset at 2020-03-26T12:43:17+01:00
+INFO:GTS.ISC_data.isc:GTS-ISC data located at: /home/haakon/mastersproject/src/mastersproject/GTS/01BasicInputData.
+INFO:GTS.isc_modelling.setup:Options for Newton solver: 
+ {'max_iterations': 40, 'nl_convergence_tol': 1e-06, 'nl_divergence_tol': 100000.0}
+INFO:GTS.isc_modelling.setup:Setup complete. Starting simulation
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling prepare_simulation
+INFO:GTS.isc_modelling.mechanics:Calling create_grid(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7ff780447f60>)
+INFO:GTS.ISC_data.isc:GTS-ISC data located at: /home/haakon/mastersproject/src/mastersproject/GTS/01BasicInputData.
+INFO:GTS.ISC_data.fracture:Interpolating shearzone S1_2 ...
+INFO:GTS.ISC_data.fracture:Saving vtk file of fracture network in 3D.
+INFO:porepy.fracs.fractures:Find intersection between fratures
+INFO:porepy.fracs.fractures:Found 12 intersections. Ellapsed time: 0.01288
+INFO:porepy.fracs.fractures:Split intersections
+INFO:porepy.fracs.fractures:Compile list of points and edges
+INFO:porepy.fracs.fractures:Points and edges done. Elapsed time 0.00056
+INFO:porepy.fracs.fractures:Uniquify points and edges, starting with 52 points, 40
+                    edges
+INFO:porepy.fracs.fractures:Uniquify complete. 12 points, 16 edges. Ellapsed time
+                    0.01417
+INFO:porepy.fracs.fractures:Remove edge intersections
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 0
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 1
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 2
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 3
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 4
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 5
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 6
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+INFO:porepy.fracs.fractures:Done with intersection removal. Elapsed time 0.06280
+INFO:porepy.fracs.fractures:Uniquify points and edges, starting with 12 points, 16
+                    edges
+INFO:porepy.fracs.fractures:Uniquify complete. 12 points, 16 edges. Ellapsed time
+                    0.01087
+INFO:porepy.fracs.fractures:Finished fracture splitting after 0.10642 seconds
+INFO:porepy.fracs.fractures:Minimal distance between points encountered is 87.21907427899889
+INFO:porepy.fracs.fractures:Gmsh completed with status 0
+INFO:porepy.fracs.simplex:Grid creation completed. Elapsed time 0.021750926971435547
+INFO:porepy.fracs.simplex:Created 1 3-d grids with 519 cells
+INFO:porepy.fracs.simplex:Created 1 2-d grids with 44 cells
+INFO:porepy.fracs.meshing:Assemble in bucket
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.003634214401245117
+INFO:porepy.fracs.meshing:Compute geometry
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.008757591247558594
+INFO:porepy.fracs.meshing:Split fractures
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.0877220630645752
+INFO:GTS.isc_modelling.mechanics:Finished 'create_grid' in 1.1711 secs
+INFO:GTS.isc_modelling.mechanics:'create_grid' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:Tagging grid of name: S1_2, and dimension 2
+INFO:GTS.isc_modelling.contact_mechanics_biot:Setting non-zero source value for pressure
+INFO:GTS.isc_modelling.contact_mechanics_biot:Closest cell found has distance: 20.557855
+INFO:porepy.models.contact_mechanics_biot_model:Discretize
+INFO:porepy.numerics.fv.mpsa:Split MPSA discretization into 1 parts
+DEBUG:porepy.numerics.fv.mpsa:number of ncasym eliminated: 144
+DEBUG:porepy.numerics.fv.mpsa:max igrad: 0.039816800195175917
+INFO:porepy.numerics.fv.biot:Done with subproblem 0. Elapsed time 3.1369822025299072
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.014528036117553711
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.013539552688598633
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 6.17743444442749
+INFO:porepy.viz.exporter:Construct 3d grid information using pure python
+INFO:GTS.isc_modelling.contact_mechanics_biot:Finished 'prepare_simulation' in 7.9001 secs
+INFO:porepy.models.run_models:
+Time step 1 at time 2.4e+03 of 2.4e+03 with time step 2.4e+03
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling before_newton_loop(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7ff780447f60>)
+INFO:GTS.isc_modelling.contact_mechanics_biot:A new phase has started: Phase 5. Injection set to 20 l/min
+INFO:porepy.models.contact_mechanics_biot_model:Discretize
+INFO:porepy.numerics.fv.mpsa:Split MPSA discretization into 1 parts
+DEBUG:porepy.numerics.fv.mpsa:number of ncasym eliminated: 144
+DEBUG:porepy.numerics.fv.mpsa:max igrad: 0.039816800195175917
+INFO:porepy.numerics.fv.biot:Done with subproblem 0. Elapsed time 2.7451064586639404
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.012623310089111328
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.014202594757080078
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 5.812794208526611
+INFO:GTS.isc_modelling.contact_mechanics_biot:Finished 'before_newton_loop' in 5.8211 secs
+INFO:GTS.isc_modelling.contact_mechanics_biot:'before_newton_loop' returned None
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 0 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.013287067413330078
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 3.10e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.48076748847961426
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 0.006338860415376545
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 1.249659665659405e-06
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 1.699600e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.699600e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 1.020697e+29
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 1.020697e+29
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 2.282976e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 2.282976e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 1.000000e+00
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 1.000000e+00
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 1.000000e+00.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 1 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.01275181770324707
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.6318066120147705
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 1.183114492617124e-10
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 2.3324231240275474e-14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 8.749200e-05
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.702810e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 1.020697e+29
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 4.400000e+15
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 8.686834e+14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.965449e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 2.319766e+13
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 5.138094e-04
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 4.419770e-02.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 2 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.013291597366333008
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.5478074550628662
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 7.835790560001325e-10
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 1.5447684234869986e-13
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 1.968213e-05
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.700093e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 8.579343e+17
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 8.619039e+17
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 2.255830e+13
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.962029e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 9.953943e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 1.157709e-04
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 1.149743e-03.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 3 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.029129743576049805
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.6607823371887207
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 9.086048664151137e-10
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 1.7912476029976416e-13
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 3.715629e-05
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.706049e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 1.282542e+18
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 4.363510e+17
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 6.003043e+13
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.968805e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 2.939244e+00
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 2.177915e-04
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 3.049079e-03.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 4 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.019225358963012695
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.49535369873046875
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 1.7795912171751913e-10
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 3.508333073053517e-14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 8.714288e-06
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.702859e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 4.250946e+17
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 6.282688e+15
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 2.685522e+13
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.965573e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 6.766126e+01
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 5.117444e-05
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 1.366279e-03.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 5 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.03372502326965332
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.6534180641174316
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 2.451678418938665e-10
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 4.833303515793338e-14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 1.681539e-06
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.701678e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 5.923006e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 6.087868e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 2.188638e+12
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.964009e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 9.729196e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 9.881655e-06
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 1.114373e-04.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 6 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.03279852867126465
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.47264981269836426
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 1.46223942767504e-09
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 2.882697384922838e-13
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 2.445523e-04
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.719639e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 6.845709e+18
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 6.791551e+18
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 4.071124e+14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 2.027424e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 1.007974e+00
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 1.422115e-03
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 2.008028e-02.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 7 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.0315701961517334
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.5121371746063232
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 2.4521859475233174e-09
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 4.834304069824449e-13
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 4.961035e-04
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.702710e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 1.236685e+19
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 5.583111e+18
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 9.071145e+14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.965744e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 2.215045e+00
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 2.913612e-03
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 4.614613e-02.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 8 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.02952861785888672
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.5442466735839844
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 4.568730202972409e-10
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 9.006915247630055e-14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 6.212710e-05
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.702270e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 5.630012e+18
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 8.173580e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 1.750014e+14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.964434e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 6.888061e+01
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 3.649662e-04
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 8.908491e-03.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 9 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.03230404853820801
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.5352609157562256
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 2.6949439991412927e-10
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 5.312883697803514e-14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 2.024313e-06
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.702765e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 7.922288e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 7.253216e+15
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 3.149666e+12
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.965797e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 1.092245e+01
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 1.188839e-05
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 1.602233e-04.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 10 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.03579974174499512
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.4859650135040283
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 1.7682878157551713e-10
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 3.486049251451883e-14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 5.657284e-08
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.702718e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 3.549991e+15
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 3.780723e+15
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 2.069338e+11
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.965306e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:u converged absolutely.
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 9.389716e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 5.657284e-08
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 1.052935e-05.
+INFO:porepy.numerics.nonlinear.nonlinear_solvers:Newton iteration number 11 of 40
+DEBUG:porepy.numerics.interface_laws.contact_mechanics_interface_laws:Done. Elapsed time 0.03374338150024414
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.69e+05
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 3.58e+05 and min 1.00e+00 A sum.
+INFO:porepy.models.contact_mechanics_biot_model:Solve Ax=b using scipy
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 0.5113277435302734
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| = 2.739781903257809e-10
+INFO:porepy.models.contact_mechanics_biot_model:||b-Ax|| / ||b|| = 5.401278325788337e-14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter u = 2.175465e-09
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init u = 1.702753e-01
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter contact = 1.114289e+14
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init contact = 3.753596e+15
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff iter scalar = 6.737523e+09
+INFO:GTS.isc_modelling.contact_mechanics_biot:diff init scalar = 1.965401e+16
+INFO:GTS.isc_modelling.contact_mechanics_biot:u converged absolutely.
+INFO:GTS.isc_modelling.contact_mechanics_biot:pressure converged relatively
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in contact force is 2.968591e-02
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in matrix displacement is 2.175465e-09
+INFO:GTS.isc_modelling.contact_mechanics_biot:Error in pressure is 3.428065e-07.
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling after_newton_convergence(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7ff780447f60>, array([-1.05495310e-01, -5.58917698e-02,  7.73938179e-03, ...,
+        6.08282422e-09,  1.89908593e-09,  1.23120759e-09]), [1.0, 0.000513809382071281, 0.00011577088709251882, 0.00021779151250966505, 5.1174440727224737e-05, 9.881655427872845e-06, 0.00142211471538678, 0.0029136116939437423, 0.0003649662164595465, 1.1888388310918766e-05, 5.657283733709017e-08, 2.1754648631950984e-09], 11)
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling export_step(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7ff780447f60>)
+INFO:GTS.isc_modelling.contact_mechanics_biot:'export_step' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:'after_newton_convergence' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:Solution exported to folder 
+ /home/haakon/mastersproject/src/mastersproject/GTS/isc_modelling/results/200326/default/default_1
+INFO:GTS.isc_modelling.setup:Simulation complete. Exporting solution. Time: 2020-03-26T12:43:40+01:00

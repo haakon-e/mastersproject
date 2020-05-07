@@ -24,7 +24,7 @@ from GTS.isc_modelling.mechanics import ContactMechanicsISC
 import pendulum
 
 import GTS as gts
-from util.logging_util import (
+from src.mastersproject.util.logging_util import (
     __setup_logging,
     timer,
     trace,
@@ -89,7 +89,7 @@ def prepare_params(
     path_head : str
         folder structure to store results in.
         Computed relative to:
-            '...GTS/test/{test_method_name}/{path_head}'
+            '...GTS/test/results/{path_head}'
     params : dict
         Update or pass additional parameters to params
     setup_loggers: bool
@@ -98,7 +98,7 @@ def prepare_params(
 
     Returns
     -------
-    default_params : dict
+    in_params : dict
         model parameters
     """
 
@@ -114,7 +114,7 @@ def prepare_params(
     logger.info(f"Path to results: {_results_path}")
 
     # --- DOMAIN ARGUMENTS ---
-    default_params = {
+    in_params = {
         'mesh_args':
             {'mesh_size_frac': 10, 'mesh_size_min': .1 * 10, 'mesh_size_bound': 6 * 10},
         'bounding_box':
@@ -134,6 +134,6 @@ def prepare_params(
         'scalar_scale':
             1,
     }
-    default_params.update(params)
+    in_params.update(params)
 
-    return default_params
+    return in_params

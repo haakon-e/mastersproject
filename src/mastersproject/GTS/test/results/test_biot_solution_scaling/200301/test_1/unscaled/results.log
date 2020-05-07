@@ -1,0 +1,750 @@
+INFO:GTS.test.util:Set up logger at 2020-03-01T11:34:23+01:00
+INFO:GTS.test.util:Path to results: /home/haakon/mastersproject/src/mastersproject/GTS/test/results/test_biot_solution_scaling/200301/test_1/unscaled
+INFO:GTS.isc_modelling.contact_mechanics_biot:Initializing contact mechanics biot on ISC dataset
+INFO:GTS.isc_modelling.mechanics:Initializing contact mechanics on ISC dataset at 2020-03-01T11:34:23+01:00
+INFO:GTS.ISC_data.isc:GTS-ISC data located at: /home/haakon/mastersproject/src/mastersproject/GTS/01BasicInputData.
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling prepare_simulation
+INFO:GTS.isc_modelling.mechanics:Calling create_grid(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf49214a8>)
+INFO:GTS.ISC_data.fracture:Saving vtk file of fracture network in 3D.
+INFO:porepy.fracs.fractures:Find intersection between fratures
+INFO:porepy.fracs.fractures:Found 12 intersections. Ellapsed time: 0.01268
+INFO:porepy.fracs.fractures:Split intersections
+INFO:porepy.fracs.fractures:Compile list of points and edges
+INFO:porepy.fracs.fractures:Points and edges done. Elapsed time 0.00051
+INFO:porepy.fracs.fractures:Uniquify points and edges, starting with 48 points, 36
+                    edges
+INFO:porepy.fracs.fractures:Uniquify complete. 8 points, 12 edges. Ellapsed time
+                    0.00999
+INFO:porepy.fracs.fractures:Remove edge intersections
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 0
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 1
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 2
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 3
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 4
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 5
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+INFO:porepy.fracs.fractures:Done with intersection removal. Elapsed time 0.02997
+INFO:porepy.fracs.fractures:Uniquify points and edges, starting with 8 points, 12
+                    edges
+INFO:porepy.fracs.fractures:Uniquify complete. 8 points, 12 edges. Ellapsed time
+                    0.00712
+INFO:porepy.fracs.fractures:Finished fracture splitting after 0.05508 seconds
+INFO:porepy.fracs.fractures:Minimal distance between points encountered is 100.0
+INFO:porepy.fracs.fractures:Gmsh completed with status 0
+INFO:porepy.fracs.simplex:Grid creation completed. Elapsed time 0.013261079788208008
+INFO:porepy.fracs.simplex:Created 1 3-d grids with 125 cells
+INFO:porepy.fracs.meshing:Assemble in bucket
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.001848459243774414
+INFO:porepy.fracs.meshing:Compute geometry
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.0030481815338134766
+INFO:porepy.fracs.meshing:Split fractures
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.00020384788513183594
+INFO:GTS.isc_modelling.mechanics:Finished 'create_grid' in 0.3143 secs
+INFO:GTS.isc_modelling.mechanics:'create_grid' returned None
+WARNING:GTS.isc_modelling.contact_mechanics_biot:No injection cell was tagged.
+INFO:porepy.models.contact_mechanics_biot_model:Discretize
+INFO:porepy.numerics.fv.mpsa:Split MPSA discretization into 1 parts
+DEBUG:porepy.numerics.fv.mpsa:number of ncasym eliminated: 366
+DEBUG:porepy.numerics.fv.mpsa:max igrad: 0.1184247263751039
+INFO:porepy.numerics.fv.biot:Done with subproblem 0. Elapsed time 1.6423587799072266
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 2.8600406646728516
+INFO:porepy.viz.exporter:Construct 3d grid information using pure python
+INFO:GTS.isc_modelling.contact_mechanics_biot:Finished 'prepare_simulation' in 3.3294 secs
+INFO:porepy.models.run_models:
+Time step 1 at time -1.1e+04 of 0.0e+00 with time step 1.1e+04
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling before_newton_loop(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf49214a8>)
+INFO:porepy.models.contact_mechanics_biot_model:Discretize
+INFO:porepy.numerics.fv.mpsa:Split MPSA discretization into 1 parts
+DEBUG:porepy.numerics.fv.mpsa:number of ncasym eliminated: 366
+DEBUG:porepy.numerics.fv.mpsa:max igrad: 0.1184247263751039
+INFO:porepy.numerics.fv.biot:Done with subproblem 0. Elapsed time 1.4829227924346924
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 2.687671661376953
+INFO:GTS.isc_modelling.contact_mechanics_biot:Finished 'before_newton_loop' in 2.6899 secs
+INFO:GTS.isc_modelling.contact_mechanics_biot:'before_newton_loop' returned None
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.95e+12
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 1.04e+13 and min 2.55e+02 A sum.
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling after_newton_convergence(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf49214a8>, array([ 2.86502940e+03,  4.36131726e+03,  5.78805796e+03,  7.99972025e+02,
+        4.39295006e+03,  4.29018600e+03,  3.00231159e+03,  4.26853082e+03,
+        7.30731420e+03,  1.50890325e+03,  4.27948366e+03,  9.23897146e+03,
+        3.38005813e+02, -2.42291683e+03,  3.22682579e+03, -6.16418462e-01,
+       -3.52660411e+03,  4.37570011e+03,  4.89134948e+03,  6.32820269e+03,
+        5.71798182e+03,  5.86014267e+02,  6.77471006e+03,  2.41684347e+03,
+       -1.45816129e+03, -3.23065987e+03,  8.63786644e+02, -2.00526222e+03,
+       -2.73086271e+03,  3.09997078e+03,  4.97793465e+03,  6.26452742e+03,
+        7.20598743e+03,  1.73124349e+03,  6.11251550e+03,  1.11909439e+04,
+       -2.60298565e+03, -3.81471835e+03,  6.07348494e+03, -1.72417685e+03,
+       -6.60990364e+03, -1.57354861e+02, -1.20986059e+02, -6.54178274e+03,
+        2.74260458e+03, -5.06717012e+03, -6.57976939e+03,  7.51407729e+03,
+        4.28850472e+03,  3.37291549e+03,  4.38324289e+03,  7.55216313e+03,
+        5.65598722e+03,  4.56752834e+03,  1.72071980e+03,  3.47714355e+03,
+        2.58670340e+03,  4.64247510e+03,  3.35681507e+03,  8.16127260e+03,
+        2.76119177e+03,  3.36160231e+03,  1.06098859e+04,  1.32872937e+03,
+        6.13950218e+03, -5.52482868e+02,  7.68523467e+03,  5.55700904e+03,
+        7.94055731e+03,  2.81650551e+03,  5.47557054e+03,  1.35414834e+04,
+       -2.50564266e+03,  1.81967021e+03,  1.16288908e+04, -3.92972317e+03,
+       -6.72343835e+02,  1.04619528e+03,  4.05433162e+03, -2.29467966e+02,
+        2.61735769e+03, -3.42924967e+03,  1.31148355e+03,  3.25140124e+03,
+        3.56999794e+03,  1.44457434e+03,  1.87786061e+03, -4.64621431e+03,
+        2.03201862e+03,  3.64647427e+03,  2.61960544e+03, -3.79347290e+03,
+        7.16540043e+03,  4.17275308e+03, -3.02127128e+03,  7.60884945e+03,
+        4.38377634e+03, -2.69586359e+03,  5.72929360e+03,  2.23826545e+03,
+       -2.62239129e+03,  9.66501857e+03,  4.77260640e+03,  1.71481291e+03,
+        9.95695988e+03, -7.46757494e+02,  6.74842166e+02,  1.14337479e+04,
+       -9.80071745e+02,  4.44400162e+03,  4.43205165e+03, -2.41118699e+03,
+        4.52622546e+03,  6.57624776e+03, -2.05154607e+03,  4.36347439e+03,
+        8.12052051e+03,  4.52711959e+01,  4.32352952e+03,  9.50705536e+03,
+        1.70250701e+03,  2.43841799e+02,  2.08808575e+03, -4.46102548e+03,
+        7.36515699e+02,  5.75785197e+03,  4.42397998e+03,  3.22567796e+02,
+        4.17470691e+03,  3.00255026e+03,  6.22408391e+02,  1.08372440e+04,
+        4.72924328e+03,  4.95275871e+02,  8.22165963e+03, -3.65742678e+03,
+        6.57853090e+02,  9.95372293e+03, -2.97852634e+03,  3.03541732e+02,
+        1.13693953e+04, -3.23566094e+03,  6.09578684e+03,  7.62380796e+03,
+        1.04441769e+03, -8.24618025e+02,  1.09136092e+04, -3.91278678e+03,
+       -8.82129698e+02,  8.07666799e+03, -3.66173684e+03, -8.91332139e+02,
+        3.06679362e+03,  4.21251597e+03, -1.18453851e+03,  6.29068722e+03,
+        4.34647903e+03,  2.54924341e+02,  1.02927797e+04, -9.66618219e+00,
+       -2.13268133e+03,  1.11682816e+04,  4.21398317e+02, -2.46598547e+03,
+        9.95434533e+03,  2.00775368e+03, -4.47784860e+03,  1.05895187e+04,
+       -5.19696890e+03,  6.73729033e+03,  7.96764932e+03, -1.02725509e+03,
+        6.82182632e+03,  2.59740873e+03,  2.33152270e+03, -5.01870079e+03,
+        1.32433278e+04,  3.97104506e+02, -3.40556420e+03,  1.37530856e+04,
+        3.36754009e+02,  6.11410180e+03,  1.14057511e+04, -3.27187726e+03,
+       -3.57967510e+03,  7.30054930e+03, -2.00351201e+03, -3.49059295e+03,
+        9.11839424e+03, -3.33209919e+03, -2.78668960e+03,  1.02053837e+04,
+        5.76512915e+03, -4.74683675e+03,  7.87548072e+03, -4.40515842e+03,
+       -2.47793706e+03,  8.49787809e+03,  6.91846020e+03, -3.65909382e+03,
+        5.80775826e+03, -3.29449302e+03,  2.05335498e+03,  1.39926378e+04,
+        6.89790360e+03,  2.04848511e+03,  1.10061356e+04, -4.49520260e+03,
+        3.29044492e+02,  1.29975745e+04,  5.82965380e+03,  4.42893458e+02,
+        1.20584864e+04,  4.69402650e+03,  1.68796553e+03, -4.55148111e+02,
+        6.21825173e+03, -1.87892587e+02,  1.14755997e+03, -7.67557590e+03,
+       -6.34461375e+02,  6.30188966e+02, -7.77117896e+03,  1.90831592e+03,
+        2.46491563e+03, -2.44419777e+03,  3.58127270e+03,  2.80981100e+03,
+       -7.10346684e+02,  3.43815994e+03,  1.12240672e+04, -4.25982239e+03,
+        3.75766556e+03,  5.75328735e+03, -2.31085570e+03,  6.30567049e+03,
+       -2.39009075e+02, -1.94531953e+02,  5.49861605e+03,  1.40502076e+04,
+       -7.25912557e+03,  6.07751192e+03,  6.37982739e+03,  2.10679996e+03,
+       -3.37263767e+03,  4.18420551e+03,  2.77393128e+03, -6.97747802e+03,
+        2.26479376e+03, -3.40229511e+03,  3.52656724e+03,  9.53911706e+03,
+       -6.38634635e+03,  5.81283425e+03,  9.94275812e+03, -4.98108885e+03,
+       -3.78204395e+03,  4.10809161e+03,  4.15490483e+03,  4.49181912e+03,
+        2.24555300e+03,  4.73492369e+03,  4.40152384e+03,  1.03411596e+04,
+       -2.34000027e+03, -1.88619115e+03,  1.16092557e+04,  4.64333904e+03,
+       -1.94279681e+03,  1.00378650e+04, -4.60925943e+03,  4.95277566e+03,
+        3.33392040e+03,  4.41785367e+03, -2.71676605e+03,  3.09911056e+03,
+       -2.89840376e+03,  4.49305934e+03,  1.15025975e+04, -9.53362975e+03,
+       -7.67726965e+03,  5.67040648e+03,  3.69544068e+03,  9.91510539e+03,
+       -1.41947248e+03,  4.73470047e+03,  8.75333413e+03,  1.38277470e+04,
+        8.19649075e+03,  8.91769502e+03,  1.00493033e+04, -6.03991327e+03,
+       -9.10410874e+03,  3.21774989e+02,  8.06756241e+03,  9.49208446e+03,
+        2.44343439e+03,  7.78071528e+03,  5.36869834e+03, -1.76518071e+03,
+       -5.70159132e+03,  5.19531739e+03,  1.52447196e+04,  8.04054157e+03,
+        5.13234957e+03,  1.35896838e+04, -8.80048342e+03,  5.80705294e+03,
+       -1.75544139e+02,  8.42950104e+03, -6.74263143e+03,  2.61921845e+03,
+        5.56463692e+03, -5.29547258e+03,  1.49384154e+04,  4.66099392e+03,
+       -7.57642482e+03, -1.61490855e+03, -6.29697355e+03,  9.11317866e+03,
+        1.20533565e+04, -2.54956891e+03, -5.66250020e+03,  1.48643683e+04,
+       -5.95033333e+03, -5.35995853e+03,  1.17467367e+04, -8.30740902e+03,
+        9.98290704e+03,  4.27695415e+03, -4.66092252e+03,  1.02420022e+04,
+       -3.73265267e+02, -2.09208469e+03,  8.79753580e+03,  1.49776865e+04,
+        8.54636492e+03, -5.32420680e+03,  1.09268564e+04, -5.41101866e+03,
+       -2.47242602e+03,  1.54770828e+04,  8.51231045e+03, -2.15672287e+03,
+        1.33095655e+04, -1.06258204e+04, -4.46541455e+03,  6.98523850e+02,
+        7.92460425e+03, -3.55079916e+03, -1.45332152e+03,  7.14602492e+03,
+        7.43757888e+03,  1.25980793e+04,  6.70351201e+03,  8.06500362e+03,
+       -4.83288870e+02, -8.73050307e+03, -7.11078834e+03,  2.06664756e+03,
+       -4.80378531e+03,  7.53553022e+03,  1.42476996e+04,  7.28465680e+03,
+       -5.98117958e+03, -7.18728271e+01, -7.50136317e+03,  8.54784149e+03,
+        1.07531354e+03,  7.57688057e+03, -4.33247868e+03,  1.29916830e+04,
+       -4.77351136e+03, -4.54058264e+03,  1.42127276e+04,  1.72660029e+13,
+        1.77918037e+13,  1.68254102e+13,  1.63617677e+13,  1.14337457e+13,
+        1.10230060e+13,  1.75334876e+13,  1.85649369e+13,  3.93847018e+13,
+        3.91076553e+13,  1.70796717e+13,  1.61319782e+13,  3.84514051e+13,
+        4.01289137e+13,  3.91668274e+13,  3.70776031e+13,  3.88925649e+13,
+        3.71983069e+13,  4.05452989e+13,  3.68811881e+13,  3.52775633e+13,
+        3.98512078e+13,  3.53178147e+13,  3.28231772e+13,  9.28082729e+12,
+        3.93118678e+13,  1.09501758e+13,  1.17417020e+13,  1.03719844e+13,
+        1.02895396e+13,  1.78041858e+13,  9.78312407e+12,  1.04479370e+13,
+        3.58989508e+13,  9.46699788e+12,  1.61491427e+13,  1.77929412e+13,
+        1.73401923e+13,  1.68320982e+13,  1.63298781e+13,  1.88398479e+13,
+        1.79401549e+13,  1.80430012e+13,  1.61299977e+13,  1.71215597e+13,
+        1.71258987e+13,  9.74592955e+12,  1.70756321e+13,  1.59066673e+13,
+        1.72527862e+13,  3.92233043e+13,  1.73366620e+13,  9.62299499e+12,
+        9.75515210e+12,  1.02078885e+13,  3.44644578e+13,  1.74435179e+13,
+        1.85556581e+13,  3.43137095e+13,  3.34080814e+13,  1.61371133e+13,
+        1.71806034e+13,  1.73109638e+13,  1.70095667e+13,  3.66605908e+13,
+        1.77560855e+13,  3.76954549e+13,  3.35568723e+13,  3.41745070e+13,
+        3.41703733e+13,  3.37804498e+13,  4.04716743e+13,  4.02071637e+13,
+        4.04939186e+13,  3.95107574e+13,  4.03909166e+13,  3.53358077e+13,
+        3.89849160e+13,  3.97398122e+13,  3.28802463e+13,  3.72712795e+13,
+        3.89547313e+13,  3.89559476e+13,  3.67804537e+13,  3.52529052e+13,
+        1.78487281e+13,  1.75105002e+13,  1.57415963e+13,  1.54903038e+13,
+        1.49374569e+13,  1.76484197e+13,  1.69413573e+13,  1.56783323e+13,
+        3.77020458e+13,  3.95616225e+13,  3.27242103e+13,  3.41771952e+13,
+        3.95569971e+13,  3.80570262e+13,  3.98102846e+13,  3.29363567e+13,
+        3.29937439e+13,  3.96783023e+13,  3.85016483e+13,  3.30783008e+13,
+        3.98767632e+13,  3.42222802e+13,  3.31211683e+13,  3.43010153e+13,
+        3.80074838e+13,  3.95187361e+13,  3.26909643e+13,  3.46767650e+13,
+        3.31746269e+13,  3.32593208e+13,  3.96702908e+13,  4.00729029e+13,
+        3.29717082e+13,  3.87828391e+13,  3.86474802e+13,  3.29482517e+13,
+        3.90752004e+13,  3.87461020e+13,  3.32413312e+13,  3.33557565e+13]), 0, iteration_counter=1)
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling export_step(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf49214a8>)
+INFO:GTS.isc_modelling.contact_mechanics_biot:'export_step' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:'after_newton_convergence' returned None
+INFO:porepy.models.run_models:
+Time step 2 at time 0.0e+00 of 0.0e+00 with time step 1.1e+04
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling before_newton_loop(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf49214a8>)
+INFO:GTS.isc_modelling.contact_mechanics_biot:A new phase has started: Phase 1
+INFO:porepy.models.contact_mechanics_biot_model:Discretize
+INFO:porepy.numerics.fv.mpsa:Split MPSA discretization into 1 parts
+DEBUG:porepy.numerics.fv.mpsa:number of ncasym eliminated: 366
+DEBUG:porepy.numerics.fv.mpsa:max igrad: 0.1184247263751039
+INFO:porepy.numerics.fv.biot:Done with subproblem 0. Elapsed time 1.5725657939910889
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 3.0161612033843994
+INFO:GTS.isc_modelling.contact_mechanics_biot:Finished 'before_newton_loop' in 3.0194 secs
+INFO:GTS.isc_modelling.contact_mechanics_biot:'before_newton_loop' returned None
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 2.95e+12
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 1.04e+13 and min 2.55e+02 A sum.
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling after_newton_convergence(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf49214a8>, array([ 5.73005231e+03,  8.72263635e+03,  1.15761130e+04,  1.59993928e+03,
+        8.78590219e+03,  8.58036614e+03,  6.00461428e+03,  8.53706285e+03,
+        1.46146165e+04,  3.01779479e+03,  8.55896809e+03,  1.84779311e+04,
+        6.76010456e+02, -4.84582089e+03,  6.45364490e+03, -1.23129359e+00,
+       -7.05320110e+03,  8.75139984e+03,  9.78268633e+03,  1.26563941e+04,
+        1.14359563e+04,  1.17202764e+03,  1.35494066e+04,  4.83368403e+03,
+       -2.91631214e+03, -6.46130701e+03,  1.72757780e+03, -4.01051376e+03,
+       -5.46170888e+03,  6.19993548e+03,  9.95585476e+03,  1.25290436e+04,
+        1.44119646e+04,  3.46247718e+03,  1.22250210e+04,  2.23818683e+04,
+       -5.20596330e+03, -7.62942789e+03,  1.21469652e+04, -3.44834316e+03,
+       -1.32197679e+04, -3.14679491e+02, -2.41970465e+02, -1.30835324e+04,
+        5.48521246e+03, -1.01343265e+04, -1.31595134e+04,  1.50281217e+04,
+        8.57700605e+03,  6.74582618e+03,  8.76648808e+03,  1.51042957e+04,
+        1.13119624e+04,  9.13505211e+03,  3.44143154e+03,  6.95428172e+03,
+        5.17340260e+03,  9.28494141e+03,  6.71362640e+03,  1.63225306e+04,
+        5.52236729e+03,  6.72320088e+03,  2.12197609e+04,  2.65745714e+03,
+        1.22789889e+04, -1.10494597e+03,  1.53704354e+04,  1.11140079e+04,
+        1.58811043e+04,  5.63299852e+03,  1.09511319e+04,  2.70829298e+04,
+       -5.01128251e+03,  3.63933889e+03,  2.32577550e+04, -7.85943085e+03,
+       -1.34467793e+03,  2.09239014e+03,  8.10865337e+03, -4.58928241e+02,
+        5.23472396e+03, -6.85848444e+03,  2.62296555e+03,  6.50279443e+03,
+        7.13998091e+03,  2.88914864e+03,  3.75572906e+03, -9.29241633e+03,
+        4.06403128e+03,  7.29294621e+03,  5.23919968e+03, -7.58694526e+03,
+        1.43307922e+04,  8.34548848e+03, -6.04253204e+03,  1.52176878e+04,
+        8.76753962e+03, -5.39171220e+03,  1.14585848e+04,  4.47652019e+03,
+       -5.24478159e+03,  1.93300192e+04,  9.54519573e+03,  3.42962682e+03,
+        1.99139002e+04, -1.49352037e+03,  1.34968908e+03,  2.28674877e+04,
+       -1.96013941e+03,  8.88800577e+03,  8.86409618e+03, -4.82237389e+03,
+        9.05245077e+03,  1.31524853e+04, -4.10309318e+03,  8.72694851e+03,
+        1.62410226e+04,  9.05386531e+01,  8.64706022e+03,  1.90140980e+04,
+        3.40500902e+03,  4.87690261e+02,  4.17616651e+03, -8.92205662e+03,
+        1.47303156e+03,  1.15156908e+04,  8.84796270e+03,  6.45142432e+02,
+        8.34941505e+03,  6.00508606e+03,  1.24482284e+03,  2.16744823e+04,
+        9.45848357e+03,  9.90558402e+02,  1.64433082e+04, -7.31486290e+03,
+        1.31570861e+03,  1.99074203e+04, -5.95705180e+03,  6.07088052e+02,
+        2.27387591e+04, -6.47132332e+03,  1.21915699e+04,  1.52475984e+04,
+        2.08882620e+03, -1.64922736e+03,  2.18272154e+04, -7.82558446e+03,
+       -1.76425646e+03,  1.61533151e+04, -7.32345297e+03, -1.78265723e+03,
+        6.13358048e+03,  8.42503535e+03, -2.36906708e+03,  1.25813698e+04,
+        8.69293880e+03,  5.09855255e+02,  2.05855444e+04, -1.93354385e+01,
+       -4.26535207e+03,  2.23365475e+04,  8.42791920e+02, -4.93197218e+03,
+        1.99086749e+04,  4.01549658e+03, -8.95569311e+03,  2.11790223e+04,
+       -1.03939264e+04,  1.34745575e+04,  1.59352768e+04, -2.05450758e+03,
+        1.36436396e+04,  5.19481281e+03,  4.66304127e+03, -1.00373854e+04,
+        2.64866220e+04,  7.94195446e+02, -6.81111585e+03,  2.75061426e+04,
+        6.73501112e+02,  1.22281951e+04,  2.28114817e+04, -6.54375179e+03,
+       -7.15934183e+03,  1.46010882e+04, -4.00702300e+03, -6.98118441e+03,
+        1.82367675e+04, -6.66419543e+03, -5.57337026e+03,  2.04107364e+04,
+        1.15302373e+04, -9.49364255e+03,  1.57509467e+04, -8.81031655e+03,
+       -4.95586611e+03,  1.69957326e+04,  1.38368848e+04, -7.31816909e+03,
+        1.16155110e+04, -6.58898531e+03,  4.10670791e+03,  2.79852242e+04,
+        1.37957717e+04,  4.09696875e+03,  2.20122485e+04, -8.99038967e+03,
+        6.58094006e+02,  2.59951093e+04,  1.16592844e+04,  8.85791366e+02,
+        2.41169385e+04,  9.38803404e+03,  3.37592721e+03, -9.10268716e+02,
+        1.24364693e+04, -3.75780069e+02,  2.29513111e+03, -1.53511065e+04,
+       -1.26891323e+03,  1.26039046e+03, -1.55423126e+04,  3.81662758e+03,
+        4.92982731e+03, -4.88838298e+03,  7.16253947e+03,  5.61961582e+03,
+       -1.42069479e+03,  6.87631482e+03,  2.24481208e+04, -8.51964367e+03,
+        7.51532111e+03,  1.15065643e+04, -4.62170363e+03,  1.26113246e+04,
+       -4.78001343e+02, -3.89072857e+02,  1.09972222e+04,  2.81003800e+04,
+       -1.45182252e+04,  1.21550052e+04,  1.27596392e+04,  4.21359093e+03,
+       -6.74527052e+03,  8.36841473e+03,  5.54784122e+03, -1.39549216e+04,
+        4.52959640e+03, -6.80459430e+03,  7.05312700e+03,  1.90782092e+04,
+       -1.27726729e+04,  1.16256530e+04,  1.98854845e+04, -9.96215423e+03,
+       -7.56406781e+03,  8.21618465e+03,  8.30978951e+03,  8.98362852e+03,
+        4.49111949e+03,  9.46982094e+03,  8.80303990e+03,  2.06822938e+04,
+       -4.67999641e+03, -3.77237064e+03,  2.32184758e+04,  9.28665373e+03,
+       -3.88558138e+03,  2.00757097e+04, -9.21849677e+03,  9.90553660e+03,
+        6.66784391e+03,  8.83568128e+03, -5.43351638e+03,  6.19822922e+03,
+       -5.79679965e+03,  8.98610830e+03,  2.30051598e+04, -1.90671883e+04,
+       -1.53544841e+04,  1.13407883e+04,  7.39086728e+03,  1.98301409e+04,
+       -2.83890369e+03,  9.46937835e+03,  1.75066133e+04,  2.76554387e+04,
+        1.63929275e+04,  1.78353337e+04,  2.00985840e+04, -1.20797822e+04,
+       -1.82081414e+04,  6.43580303e+02,  1.61350719e+04,  1.89841022e+04,
+        4.88687366e+03,  1.55613689e+04,  1.07373629e+04, -3.53031446e+03,
+       -1.14031494e+04,  1.03906067e+04,  3.04893659e+04,  1.60810281e+04,
+        1.02646739e+04,  2.71793077e+04, -1.76009030e+04,  1.16140706e+04,
+       -3.51051561e+02,  1.68589394e+04, -1.34851991e+04,  5.23845630e+03,
+        1.11292496e+04, -1.05909048e+04,  2.98767628e+04,  9.32195867e+03,
+       -1.51527877e+04, -3.22975938e+03, -1.25939152e+04,  1.82262964e+04,
+        2.41066692e+04, -5.09914603e+03, -1.13249495e+04,  2.97286725e+04,
+       -1.19006312e+04, -1.07198725e+04,  2.34934498e+04, -1.66147651e+04,
+        1.99657427e+04,  8.55390104e+03, -9.32182549e+03,  2.04839324e+04,
+       -7.46496809e+02, -4.18417551e+03,  1.75950235e+04,  2.99553106e+04,
+        1.70926711e+04, -1.06483636e+04,  2.18536737e+04, -1.08220030e+04,
+       -4.94482549e+03,  3.09540921e+04,  1.70245615e+04, -4.31342198e+03,
+        2.66190729e+04, -2.12515548e+04, -8.93079350e+03,  1.39707110e+03,
+        1.58491469e+04, -7.10156648e+03, -2.90658814e+03,  1.42920022e+04,
+        1.48751141e+04,  2.51961100e+04,  1.34069779e+04,  1.61299522e+04,
+       -9.66542141e+02, -1.74609396e+04, -1.42215199e+04,  4.13330960e+03,
+       -9.60754907e+03,  1.50710149e+04,  2.84953349e+04,  1.45692576e+04,
+       -1.19623054e+04, -1.43702542e+02, -1.50026762e+04,  1.70956243e+04,
+        2.15065120e+03,  1.51537124e+04, -8.66491591e+03,  2.59833108e+04,
+       -9.54699390e+03, -9.08112247e+03,  2.84253975e+04,  3.45320129e+13,
+        3.55836160e+13,  3.36508264e+13,  3.27235405e+13,  2.28675277e+13,
+        2.20460579e+13,  3.50668855e+13,  3.71297770e+13,  7.87691034e+13,
+        7.82151943e+13,  3.41592539e+13,  3.22638559e+13,  7.69026655e+13,
+        8.02573569e+13,  7.83331875e+13,  7.41548406e+13,  7.77849910e+13,
+        7.43962468e+13,  8.10904434e+13,  7.37622370e+13,  7.05550010e+13,
+        7.97020219e+13,  7.06352830e+13,  6.56460034e+13,  1.85616815e+13,
+        7.86234477e+13,  2.19003652e+13,  2.34834332e+13,  2.07440041e+13,
+        2.05791105e+13,  3.56083222e+13,  1.95662737e+13,  2.08958903e+13,
+        7.17977664e+13,  1.89340230e+13,  3.22982516e+13,  3.55858894e+13,
+        3.46803924e+13,  3.36642028e+13,  3.26597598e+13,  3.76796585e+13,
+        3.58802773e+13,  3.60859668e+13,  3.22599635e+13,  3.42430850e+13,
+        3.42517645e+13,  1.94918731e+13,  3.41512440e+13,  3.18133031e+13,
+        3.45055525e+13,  7.84465264e+13,  3.46732891e+13,  1.92460033e+13,
+        1.95103108e+13,  2.04157997e+13,  6.89286643e+13,  3.48868641e+13,
+        3.71112179e+13,  6.86270872e+13,  6.68163346e+13,  3.22741128e+13,
+        3.43612308e+13,  3.46218661e+13,  3.40191004e+13,  7.33207224e+13,
+        3.55120709e+13,  7.53904237e+13,  6.71133202e+13,  6.83485819e+13,
+        6.83403152e+13,  6.75605000e+13,  8.09428539e+13,  8.04138112e+13,
+        8.09874032e+13,  7.90210326e+13,  8.07816873e+13,  7.06714818e+13,
+        7.79696821e+13,  7.94792324e+13,  6.57603401e+13,  7.45422102e+13,
+        7.79092944e+13,  7.79115633e+13,  7.35607779e+13,  7.05054863e+13,
+        3.56974835e+13,  3.50210274e+13,  3.14832147e+13,  3.09806152e+13,
+        2.98749281e+13,  3.52968642e+13,  3.38827336e+13,  3.13566878e+13,
+        7.54035144e+13,  7.91226364e+13,  6.54479334e+13,  6.83538657e+13,
+        7.91134191e+13,  7.61134654e+13,  7.96199541e+13,  6.58721737e+13,
+        6.59869892e+13,  7.93560062e+13,  7.70027044e+13,  6.61561118e+13,
+        7.97529242e+13,  6.84440041e+13,  6.62415379e+13,  6.86014627e+13,
+        7.60143926e+13,  7.90368697e+13,  6.53814841e+13,  6.93529990e+13,
+        6.63487335e+13,  6.65181113e+13,  7.93399752e+13,  8.01451864e+13,
+        6.59430808e+13,  7.75652828e+13,  7.72945753e+13,  6.58962196e+13,
+        7.81499989e+13,  7.74917944e+13,  6.64823300e+13,  6.67111883e+13]), 0, iteration_counter=1)
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling export_step(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf49214a8>)
+INFO:GTS.isc_modelling.contact_mechanics_biot:'export_step' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:'after_newton_convergence' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:Solution exported to folder 
+ /home/haakon/mastersproject/src/mastersproject/GTS/test/results/test_biot_solution_scaling/200301/test_1/unscaled
+INFO:GTS.isc_modelling.contact_mechanics_biot:Initializing contact mechanics biot on ISC dataset
+INFO:GTS.isc_modelling.mechanics:Initializing contact mechanics on ISC dataset at 2020-03-01T11:34:32+01:00
+INFO:GTS.ISC_data.isc:GTS-ISC data located at: /home/haakon/mastersproject/src/mastersproject/GTS/01BasicInputData.
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling prepare_simulation
+INFO:GTS.isc_modelling.mechanics:Calling create_grid(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf4bcf898>)
+INFO:GTS.ISC_data.fracture:Saving vtk file of fracture network in 3D.
+INFO:porepy.fracs.fractures:Find intersection between fratures
+INFO:porepy.fracs.fractures:Found 12 intersections. Ellapsed time: 0.01323
+INFO:porepy.fracs.fractures:Split intersections
+INFO:porepy.fracs.fractures:Compile list of points and edges
+INFO:porepy.fracs.fractures:Points and edges done. Elapsed time 0.00051
+INFO:porepy.fracs.fractures:Uniquify points and edges, starting with 48 points, 36
+                    edges
+INFO:porepy.fracs.fractures:Uniquify complete. 8 points, 12 edges. Ellapsed time
+                    0.00976
+INFO:porepy.fracs.fractures:Remove edge intersections
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 0
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 1
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 2
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 3
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 4
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.fracs.fractures:Remove intersections from fracture 5
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+DEBUG:porepy.geometry.intersections:Segment intersection found in one point
+INFO:porepy.fracs.fractures:Done with intersection removal. Elapsed time 0.02796
+INFO:porepy.fracs.fractures:Uniquify points and edges, starting with 8 points, 12
+                    edges
+INFO:porepy.fracs.fractures:Uniquify complete. 8 points, 12 edges. Ellapsed time
+                    0.00796
+INFO:porepy.fracs.fractures:Finished fracture splitting after 0.05450 seconds
+INFO:porepy.fracs.fractures:Minimal distance between points encountered is 10.0
+INFO:porepy.fracs.fractures:Gmsh completed with status 0
+INFO:porepy.fracs.simplex:Grid creation completed. Elapsed time 0.01151132583618164
+INFO:porepy.fracs.simplex:Created 1 3-d grids with 141 cells
+INFO:porepy.fracs.meshing:Assemble in bucket
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.0001380443572998047
+INFO:porepy.fracs.meshing:Compute geometry
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.0029418468475341797
+INFO:porepy.fracs.meshing:Split fractures
+INFO:porepy.fracs.meshing:Done. Elapsed time 0.00018024444580078125
+INFO:GTS.isc_modelling.mechanics:Finished 'create_grid' in 0.2942 secs
+INFO:GTS.isc_modelling.mechanics:'create_grid' returned None
+WARNING:GTS.isc_modelling.contact_mechanics_biot:No injection cell was tagged.
+INFO:porepy.models.contact_mechanics_biot_model:Discretize
+INFO:porepy.numerics.fv.mpsa:Split MPSA discretization into 1 parts
+DEBUG:porepy.numerics.fv.mpsa:number of ncasym eliminated: 300
+DEBUG:porepy.numerics.fv.mpsa:max igrad: 6.692649274280493
+INFO:porepy.numerics.fv.biot:Done with subproblem 0. Elapsed time 1.5951449871063232
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 2.985215187072754
+INFO:porepy.viz.exporter:Construct 3d grid information using pure python
+INFO:GTS.isc_modelling.contact_mechanics_biot:Finished 'prepare_simulation' in 3.4529 secs
+INFO:porepy.models.run_models:
+Time step 1 at time -1.1e+04 of 0.0e+00 with time step 1.1e+04
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling before_newton_loop(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf4bcf898>)
+INFO:porepy.models.contact_mechanics_biot_model:Discretize
+INFO:porepy.numerics.fv.mpsa:Split MPSA discretization into 1 parts
+DEBUG:porepy.numerics.fv.mpsa:number of ncasym eliminated: 300
+DEBUG:porepy.numerics.fv.mpsa:max igrad: 6.692649274280493
+INFO:porepy.numerics.fv.biot:Done with subproblem 0. Elapsed time 1.539137601852417
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 2.8818869590759277
+INFO:GTS.isc_modelling.contact_mechanics_biot:Finished 'before_newton_loop' in 2.8841 secs
+INFO:GTS.isc_modelling.contact_mechanics_biot:'before_newton_loop' returned None
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 8.46e+11
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 1.38e+12 and min 2.89e+00 A sum.
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling after_newton_convergence(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf4bcf898>, array([ 7.06128989e+05, -7.02015830e+05,  1.33923850e+06,  4.12506427e+05,
+       -7.12862086e+05,  1.25212916e+06, -5.03286925e+05, -3.22309498e+05,
+        7.35788209e+05, -5.22648108e+05, -2.50733754e+05,  1.13454158e+06,
+        3.46443608e+05, -5.86730202e+05,  1.38119466e+06,  5.28030245e+05,
+       -6.98873022e+05,  1.07750643e+06,  9.12454671e+04, -5.90906171e+05,
+        1.53640108e+06,  1.07247618e+05, -6.33424056e+05,  1.31018944e+06,
+        4.40788660e+05, -5.06973819e+05,  8.00258784e+05, -1.20569485e+05,
+       -5.80402695e+05,  1.26000657e+06,  3.62347732e+05, -8.57771358e+05,
+        1.70098770e+06,  6.59123830e+05,  4.64224244e+03,  2.61988090e+05,
+        8.96622861e+05,  2.85611085e+03,  4.69455346e+05,  6.22856795e+05,
+       -6.37009297e+04,  5.51973426e+05,  2.78303562e+05, -7.94220758e+05,
+        1.44271608e+06,  2.77007775e+05, -1.04788665e+06,  1.42806565e+06,
+        5.31319180e+05, -1.09286328e+06,  1.41834737e+06,  5.51052781e+05,
+       -4.90183772e+05,  9.96934889e+05, -9.65226745e+04, -5.22203196e+05,
+        7.27004760e+05, -2.12590701e+05, -5.69916025e+05,  9.23825045e+05,
+        4.49344319e+05, -1.97769512e+05,  6.90036389e+05, -4.55009016e+05,
+       -5.26848230e+05,  6.61389147e+05,  6.80927463e+05, -1.25331754e+05,
+        1.36457583e+06,  6.55753755e+05,  6.69943863e+04,  1.59315282e+06,
+        6.86500323e+05,  1.95295820e+05,  1.41248133e+06,  6.30103072e+05,
+        3.67932809e+05,  1.04832887e+06, -1.80713358e+05, -1.06370077e+05,
+        1.70354573e+06,  5.06105447e+05,  1.83559660e+04,  8.08440105e+05,
+        4.46621541e+05,  2.22280373e+05,  6.76528885e+05, -3.19486800e+05,
+       -5.92664393e+04,  7.03002269e+05,  9.72997378e+05, -2.14999066e+05,
+        1.51655197e+06,  7.38193220e+05, -1.01760038e+06,  1.08236548e+06,
+       -5.11150005e+05, -6.24337881e+05,  1.31771233e+06,  6.18590302e+05,
+       -6.49938929e+05,  8.55982137e+05, -5.81212288e+05, -9.44975335e+05,
+        1.30405841e+06,  8.32244827e+05, -5.74897386e+05,  8.14278492e+05,
+       -3.40908407e+05, -1.57144407e+05,  1.99454339e+06, -3.08485674e+05,
+       -9.55274074e+05,  1.14127325e+06,  9.03399331e+05, -2.86379963e+05,
+        3.52021537e+05,  9.21873316e+05, -9.08093298e+05,  7.29809101e+05,
+        1.40049603e+05, -8.68038617e+05,  1.77199552e+06, -8.97805774e+04,
+       -7.92778411e+05,  4.96532418e+05,  6.53136630e+05, -9.38255159e+05,
+        8.13187775e+05, -3.17093528e+05, -6.77653788e+05,  1.17058739e+06,
+        7.06349783e+05,  3.37838874e+05,  2.98583705e+05, -3.62234091e+05,
+       -9.81401438e+05,  8.61116026e+05, -5.42062558e+04, -3.31866862e+05,
+        7.23338152e+05, -2.83432636e+05, -4.47437172e+05,  1.11393542e+06,
+       -5.59013737e+03, -4.32218227e+05,  1.53967411e+06,  5.26560962e+05,
+       -2.31313384e+05,  1.42026112e+06,  6.75500045e+05,  1.18283538e+05,
+        1.02852342e+06,  7.08517278e+05,  5.11143234e+04,  1.17995156e+06,
+        4.99536995e+05,  8.22329102e+04,  1.75676323e+06,  1.65325318e+05,
+        8.17407032e+04,  1.90238970e+06,  2.73521038e+04, -2.36975047e+05,
+        1.61587871e+06, -2.00809867e+03, -3.89368994e+05,  1.77041520e+06,
+       -3.46003701e+05, -4.74267637e+05,  1.87155061e+06, -1.78774852e+05,
+       -3.69568838e+05,  1.95282144e+06,  7.47759429e+05, -3.17846310e+05,
+        1.55573550e+06, -6.08972744e+04, -4.82069888e+05,  4.42999175e+05,
+        5.49303795e+05,  4.56188341e+05,  7.93374159e+05, -6.53553120e+04,
+        8.27834747e+04,  1.87726877e+06,  1.87954755e+05,  2.25440041e+05,
+        1.73647724e+06,  4.68152451e+05,  3.96279611e+05,  1.23224684e+06,
+        3.60613839e+05,  2.04348894e+05,  1.65812340e+06,  4.98757916e+05,
+        2.82745255e+05,  1.41623119e+06,  3.44932422e+05, -2.10044012e+05,
+        1.67603955e+06,  3.60479706e+05, -5.97618784e+04,  1.82800353e+06,
+       -1.06210003e+05, -8.24977823e+04,  6.23554952e+05, -2.20710797e+05,
+        2.57215914e+05,  1.77701624e+06, -4.60402131e+05,  2.63843687e+05,
+        9.71738265e+05, -5.50218830e+05,  9.27966870e+04,  1.21409730e+06,
+       -4.38183286e+05,  5.39100438e+05,  1.41015909e+06, -4.60080235e+05,
+        2.73173812e+05,  1.46091943e+06, -3.51827813e+05,  1.38419234e+05,
+        1.60665846e+06,  2.77992392e+05,  4.65755673e+05,  7.59741770e+05,
+       -4.10346612e+05,  5.31674959e+05,  1.08470306e+06, -1.13486924e+06,
+        6.37034479e+05,  4.30101776e+05, -7.94188885e+04,  3.62785009e+05,
+        1.65364843e+06, -1.75741775e+05,  5.15280360e+05,  1.48227782e+06,
+        3.11992727e+05,  8.58660224e+05,  5.74358611e+05, -3.65040861e+05,
+        4.37241045e+05,  2.09618646e+06,  8.03395329e+05, -1.14383218e+06,
+        1.70677067e+06,  3.82829415e+05, -8.85714434e+05, -3.37301561e+04,
+        9.92181477e+05,  3.86469263e+05,  1.57847269e+06, -9.35922475e+05,
+        1.12881861e+06,  1.45900909e+06,  9.75604136e+05,  7.86995863e+05,
+        1.01392115e+06, -1.08288564e+06,  3.53019389e+05,  6.51187175e+05,
+       -7.87704239e+05, -7.13781395e+04,  3.20514852e+05, -7.54027435e+05,
+        9.21883102e+05,  8.49485105e+05,  1.46110176e+05,  2.26344526e+05,
+        6.24646679e+05,  6.34754628e+05,  1.07016779e+06,  5.28833633e+05,
+        6.86452230e+05,  2.63330528e+05,  2.03378022e+06, -7.78228746e+05,
+       -1.10887147e+06,  6.77969872e+05, -1.45096749e+06,  9.62357087e+05,
+        5.86337914e+05, -5.18141008e+05, -1.17050798e+06,  1.68555742e+06,
+        1.08981346e+06,  5.96630513e+05,  3.86737349e+05,  8.67704438e+05,
+       -1.08703611e+06,  2.96621257e+05,  1.15098312e+06, -7.50027886e+05,
+        1.65096478e+06,  8.88681128e+05, -5.29968718e+05, -9.66779768e+04,
+       -2.83626449e+05, -3.08381664e+04,  2.40651877e+06,  1.07607584e+06,
+       -6.13591781e+04,  1.90455309e+06,  1.13567397e+06, -1.08035619e+06,
+        1.26005039e+06, -7.03816336e+05,  1.54535415e+06,  6.92512935e+05,
+       -5.12621462e+04, -1.20813754e+06,  1.91120827e+06, -3.98288956e+05,
+       -9.54584379e+05,  1.57234997e+05,  1.24456873e+05,  2.67502800e+05,
+        2.34900607e+06, -1.88256585e+05,  7.25034128e+04,  2.16742395e+05,
+       -7.80543117e+05,  1.74695433e+05,  1.62511254e+04,  9.34981404e+05,
+        2.21262374e+05,  1.85227483e+06,  7.17550419e+05, -8.52674148e+05,
+        4.05478248e+04,  1.02308117e+06, -9.92595470e+05,  1.53687000e+06,
+       -1.94250796e+05,  2.43625181e+05,  2.29134065e+06,  8.90650495e+05,
+        8.29888865e+05,  6.25488489e+05, -1.05677524e+06,  1.23402300e+06,
+        9.05700751e+05, -3.54210283e+05, -7.91535246e+05,  2.15713360e+06,
+       -9.98524395e+05, -6.95537552e+05,  2.23249720e+05, -9.56093747e+05,
+       -3.99818846e+05,  4.24449680e+05, -7.21394373e+05, -9.16464698e+05,
+        3.60761522e+05, -3.22494883e+05, -1.06038045e+06,  1.92752705e+06,
+       -3.65334654e+05,  1.19306354e+06,  5.82229977e+05, -1.21277679e+06,
+        1.42255952e+05,  1.03829859e+06, -1.07222275e+06, -3.05562851e+05,
+        9.48369821e+05, -2.90953321e+04,  2.29052829e+05,  2.19531171e+05,
+       -5.80592998e+03,  8.87143654e+05,  2.44924074e+05,  2.37238459e+05,
+       -4.13719537e+05,  7.22516383e+05,  2.95992863e+05, -2.74568028e+05,
+        5.37338232e+05,  1.52700449e+05, -5.63364366e+05,  4.52713783e+05,
+        1.52848079e+05, -3.82826027e+05,  1.61674822e+05,  5.64122344e+05,
+       -5.13995832e+05,  1.45202145e+06,  6.06428581e+05, -3.78674660e+05,
+        1.25924879e+06,  8.05158683e+05, -5.56323654e+05,  1.67781545e+06,
+        8.34833671e+05, -4.33795869e+05,  1.42278144e+06,  6.74353319e+05,
+       -5.47789588e+05,  4.46494453e+05,  5.19500539e+05, -4.20116594e+05,
+        6.59339499e+05, -2.70806333e+05, -7.13057347e+05,  1.65513318e+06,
+       -1.40157640e+05, -5.82891137e+05,  1.46620209e+06, -8.89926783e+04,
+        1.00845986e+06,  1.00307393e+06, -6.86437422e+04,  5.00414891e+05,
+        1.15382672e+06,  1.96068924e+05,  8.24140246e+05,  9.61334104e+05,
+        2.02480099e+05,  4.23297707e+05,  1.07043085e+06,  1.51670368e+16,
+        3.13854751e+16,  2.51049641e+16,  2.86288884e+16,  1.40826366e+16,
+        2.94693971e+16,  3.07269909e+16,  1.45585420e+16,  1.49017264e+16,
+        1.33787572e+16,  3.32785862e+16,  4.00559948e+16,  3.93474950e+16,
+        1.79772798e+16,  1.55501275e+16,  3.38994656e+16,  3.36498489e+16,
+        1.36052793e+16,  3.18416830e+16,  3.33815312e+16,  1.92435269e+16,
+        1.58849193e+16,  3.26024719e+16,  1.79056516e+16,  1.84317405e+16,
+        1.86009236e+16,  3.22634373e+16,  1.46700659e+16,  3.33968172e+16,
+        3.01598706e+16,  3.39715115e+16,  3.53216212e+16,  3.64747438e+16,
+        1.66073521e+16,  3.60918403e+16,  3.76013133e+16,  3.39832990e+16,
+        3.65377476e+16,  3.92846836e+16,  3.71882427e+16,  3.29443580e+16,
+        3.87687615e+16,  3.65428248e+16,  1.65363290e+16,  3.98605465e+16,
+        3.71110282e+16,  1.47960082e+16,  1.48492004e+16,  1.90733512e+16,
+        1.44058504e+16,  1.75055633e+16,  1.72356279e+16,  1.78674986e+16,
+        1.77984541e+16,  1.41397682e+16,  1.56459298e+16,  3.42978716e+16,
+        1.63239015e+16,  1.59301739e+16,  1.90711260e+16,  1.84615011e+16,
+        1.77195320e+16,  1.95851210e+16,  2.05152300e+16,  1.95034849e+16,
+        2.00203964e+16,  1.63913170e+16,  1.67480499e+16,  2.85633943e+16,
+        1.83525719e+16,  4.12760268e+16,  3.26474657e+16,  1.78727665e+16,
+        1.73771792e+16,  1.71121484e+16,  1.90103469e+16,  2.48496027e+16,
+        6.60055599e+16,  2.01014333e+16,  2.02904324e+16,  3.34639978e+16,
+        3.41436876e+16,  3.27195748e+16,  3.95240466e+16,  3.39480986e+16,
+        3.68319127e+16,  3.77734481e+16,  6.59442010e+16,  5.43299141e+16,
+        6.54462846e+16,  2.83030414e+16,  3.96012078e+16,  3.25427814e+16,
+        3.80069492e+16,  3.83702740e+16,  3.40405202e+16,  3.96109249e+16,
+        3.79552766e+16,  3.26863369e+16,  3.94144405e+16,  3.26732219e+16,
+        3.26634184e+16,  3.42571436e+16,  3.82008792e+16,  3.28507880e+16,
+        3.94247018e+16,  3.24355603e+16,  7.32960811e+16,  6.90122198e+16,
+        3.30515659e+16,  3.88381420e+16,  3.28490982e+16,  3.30366698e+16,
+        3.87546366e+16,  3.80788265e+16,  3.24229428e+16,  3.97787785e+16,
+        4.69830371e+16,  3.84623257e+16,  3.29571834e+16,  6.54958292e+16,
+        5.61686028e+16,  5.62650975e+16,  7.13878133e+16,  6.88931093e+16,
+        1.45085774e+16,  3.29253087e+16,  1.84234874e+16,  3.81545935e+16,
+        4.21790618e+16,  1.99178014e+16,  3.28211684e+16,  1.60753093e+16,
+        3.85333518e+16,  9.50793680e+15,  3.46040076e+16,  9.18961020e+15,
+        3.20714081e+16,  4.74385097e+16,  3.20061325e+16,  1.97852459e+16]), 0, iteration_counter=1)
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling export_step(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf4bcf898>)
+INFO:GTS.isc_modelling.contact_mechanics_biot:'export_step' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:'after_newton_convergence' returned None
+INFO:porepy.models.run_models:
+Time step 2 at time 0.0e+00 of 0.0e+00 with time step 1.1e+04
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling before_newton_loop(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf4bcf898>)
+INFO:GTS.isc_modelling.contact_mechanics_biot:A new phase has started: Phase 1
+INFO:porepy.models.contact_mechanics_biot_model:Discretize
+INFO:porepy.numerics.fv.mpsa:Split MPSA discretization into 1 parts
+DEBUG:porepy.numerics.fv.mpsa:number of ncasym eliminated: 300
+DEBUG:porepy.numerics.fv.mpsa:max igrad: 6.692649274280493
+INFO:porepy.numerics.fv.biot:Done with subproblem 0. Elapsed time 1.5416507720947266
+INFO:porepy.models.contact_mechanics_biot_model:Done. Elapsed time 2.920093059539795
+INFO:GTS.isc_modelling.contact_mechanics_biot:Finished 'before_newton_loop' in 2.9226 secs
+INFO:GTS.isc_modelling.contact_mechanics_biot:'before_newton_loop' returned None
+DEBUG:porepy.models.contact_mechanics_biot_model:Max element in A 8.46e+11
+DEBUG:porepy.models.contact_mechanics_biot_model:Max 1.38e+12 and min 2.89e+00 A sum.
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling after_newton_convergence(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf4bcf898>, array([ 1.41225346e+06, -1.40402588e+06,  2.67847135e+06,  8.25009792e+05,
+       -1.42571988e+06,  2.50425275e+06, -1.00657135e+06, -6.44617168e+05,
+        1.47157101e+06, -1.04529570e+06, -5.01465134e+05,  2.26907485e+06,
+        6.92884276e+05, -1.17345543e+06,  2.76238368e+06,  1.05605709e+06,
+       -1.39774208e+06,  2.15500844e+06,  1.82488736e+05, -1.18180694e+06,
+        3.07279538e+06,  2.14493525e+05, -1.26684365e+06,  2.62037289e+06,
+        8.81575799e+05, -1.01394534e+06,  1.60051417e+06, -2.41139706e+05,
+       -1.16080164e+06,  2.52000598e+06,  7.24691491e+05, -1.71553632e+06,
+        3.40196733e+06,  1.31824619e+06,  9.28385426e+03,  5.23974650e+05,
+        1.79324254e+06,  5.71124311e+03,  9.38908073e+05,  1.24571290e+06,
+       -1.27401628e+05,  1.10394276e+06,  5.56604219e+05, -1.58843608e+06,
+        2.88542626e+06,  5.54012705e+05, -2.09576574e+06,  2.85612538e+06,
+        1.06263364e+06, -2.18571897e+06,  2.83668899e+06,  1.10210376e+06,
+       -9.80364047e+05,  1.99386554e+06, -1.93044715e+05, -1.04440504e+06,
+        1.45400560e+06, -4.25180445e+05, -1.13983013e+06,  1.84764480e+06,
+        8.98687981e+05, -3.95537716e+05,  1.38006792e+06, -9.10015234e+05,
+       -1.05369393e+06,  1.32277405e+06,  1.36185247e+06, -2.50660482e+05,
+        2.72914470e+06,  1.31150368e+06,  1.33991113e+05,  3.18629662e+06,
+        1.37299814e+06,  3.90593632e+05,  2.82495442e+06,  1.26020522e+06,
+        7.35865699e+05,  2.09665060e+06, -3.61428211e+05, -2.12736640e+05,
+        3.40707997e+06,  1.01221073e+06,  3.67125169e+04,  1.61687540e+06,
+        8.93242332e+05,  4.44559239e+05,  1.35305249e+06, -6.38970782e+05,
+       -1.18532539e+05,  1.40599906e+06,  1.94598954e+06, -4.29994319e+05,
+        3.03309721e+06,  1.47638222e+06, -2.03519469e+06,  2.16472638e+06,
+       -1.02229963e+06, -1.24867170e+06,  2.63541673e+06,  1.23717837e+06,
+       -1.29987482e+06,  1.71196127e+06, -1.16242194e+06, -1.88994372e+06,
+        2.60810888e+06,  1.66448708e+06, -1.14979222e+06,  1.62855375e+06,
+       -6.81817281e+05, -3.14285200e+05,  3.98907367e+06, -6.16971268e+05,
+       -1.91054217e+06,  2.28253988e+06,  1.80679548e+06, -5.72758511e+05,
+        7.04041839e+05,  1.84374110e+06, -1.81618096e+06,  1.45961569e+06,
+        2.80096663e+05, -1.73607050e+06,  3.54398239e+06, -1.79560771e+05,
+       -1.58555356e+06,  9.93061069e+05,  1.30627018e+06, -1.87650503e+06,
+        1.62637284e+06, -6.34187140e+05, -1.35530378e+06,  2.34116767e+06,
+        1.41269745e+06,  6.75673978e+05,  5.97165341e+05, -7.24467370e+05,
+       -1.96279747e+06,  1.72222753e+06, -1.08411061e+05, -6.63732925e+05,
+        1.44667113e+06, -5.66865578e+05, -8.94871482e+05,  2.22786423e+06,
+       -1.11822700e+04, -8.64431300e+05,  3.07934045e+06,  1.05311917e+06,
+       -4.62623031e+05,  2.84051617e+06,  1.35099952e+06,  2.36568457e+05,
+        2.05704085e+06,  1.41703325e+06,  1.02230799e+05,  2.35989685e+06,
+        9.99070529e+05,  1.64469212e+05,  3.51351644e+06,  3.30648438e+05,
+        1.63485120e+05,  3.80476746e+06,  5.47022513e+04, -4.73945838e+05,
+        3.23174879e+06, -4.01912256e+03, -7.78732767e+05,  3.54082130e+06,
+       -6.92007846e+05, -9.48530408e+05,  3.74308961e+06, -3.57551459e+05,
+       -7.39132766e+05,  3.90563061e+06,  1.49551497e+06, -6.35688299e+05,
+        3.11146442e+06, -1.21793608e+05, -9.64138533e+05,  8.85995169e+05,
+        1.09860663e+06,  9.12374230e+05,  1.58674279e+06, -1.30711624e+05,
+        1.65569666e+05,  3.75452476e+06,  3.75907666e+05,  4.50883967e+05,
+        3.47294311e+06,  9.36304217e+05,  7.92560996e+05,  2.46448495e+06,
+        7.21225526e+05,  4.08701606e+05,  3.31623644e+06,  9.97514252e+05,
+        5.65493334e+05,  2.83245327e+06,  6.89861717e+05, -4.20083057e+05,
+        3.35207158e+06,  7.20956152e+05, -1.19519298e+05,  3.65599703e+06,
+       -2.12417818e+05, -1.64995291e+05,  1.24710431e+06, -4.41422261e+05,
+        5.14433938e+05,  3.55401952e+06, -9.20801862e+05,  5.27686673e+05,
+        1.94346919e+06, -1.10043701e+06,  1.85594178e+05,  2.42818559e+06,
+       -8.76365315e+05,  1.07820059e+06,  2.82030612e+06, -9.20160724e+05,
+        5.46348379e+05,  2.92182712e+06, -7.03656577e+05,  2.76840558e+05,
+        3.21330494e+06,  5.55984746e+05,  9.31509437e+05,  1.51947762e+06,
+       -8.20690247e+05,  1.06334864e+06,  2.16939713e+06, -2.26972789e+06,
+        1.27406350e+06,  8.60196312e+05, -1.58838513e+05,  7.25572814e+05,
+        3.30728475e+06, -3.51483439e+05,  1.03056252e+06,  2.96454376e+06,
+        6.23985248e+05,  1.71731337e+06,  1.14871091e+06, -7.30080485e+05,
+        8.74481227e+05,  4.19235869e+06,  1.60678422e+06, -2.28765478e+06,
+        3.41353204e+06,  7.65657856e+05, -1.77142213e+06, -6.74576126e+04,
+        1.98435672e+06,  7.72937452e+05,  3.15693771e+06, -1.87183738e+06,
+        2.25762922e+06,  2.91800095e+06,  1.95120346e+06,  1.57398553e+06,
+        2.02783255e+06, -2.16576329e+06,  7.06035919e+05,  1.30236644e+06,
+       -1.57540106e+06, -1.42755552e+05,  6.41024834e+05, -1.50804790e+06,
+        1.84375931e+06,  1.69895962e+06,  2.92221010e+05,  4.52687792e+05,
+        1.24928789e+06,  1.26950716e+06,  2.14032498e+06,  1.05766216e+06,
+        1.37290090e+06,  5.26661518e+05,  4.06754756e+06, -1.55645137e+06,
+       -2.21773456e+06,  1.35593546e+06, -2.90192037e+06,  1.92470579e+06,
+        1.17266712e+06, -1.03627915e+06, -2.34100520e+06,  3.37110439e+06,
+        2.17962022e+06,  1.19325546e+06,  7.73472126e+05,  1.73540290e+06,
+       -2.17406379e+06,  5.93243329e+05,  2.30195683e+06, -1.50005006e+06,
+        3.30192120e+06,  1.77735700e+06, -1.05993481e+06, -1.93351819e+05,
+       -5.67252357e+05, -6.16730569e+04,  4.81301949e+06,  2.15214366e+06,
+       -1.22715257e+05,  3.80909469e+06,  2.27133867e+06, -2.16070396e+06,
+        2.52009580e+06, -1.40762492e+06,  3.09069346e+06,  1.38501603e+06,
+       -1.02526071e+05, -2.41626399e+06,  3.82240467e+06, -7.96575249e+05,
+       -1.90916214e+06,  3.14470619e+05,  2.48909908e+05,  5.35006419e+05,
+        4.69799525e+06, -3.76511475e+05,  1.45006085e+05,  4.33481072e+05,
+       -1.56107681e+06,  3.49388519e+05,  3.25008572e+04,  1.86995633e+06,
+        4.42525031e+05,  3.70453853e+06,  1.43509633e+06, -1.70534211e+06,
+        8.10984566e+04,  2.04615398e+06, -1.98518272e+06,  3.07373233e+06,
+       -3.88501697e+05,  4.87250969e+05,  4.58266448e+06,  1.78129641e+06,
+        1.65977008e+06,  1.25097172e+06, -2.11354015e+06,  2.46803529e+06,
+        1.81139003e+06, -7.08419335e+05, -1.58306330e+06,  4.31425182e+06,
+       -1.99703999e+06, -1.39107057e+06,  4.46498541e+05, -1.91218072e+06,
+       -7.99635449e+05,  8.48894797e+05, -1.44278284e+06, -1.83292275e+06,
+        7.21521588e+05, -6.44988587e+05, -2.12075097e+06,  3.85504129e+06,
+       -7.30664329e+05,  2.38611649e+06,  1.16445153e+06, -2.42554686e+06,
+        2.84510042e+05,  2.07658605e+06, -2.14443960e+06, -6.11122833e+05,
+        1.89672956e+06, -5.81901424e+04,  4.58103686e+05,  4.39058730e+05,
+       -1.16096676e+04,  1.77427702e+06,  4.89845486e+05,  4.74476080e+05,
+       -8.27437908e+05,  1.44502858e+06,  5.91985277e+05, -5.49134838e+05,
+        1.07467232e+06,  3.05400803e+05, -1.12672693e+06,  9.05424423e+05,
+        3.05696467e+05, -7.65650331e+05,  3.23348610e+05,  1.12824099e+06,
+       -1.02798658e+06,  2.90403745e+06,  1.21285477e+06, -7.57345036e+05,
+        2.51849241e+06,  1.61031271e+06, -1.11264245e+06,  3.35562361e+06,
+        1.66966315e+06, -8.67587463e+05,  2.84555746e+06,  1.34870460e+06,
+       -1.09557589e+06,  8.92987772e+05,  1.03899978e+06, -8.40230831e+05,
+        1.31867592e+06, -5.41613521e+05, -1.42610843e+06,  3.31025632e+06,
+       -2.80316500e+05, -1.16577710e+06,  2.93239584e+06, -1.77983252e+05,
+        2.01691577e+06,  2.00613655e+06, -1.37286723e+05,  1.00083065e+06,
+        2.30764466e+06,  3.92138425e+05,  1.64827768e+06,  1.92265786e+06,
+        4.04960226e+05,  8.46596573e+05,  2.14085388e+06,  3.03341032e+16,
+        6.27708870e+16,  5.02099746e+16,  5.72577523e+16,  2.81653086e+16,
+        5.89387498e+16,  6.14539114e+16,  2.91170962e+16,  2.98034664e+16,
+        2.67575340e+16,  6.65567851e+16,  8.01115105e+16,  7.86945086e+16,
+        3.59545941e+16,  3.11002741e+16,  6.77985324e+16,  6.72994275e+16,
+        2.72105849e+16,  6.36833289e+16,  6.67629969e+16,  3.84870605e+16,
+        3.17698776e+16,  6.52048510e+16,  3.58113088e+16,  3.68634473e+16,
+        3.72018105e+16,  6.45267846e+16,  2.93401531e+16,  6.67934971e+16,
+        6.03198096e+16,  6.79426977e+16,  7.06429556e+16,  7.29492065e+16,
+        3.32147262e+16,  7.21832811e+16,  7.52023419e+16,  6.79662882e+16,
+        7.30750536e+16,  7.85690466e+16,  7.43760604e+16,  6.58884568e+16,
+        7.75371422e+16,  7.30852237e+16,  3.30726788e+16,  7.97207560e+16,
+        7.42217511e+16,  2.95920434e+16,  2.96984322e+16,  3.81467112e+16,
+        2.88117275e+16,  3.50110859e+16,  3.44712239e+16,  3.57349653e+16,
+        3.55968772e+16,  2.82795577e+16,  3.12918459e+16,  6.85954376e+16,
+        3.26476477e+16,  3.18602709e+16,  3.81421481e+16,  3.69230276e+16,
+        3.54390722e+16,  3.91701945e+16,  4.10304036e+16,  3.90069232e+16,
+        4.00407403e+16,  3.27826155e+16,  3.34960243e+16,  5.71268044e+16,
+        3.67051109e+16,  8.25520348e+16,  6.52948953e+16,  3.57455225e+16,
+        3.47543163e+16,  3.42242646e+16,  3.80207649e+16,  4.96992909e+16,
+        1.32010743e+17,  4.02028129e+16,  4.05808287e+16,  6.69276876e+16,
+        6.82868227e+16,  6.54386689e+16,  7.90474912e+16,  6.78956499e+16,
+        7.36632383e+16,  7.55462797e+16,  1.31888148e+17,  1.08659614e+17,
+        1.30892287e+17,  5.66060997e+16,  7.92017913e+16,  6.50850392e+16,
+        7.60133340e+16,  7.67400014e+16,  6.80806320e+16,  7.92212634e+16,
+        7.59100113e+16,  6.53721741e+16,  7.88283097e+16,  6.53459590e+16,
+        6.53263416e+16,  6.85137819e+16,  7.64012210e+16,  6.57011347e+16,
+        7.88488030e+16,  6.48706006e+16,  1.46591106e+17,  1.38023168e+17,
+        6.61028034e+16,  7.76759100e+16,  6.56978669e+16,  6.60730078e+16,
+        7.75088912e+16,  7.61573193e+16,  6.48454244e+16,  7.95569333e+16,
+        9.39656698e+16,  7.69242641e+16,  6.59139403e+16,  1.30991237e+17,
+        1.12336526e+17,  1.12529462e+17,  1.42774604e+17,  1.37785119e+17,
+        2.90171861e+16,  6.58505509e+16,  3.68468819e+16,  7.63088193e+16,
+        8.43579521e+16,  3.98356010e+16,  6.56420198e+16,  3.21505440e+16,
+        7.70665581e+16,  1.90159287e+16,  6.92078301e+16,  1.83792700e+16,
+        6.41426767e+16,  9.48768827e+16,  6.40120767e+16,  3.95705290e+16]), 0, iteration_counter=1)
+INFO:GTS.isc_modelling.contact_mechanics_biot:Calling export_step(<GTS.isc_modelling.contact_mechanics_biot.ContactMechanicsBiotISC object at 0x7fccf4bcf898>)
+INFO:GTS.isc_modelling.contact_mechanics_biot:'export_step' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:'after_newton_convergence' returned None
+INFO:GTS.isc_modelling.contact_mechanics_biot:Solution exported to folder 
+ /home/haakon/mastersproject/src/mastersproject/GTS/test/results/test_biot_solution_scaling/200301/test_1/unscaled

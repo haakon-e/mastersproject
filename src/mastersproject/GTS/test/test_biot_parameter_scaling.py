@@ -20,18 +20,24 @@ from pathlib import Path
 import porepy as pp
 import numpy as np
 from porepy.models.contact_mechanics_model import ContactMechanics
+import pendulum
 
 import GTS as gts
 from .test_create_grid import test_create_grid
 
 from util.logging_util import __setup_logging
+import src.mastersproject.GTS.test.util as test_util
 
 logger = logging.getLogger(__name__)
 
 
 def test_biot_parameter_scaling(**kw):
     """ Test scaling of parameters in Biot
+
+    No methods are solved. The parameters are simply checked
+    for consistency
     """
+    # --- THIS METHOD NO LONGER WORKS OVER A GRID BECAUSE LENGTH SCALING GIVES SLIGHTLY DIFFERENT MESHES ---
     _this_file = Path(os.path.abspath(__file__)).parent
     _results_path = _this_file / "results/test_biot_parameter_scaling/default"
     _results_path.mkdir(parents=True, exist_ok=True)  # Create path if not exists
@@ -149,7 +155,7 @@ def test_biot_parameter_scaling(**kw):
     fs_scl = scaled_flow['source'][test_cell]
     logger.info(f"Unscaled flow source={fs:.2e}")
     logger.info(f"Scaled flow source={fs_scl:.2e}")
-    assert np.allclose(fs * ls ** dim, fs), "fs_scl = fs * length_scale ** dim"
+    assert np.allclose(fs / ls ** dim, fs_scl), "fs_scl = fs / length_scale ** dim"
 
     # Boundary conditions (FLOW)
     #   Dirchlet [Pa]
@@ -185,7 +191,7 @@ def test_biot_parameter_scaling(**kw):
     ms_scl = scaled_mech['source'].reshape((3, -1), order='F')
     logger.info(f"Mechanics source={ms[:, test_cell]}")
     logger.info(f"Mechanics source scaled={ms_scl[:, test_cell]}")
-    assert np.allclose(ms / (ss * ls ** 2), ms_scl)
+    assert np.allclose(ms / ls, ms_scl)
 
 
     # Boundary conditions (MECHANICS)
@@ -201,67 +207,51 @@ def test_biot_parameter_scaling(**kw):
     return setup, mech, flow, scaled_mech, scaled_flow
 
 
-def test_biot_condition_number(**kw):
+def test_biot_condition_number(
+        test_name: str,
+        ls: float,
+        ss: float,
+        shearzones: List[str] = None,
+):
     """ Test scaling of parameters in Biot
+
+    Note: No problem is solved. Condition number is simply computed.
+
+    Parameters
+    ----------
+    test_name : str
+        name of this test
+    ls, ss : float
+        length scale and scalar scale, respectively
+    shearzones : List[str] (Default: None)
+        list of shearzones
     """
-    _this_file = Path(os.path.abspath(__file__)).parent
-    _results_path = _this_file / "results/test_biot_condition_number/default"
-    _results_path.mkdir(parents=True, exist_ok=True)  # Create path if not exists
-    __setup_logging(_results_path)
-    # path = str(_results_path)
-    # # GTS logger
-    # gts_logger = logging.getLogger('GTS')
-    # gts_logger.setLevel(logging.INFO)
-    #
-    # # PorePy logger
-    # pp_logger = logging.getLogger('porepy')
-    # pp_logger.setLevel(logging.DEBUG)
-    #
-    # # Add handler for logging debug messages to file.
-    # fh = logging.FileHandler(path + "/" + "results.log")
-    # fh.setLevel(logging.DEBUG)
-    # fh.setFormatter(logging.Formatter(logging.BASIC_FORMAT))
-    #
-    # gts_logger.addHandler(fh)
-    # pp_logger.addHandler(fh)
 
-    logger.info(f"Path to results: {_results_path}")
-
-    # --- DOMAIN ARGUMENTS ---
+    # Custom parameters
     params = {
-        'mesh_args':
-            {'mesh_size_frac': 10, 'mesh_size_min': .1*10, 'mesh_size_bound': 6*10},
-        'bounding_box':
-            {'xmin': -20, 'xmax': 80, 'ymin': 50, 'ymax': 150, 'zmin': -25, 'zmax': 75},
-        'shearzone_names':
-            ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],
-        'folder_name':
-            _results_path,
-        'solver':
-            'direct',
-        'stress':
-            gts.isc_modelling.stress_tensor(),
-        'source_scalar_borehole_shearzone':
-            {'borehole': 'INJ1', 'shearzone': 'S1_1'},
-        'length_scale':
-            kw.get('ls', 100),
-        'scalar_scale':
-            kw.get('ss', 1 * pp.GIGA),
+        "shearzone_names": shearzones,
+        "length_scale": ls,
+        "scalar_scale": ss,
     }
-    logger.info(f"input parameters: \n {params}")
 
+    # Storage folder
+    this_method_name = test_biot_condition_number.__name__
+    now_as_YYMMDD = pendulum.now().format("YYMMDD")
+    shearzone_str = str(shearzones) if not shearzones else "-".join(shearzones)
+    scale_str = f"ss{ss}_ls{ls}"
+    _folder_root = f"{this_method_name}/{now_as_YYMMDD}/{test_name}/{shearzone_str}/{scale_str}"
+
+    params = test_util.prepare_params(
+        path_head=_folder_root,
+        params=params,
+        setup_loggers=True,
+    )
+
+    # Set up model class
     setup = gts.ContactMechanicsBiotISC(params)
-
-    setup.create_grid(overwrite_grid=True)
-    ss = setup.scalar_scale
-    ls = setup.length_scale
-    print(f'ss={ss}')
-    print(f'ls={ls}')
-
-    # Recompute parameters
     setup.prepare_simulation()
 
-    # Mimic NewtonSolver:
+    # Mimic NewtonSolver: --> This can probably be removed
     setup.before_newton_iteration()
 
     # Check size of entries in matrix A.
@@ -269,6 +259,121 @@ def test_biot_condition_number(**kw):
     logger.info("------------------------------------------")
     logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")
     logger.info(f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum.")
-
+    logger.info(f"Length scale: {setup.length_scale:.1e}. Scalar scale: {setup.scalar_scale:.1e}.")
     return setup
+
+
+def test_biot_solution_scaling(
+        test_name: str,
+        ls: float,
+        ss: float
+):
+    """ Test consistency of solution subject to
+    scalar scaling and length scaling of biot.
+
+    Simplifications:
+    * hydrostatic mechanical stress
+    * no mechanical gravity term
+    * No shear zones
+
+    Parameters
+    ----------
+    test_name : str
+        name of this test
+    ls, ss : float
+        length scale and scalar scale, respectively
+    """
+
+    # 1. Prepare parameters
+    stress = gts.isc_modelling.stress_tensor()
+    # We set up hydrostatic stress
+    hydrostatic = np.mean(np.diag(stress)) * np.ones(stress.shape[0])
+    stress = np.diag(hydrostatic)
+
+    no_shearzones = None
+    gravity = False  # No gravity effects
+
+    base_params = {
+        "stress": stress,
+        "shearzone_names": no_shearzones,
+        "_gravity_bc": gravity,
+        "_gravity_src": gravity,
+        "length_scale": 1,
+        "scalar_scale": 1,
+    }
+
+    # Storage folder
+    this_method_name = test_biot_solution_scaling.__name__
+    now_as_YYMMDD = pendulum.now().format("YYMMDD")
+    _master_root = f"{this_method_name}/{now_as_YYMMDD}/{test_name}"
+    _folder_root = f"{_master_root}/unscaled"
+
+    #
+    # 2. Setup and run test
+    params = test_util.prepare_params(
+        path_head=_folder_root,
+        params=base_params.copy(),
+        setup_loggers=True)
+    setup = gts.ContactMechanicsBiotISC(params=params)
+
+    nl_params = {}  # Default Newton Iteration parameters
+    pp.run_time_dependent_model(setup, params=nl_params)
+
+    #
+    # 3. Setup scaled problem and solve
+    scale_str = f"ss{ss}_ls{ls}"
+    _folder_root = f"{_master_root}/{scale_str}"
+
+    params = base_params
+    params["length_scale"] = ls
+    params["scalar_scale"] = ss
+    params = test_util.prepare_params(path_head=_folder_root, params=params.copy(), setup_loggers=False)
+    scaled_setup = gts.ContactMechanicsBiotISC(params=params)
+    pp.run_time_dependent_model(scaled_setup, params=nl_params)
+
+    #
+    # Extract useful solutions
+
+    # 1. Approximate the mapping of variables from the unscaled to the scaled grid
+
+    return setup, scaled_setup
+
+
+
+def test_param_scaling_on_regular_grid():
+    """ This test intends to verify scaling of variables and solutions
+    by constructing a simple cartesian grid, scale the parameters, and check output.
+
+    If the discretization method is consistent (not necessarily accurate), we should get
+    comparable results on different length and scalar scales.
+    """
+
+    this_method_name = test_param_scaling_on_regular_grid.__name__
+    now_as_YYMMDD = pendulum.now().format("YYMMDD")
+    _folder_root = f"{this_method_name}/{now_as_YYMMDD}/test_1"
+
+    params1 = {
+        "mesh_args":
+            {'mesh_size_frac': 10, 'mesh_size_min': 10, 'mesh_size_bound': 10},
+        "bounding_box":
+            {'xmin': 0, 'xmax': 10,
+             'ymin': 0, 'ymax': 10,
+             'zmin': 0, 'zmax': 10},
+        "shearzone_names":
+            ["SZ_1"],
+        "length_scale":
+            1,
+        "scalar_scale":
+            1,
+    }
+
+    setup = test_util.prepare_setup(
+        model=gts.ContactMechanicsBiotISC,
+        path_head=_folder_root,
+        params=params1,
+        prepare_simulation=False,
+        setup_loggers=True,
+    )
+
+#    gb =
 

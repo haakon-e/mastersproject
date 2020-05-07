@@ -15,7 +15,7 @@ import logging
 import numpy as np
 import pandas as pd
 
-import GTS as gts
+from GTS.fit_plane import fit_normal_to_points
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,6 @@ class ISCData:
                  which is known relative to this class.
 
         """
-        # TODO: Remove the 'linux' and 'windows' options. Instead, find the location automatically.
         # Verify path to data set.
         if path is None:
             path = Path(os.path.abspath(__file__))
@@ -275,7 +274,7 @@ class ISCData:
             point_cloud = self.get_shearzone(sz=sz, coords="gts")
             n_pts = point_cloud.shape[1]
             centroid = np.sum(point_cloud, axis=1) / n_pts
-            normal = gts.fit_normal_to_points(point_cloud)
+            normal = fit_normal_to_points(point_cloud)
 
             data = np.atleast_2d(np.hstack((centroid, normal)))
             columns = ("x_c", "y_c", "z_c", "n_x", "n_y", "n_z")

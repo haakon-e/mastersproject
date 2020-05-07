@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt32" compressor="vtkZLibDataCompressor">
+  <UnstructuredGrid>
+    <Piece NumberOfPoints="41"                   NumberOfCells="10"                  >
+      <PointData>
+      </PointData>
+      <CellData>
+        <DataArray type="Float64" Name="Fracture_Number" format="appended" RangeMin="1"                    RangeMax="10"                   offset="0"                   />
+      </CellData>
+      <Points>
+        <DataArray type="Float32" Name="Points" NumberOfComponents="3" format="appended" RangeMin="11874.342087"         RangeMax="37161.808352"         offset="76"                  />
+      </Points>
+      <Cells>
+        <DataArray type="Int64" Name="connectivity" format="appended" RangeMin=""                     RangeMax=""                     offset="480"                 />
+        <DataArray type="Int64" Name="offsets" format="appended" RangeMin=""                     RangeMax=""                     offset="632"                 />
+        <DataArray type="UInt8" Name="types" format="appended" RangeMin=""                     RangeMax=""                     offset="704"                 />
+      </Cells>
+    </Piece>
+  </UnstructuredGrid>
+  <AppendedData encoding="base64">
+   _AQAAAACAAABQAAAAJwAAAA==eJxjYACBD/YMEOAAoTigtACUFoHSElBaBkorQGklKK3iAAC0AwQ2AQAAAACAAADsAQAAHQEAAA==eJzj///GRfdolxvLwzuur2enuClEHHJj/HfR1fOYnpuv9lq32794XW/Olne7l7fCbe7/Dy6c99hdxdunuk0VuO569G6222HGi26ZotdcZXI03MTvbXKzuHXNRShI3O3VmdVuh1INXLa/TnUNWbnCrXH+TVdtkWy3tV/uuSWVX3adaqTkxpe6w+2pVL1LUKSAm9+SDW4fnKOcTfk/ujpvX+v2teqhS+NCabfI/DluLU/XuGzmT3Tz3bjUbbbXOdeZHnpuOe6r3LKW3HXN2tftyqi+we0W12VXBoaqowwOMm4MCVlucLbDnKNgdsIrVDZEjRuSejck9W5I6t2Q1B9FUYPORlYDY6Obg81MYsxHdz+Mje5+GBuL+QB7gq7dAQAAAACAAACYAQAAXwAAAA==eJxdyssCQmAAROGfQpJryV2u8f5PaOFszGy+xRljzllo481cd0cHXfSkP9DHJwb4kl+IEcaYSE8xwzd+pOf4xQJL6RXW2GArvcMefzhIH3HCGRfpK/5xw136ASAGA/A=AQAAAACAAABQAAAAIwAAAA==eJxjZYAALigtAKVFobQUlJaH0ipQWhNK60FpYygNACPQARw=AQAAAACAAAAKAAAACwAAAA==eJxjZ4cBAAGLAEc=
+  </AppendedData>
+</VTKFile>

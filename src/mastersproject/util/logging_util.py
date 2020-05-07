@@ -56,6 +56,8 @@ def trace(logger=default_logger, timeit=True, level='INFO'):
 
 
 def __setup_logging(path, log_fname="results.log"):
+    # reset root logger
+    logging.getLogger().handlers = []
     path = str(path)
     # GTS logger
     gts_logger = logging.getLogger('GTS')

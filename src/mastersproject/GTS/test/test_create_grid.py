@@ -22,7 +22,7 @@ import numpy as np
 from porepy.models.contact_mechanics_model import ContactMechanics
 
 import GTS as gts
-from util.logging_util import __setup_logging
+from src.mastersproject.util.logging_util import __setup_logging
 logger = logging.getLogger(__name__)
 
 
