@@ -27,7 +27,7 @@ class Flow(AbstractModel):
         Parameters
         ----------
         params : dict
-            viz_folder_name : str
+            folder_name : str
                 Path to where visualization results are to be stored.
 
             -- OPTIONAL --
@@ -44,7 +44,7 @@ class Flow(AbstractModel):
 
         # File name
         self.file_name = params.get('file_name', 'simulation_run')
-        self.viz_folder_name = params.get('viz_folder_name')
+        self.viz_folder_name = params.get('folder_name')
 
         # Time
         self.time = 0
@@ -612,7 +612,7 @@ class FlowISC(Flow):
         Parameters
         ----------
         params : dict
-            viz_folder_name : str
+            folder_name : str
                 Path to where visualization results are to be stored.
             shearzone_names : List[str]
                 List of shearzones to mesh
