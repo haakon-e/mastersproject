@@ -8,8 +8,8 @@ from porepy.utils.derived_discretizations import implicit_euler as IE_discretiza
 import numpy as np
 import scipy.sparse.linalg as spla
 
-from .ISCGrid import create_grid
-from mastersproject.GTS.ISC_data.isc import ISCData
+from GTS.isc_modelling.ISCGrid import create_grid
+from GTS.ISC_data.isc import ISCData
 
 # --- LOGGING UTIL ---
 from util.logging_util import timer, trace

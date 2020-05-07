@@ -2,7 +2,7 @@ from typing import Dict, List
 
 import porepy as pp
 
-from mastersproject.GTS.ISC_data.fracture import fracture_network
+from GTS.ISC_data.fracture import fracture_network
 
 
 def create_grid(
