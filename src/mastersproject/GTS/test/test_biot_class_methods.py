@@ -260,10 +260,17 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
     def discretize(self):
         """ Discretize the flow terms only"""
         if not hasattr(self, "assembler"):
-            self.assembler = pp.Assembler(self.gb, active_variables=[self.scalar_variable])
+            self.assembler = pp.Assembler(
+                self.gb,
+                active_variables=[self.scalar_variable, self.mortar_scalar_variable])
 
-        for g, _ in self.gb:
-            self.assembler.discretize(grid=g, variable_filter=[self.scalar_variable])
+        self.assembler.discretize()
+
+        # self.assembler.discretize(
+        #     variable_filter=[self.scalar_variable, self.mortar_scalar_variable]
+        # )
+        # for g, _ in self.gb:
+        #     self.assembler.discretize(grid=g, variable_filter=[self.scalar_variable])
 
     def check_convergence(self, solution, prev_solution, init_solution, nl_params=None):
         g_max = self._nd_grid()
@@ -318,11 +325,13 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
 
             error_scalar = (difference_in_iterates_scalar / difference_from_init_scalar)
 
+        logger.info(f"Error in pressure is {error_scalar:.6e}.")
+
         converged = converged_p
 
         return error_scalar, converged, diverged
 
-    def assign_discretizations(self):
+    def assign_discretizations(self) -> None:
         """
         Assign discretizations to the nodes and edges of the grid bucket.
 
@@ -332,144 +341,102 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
         """
         from porepy.utils.derived_discretizations import implicit_euler as IE_discretizations
         # Shorthand
-        key_s, key_m = self.scalar_parameter_key, self.mechanics_parameter_key
-        var_s, var_d = self.scalar_variable, self.displacement_variable
+        key_s = self.scalar_parameter_key
+        var_s = self.scalar_variable
 
-        # Define discretization
-        # For the Nd domain we solve linear elasticity with mpsa.
-        mpsa = pp.Mpsa(key_m)
-        empty_discr = pp.VoidDiscretization(key_m, ndof_cell=self.Nd)
         # Scalar discretizations (all dimensions)
-        diff_disc_s = IE_discretizations.ImplicitMpfa(key_s)
-        mass_disc_s = IE_discretizations.ImplicitMassMatrix(key_s, var_s)
+        diff_disc_s = pp.Mpfa(key_s)
+        # mass_disc_s = pp.MassMatrix(key_s)
+        # diff_disc_s = IE_discretizations.ImplicitMpfa(key_s)
+        # mass_disc_s = IE_discretizations.ImplicitMassMatrix(key_s, var_s)
         source_disc_s = pp.ScalarSource(key_s)
-        # Coupling discretizations
-        # All dimensions
-        div_u_disc = pp.DivU(
-            key_m,
-            key_s,
-            variable=var_d,
-            mortar_variable=self.mortar_displacement_variable,
-        )
-        # Nd
-        grad_p_disc = pp.GradP(key_m)
-        stabilization_disc_s = pp.BiotStabilization(key_s, var_s)
 
         # Assign node discretizations
         for g, d in self.gb:
-            if g.dim == self.Nd:
-                d[pp.DISCRETIZATION] = {
-                    var_d: {"mpsa": mpsa},
-                    var_s: {
-                        "diffusion": diff_disc_s,
-                        "mass": mass_disc_s,
-                        # "stabilization": stabilization_disc_s,
-                        "source": source_disc_s,
-                    },
-                    var_d + "_" + var_s: {"grad_p": grad_p_disc},
-                    var_s + "_" + var_d: {"div_u": div_u_disc},
-                }
-
-            elif g.dim == self.Nd - 1:
-                d[pp.DISCRETIZATION] = {
-                    self.contact_traction_variable: {"empty": empty_discr},
-                    var_s: {
-                        "diffusion": diff_disc_s,
-                        "mass": mass_disc_s,
-                        "source": source_disc_s,
-                    },
-                }
-            else:
-                d[pp.DISCRETIZATION] = {
-                    var_s: {
-                        "diffusion": diff_disc_s,
-                        "mass": mass_disc_s,
-                        "source": source_disc_s,
-                    }
-                }
-
-        # Define edge discretizations for the mortar grid
-        contact_law = pp.ColoumbContact(self.mechanics_parameter_key, self.Nd, mpsa)
-        contact_discr = pp.PrimalContactCoupling(
-            self.mechanics_parameter_key, mpsa, contact_law
-        )
-        # Account for the mortar displacements effect on scalar balance in the matrix,
-        # as an internal boundary contribution, fracture, aperture changes appear as a
-        # source contribution.
-        div_u_coupling = pp.DivUCoupling(
-            self.displacement_variable, div_u_disc, div_u_disc
-        )
-        # Account for the pressure contributions to the force balance on the fracture
-        # (see contact_discr).
-        # This discretization needs the keyword used to store the grad p discretization:
-        grad_p_key = key_m
-        matrix_scalar_to_force_balance = pp.MatrixScalarToForceBalance(
-            grad_p_key, mass_disc_s, mass_disc_s
-        )
-        if self.subtract_fracture_pressure:
-            fracture_scalar_to_force_balance = pp.FractureScalarToForceBalance(
-                mass_disc_s, mass_disc_s
-            )
+            d[pp.DISCRETIZATION] = {
+                var_s: {
+                    "diffusion": diff_disc_s,
+                    # "mass": mass_disc_s,
+                    "source": source_disc_s,
+                },
+            }
 
         for e, d in self.gb.edges():
             g_l, g_h = self.gb.nodes_of_edge(e)
+            d[pp.COUPLING_DISCRETIZATION] = {
+                self.scalar_coupling_term: {
+                    g_h: (var_s, "diffusion"),
+                    g_l: (var_s, "diffusion"),
+                    e: (
+                        self.mortar_scalar_variable,
+                        pp.RobinCoupling(key_s, diff_disc_s),
+                    ),
+                },
+            }
 
-            if g_h.dim == self.Nd:
-                d[pp.COUPLING_DISCRETIZATION] = {
-                    self.friction_coupling_term: {
-                        g_h: (var_d, "mpsa"),
-                        g_l: (self.contact_traction_variable, "empty"),
-                        (g_h, g_l): (self.mortar_displacement_variable, contact_discr),
-                    },
-                    self.scalar_coupling_term: {
-                        g_h: (var_s, "diffusion"),
-                        g_l: (var_s, "diffusion"),
-                        e: (
-                            self.mortar_scalar_variable,
-                            pp.RobinCoupling(key_s, diff_disc_s),
-                        ),
-                    },
-                    "div_u_coupling": {
-                        g_h: (
-                            var_s,
-                            "mass",
-                        ),  # This is really the div_u, but this is not implemented
-                        g_l: (var_s, "mass"),
-                        e: (self.mortar_displacement_variable, div_u_coupling),
-                    },
-                    "matrix_scalar_to_force_balance": {
-                        g_h: (var_s, "mass"),
-                        g_l: (var_s, "mass"),
-                        e: (
-                            self.mortar_displacement_variable,
-                            matrix_scalar_to_force_balance,
-                        ),
-                    },
-                }
-                if self.subtract_fracture_pressure:
-                    d[pp.COUPLING_DISCRETIZATION].update(
-                        {
-                            "fracture_scalar_to_force_balance": {
-                                g_h: (var_s, "mass"),
-                                g_l: (var_s, "mass"),
-                                e: (
-                                    self.mortar_displacement_variable,
-                                    fracture_scalar_to_force_balance,
-                                ),
-                            }
-                        }
-                    )
+    # -- Sanity checks --
+    def bc_type_mechanics(self, g) -> pp.BoundaryConditionVectorial:
+        pass
+    def bc_values_mechanics(self, g) -> np.array:
+        pass
+    def bc_values_scalar(self, g) -> np.array:
+        # DIRICHLET
+        all_bf, *_ = self.domain_boundary_sides(g)
+        bc_values = np.zeros(g.num_faces)
+
+        # TEMPORARY: Add a BC/source for testing
+        if g.dim == 3:
+            all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(g)
+            # point = np.array(
+            #     [
+            #         [self.box["xmin"]],
+            #         [(self.box["ymin"] + self.box["ymax"]) / 2],
+            #         [(self.box["zmin"] + self.box["zmax"]) / 2],
+            #     ]
+            # )
+            # distances = pp.distances.point_pointset(point, g.face_centers[:, all_bf])
+            # indexes = np.argpartition(distances, 1)[:1]
+            value = 100 * pp.MEGA * (pp.PASCAL / self.scalar_scale)
+            bc_values[west] = value  # BC Pressure
+        return bc_values
+    def bc_type_scalar(self, g) -> pp.BoundaryCondition:
+        all_bf, *_ = self.domain_boundary_sides(g)
+        return pp.BoundaryCondition(g, all_bf, ["dir"] * all_bf.size)
+    def source_scalar(self, g: pp.Grid) -> np.array:
+        return np.zeros(g.num_cells)
+    def source_mechanics(self, g) -> np.array:
+        pass
+    def set_mechanics_parameters(self) -> None:
+        pass
+    def set_viz(self):
+        super().set_viz()
+        self.export_fields = [self.p_exp]
+    def export_step(self):
+        gb = self.gb
+        Nd = self.Nd
+        ss = self.scalar_scale
+        for g, d in gb:
+            if self.scalar_variable in d[pp.STATE]:
+                d[pp.STATE][self.p_exp] = d[pp.STATE][self.scalar_variable].copy() * ss
             else:
-                d[pp.COUPLING_DISCRETIZATION] = {
-                    self.scalar_coupling_term: {
-                        g_h: (var_s, "diffusion"),
-                        g_l: (var_s, "diffusion"),
-                        e: (
-                            self.mortar_scalar_variable,
-                            pp.RobinCoupling(key_s, diff_disc_s),
-                        ),
-                    }
-                }
+                d[pp.STATE][self.p_exp] = np.zeros((Nd, g.num_cells))
+        self.viz.write_vtk(data=self.export_fields, time_step=self.time)  # Write visualization
+        self.export_times.append(self.time)
+    def after_newton_convergence(self, solution, errors, iteration_counter):
+        self.assembler.distribute_variable(solution)
+        self.export_step()
+    def initial_condition(self) -> None:
+        for g, d in self.gb:
+            # Initial value for the scalar variable.
+            initial_scalar_value = np.zeros(g.num_cells)
+            d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
+        for _, d in self.gb.edges():
+            mg = d["mortar_grid"]
+            initial_value = np.zeros(mg.num_cells)
+            state = {self.mortar_scalar_variable: initial_value}
+            pp.set_state(d, state)
+            # d[pp.STATE][self.mortar_scalar_variable] = initial_value
+
 
 
 class BiotReduceDiscretization(ContactMechanicsBiotISC):

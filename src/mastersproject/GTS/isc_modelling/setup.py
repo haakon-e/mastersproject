@@ -1,36 +1,29 @@
 import os
 import logging
-from typing import (  # noqa
-    Any,
+from typing import (
     Callable,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
     List,
     Mapping,
-    Optional,
-    Set,
     Tuple,
     Type,
-    TypeVar,
     Union,
+    Dict,
 )
 from pathlib import Path
 from pprint import pformat
-import functools
-import inspect
 
+from pydantic import BaseModel
 import pendulum
 import porepy as pp
 import numpy as np
-import scipy.sparse as sps
-from porepy.models.contact_mechanics_biot_model import ContactMechanicsBiot
 from porepy.models.contact_mechanics_model import ContactMechanics
+
+# GTS methods
+import GTS as gts
+
+# Refinement
 from refinement import gb_coarse_fine_cell_mapping
 from refinement.convergence import grid_error
-
-import GTS as gts
 from refinement import refine_mesh
 
 # --- LOGGING UTIL ---
@@ -41,6 +34,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# --- RUN MODEL METHODS ---
 
 @trace(logger)
 def run_biot_model(
@@ -173,6 +167,8 @@ def gts_biot_model(setup, params):
     pp.run_time_dependent_model(setup=setup, params=params)
 
 
+# * RUN ABSTRACT METHOD *
+
 def run_abstract_model(
         model: Type[ContactMechanics],
         run_model_method: Callable,
@@ -198,10 +194,9 @@ def run_abstract_model(
     # -------------------
     # --- SETUP MODEL ---
     # -------------------
-    params = _prepare_params(
-        params=params,
-        setup_loggers=True,
-    )
+    params = SetupParams(
+        **params,
+    ).dict()
 
     setup = model(params=params)
 
@@ -226,109 +221,80 @@ def run_abstract_model(
     return setup
 
 
-def _prepare_params(
-        params: dict = None,
-        setup_loggers: bool = True,
-):
-    """ Helper method to assemble model setup for biot and mechanics.
+# --- PREPARE SIMULATIONS: DIRECTORIES AND PARAMETERS ---
 
-    Parameters
-    ----------
-    params : dict (Default: None)
-        Custom parameters to pass to model
-        See below of default values
-    setup_loggers : bool (Default: True)
-        Whether to set up logging functionality
-    """
+def prepare_directories(head, date=True, root=None, **kwargs):
     # --------------------------------------------------
     # --- DEFAULT FOLDER AND FILE RELATED PARAMETERS ---
     # --------------------------------------------------
-    _this_file = Path(os.path.abspath(__file__)).parent
-    now_as_YYMMDD = pendulum.now().format("YYMMDD")
-    default_path_head = f"{now_as_YYMMDD}/default/default_1"
-    path_head = params.get("path_head", default_path_head)
-    _results_path = _this_file / f"results/{path_head}"
 
-    # --------------------------------------------
-    # --- DEFAULT MODELLING RELATED PARAMETERS ---
-    # --------------------------------------------
-    sz = 10
-    mesh_args = {
-        'mesh_size_frac': sz,
-        'mesh_size_min': 0.1 * sz,
-        'mesh_size_bound': 6 * sz,
+    # root of modelling results: i.e. ~/mastersproject/src/mastersproject/GTS/isc_modelling/results
+    _root = Path(os.path.abspath(__file__)).parent / "results"
+    root = root if root else Path(_root)
+    # today's date
+    date = pendulum.now().format("YYMMDD") if date else ""
+    # build full path
+    path = root / date / head
+    # create the directory
+    Path(path).mkdir(parents=True, exist_ok=True)
+    return path
+
+
+class SetupParams(BaseModel):
+    """ Construct the default model parameters"""
+
+    # Grid discretization
+    _sz = 20
+    mesh_args: Dict[str, float] = {
+        "mesh_size_frac": _sz,
+        "mesh_size_min": 0.2 * _sz,
+        "mesh_size_bound": 3 * _sz,
+    }
+    # bounding_box: Dict[str, float] = {
+    #     'xmin': -20,
+    #     'xmax': 80,
+    #     'ymin': 50,
+    #     'ymax': 150,
+    #     'zmin': -25,
+    #     'zmax': 75,
+    # }
+    bounding_box: Dict[str, float] = {
+        'xmin': -100,
+        'xmax': 200,
+        'ymin': 0,
+        'ymax': 300,
+        'zmin': -100,
+        'zmax': 200,
     }
 
-    bounding_box = {
-        'xmin': -20,
-        'xmax': 80,
-        'ymin': 50,
-        'ymax': 150,
-        'zmin': -25,
-        'zmax': 75
-    }
-
-    # Set which borehole / shearzone to inject fluid to
-    # This corresponds to setup in HS2 from Doetsch et al 2018
-    source_scalar_borehole_shearzone = {
+    # Injection location
+    source_scalar_borehole_shearzone: Dict[str, str] = {
         "shearzone": "S1_2",
         "borehole": "INJ1",
-    }  # (If ContactMechanicsISC is run, this is ignored)
-
-    # -----------------------------------
-    # --- DEFAULT PHYSICAL PARAMETERS ---
-    # -----------------------------------
-
-    stress = stress_tensor()
-
-    # -------------------------------------
-    # --- INITIALIZE DEFAULT PARAMETERS ---
-    # -------------------------------------
-
-    default_params = {
-        "folder_name":
-            _results_path,
-        "mesh_args":
-            mesh_args,
-        "bounding_box":
-            bounding_box,
-        "shearzone_names":
-            None,
-        "length_scale":
-            1,
-        "scalar_scale":
-            1,
-        "solver":
-            "direct",
-        "source_scalar_borehole_shearzone":
-            source_scalar_borehole_shearzone,
-        "stress":
-            stress,
     }
 
-    # --------------------------------------------------------
-    # --- UPDATE DEFAULT PARAMETERS WITH CUSTOM PARAMETERS ---
-    # --------------------------------------------------------
-    if not params:
-        params = {}
-    default_params.update(params)
+    # Stress tensor
+    stress: np.ndarray = gts.stress_tensor()
 
-    # ---------------------
-    # --- BACKEND SETUP ---
-    # ---------------------
+    # Storage folder for grid files and visualization output
+    folder_name: Path = prepare_directories(head="default/default_1")
 
-    # Create viz folder path if it does not already exist
-    viz_folder_name = default_params["folder_name"]
-    Path(viz_folder_name).mkdir(parents=True, exist_ok=True)
+    # shearzones
+    shearzone_names: List[str] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
 
-    # Set up logging
-    if setup_loggers:
-        __setup_logging(viz_folder_name)
-    logger.info(f"Preparing setup for simulation on {pendulum.now().to_atom_string()}")
-    logger.info(f"Simulation parameters:\n {pformat(default_params)}")
+    # scaling coefficients
+    length_scale: float = 0.05
+    scalar_scale: float = 1e10
 
-    return default_params
+    # solver
+    solver: str = "direct"
 
+    # needed to allow numpy arrays
+    class Config:
+        arbitrary_types_allowed = True
+
+
+# --- METHODS FOR CONVERGENCE STUDY ---
 
 def create_isc_domain(
         viz_folder_name: Union[str, Path],
@@ -401,7 +367,6 @@ def run_models_for_convergence_study(
         newton_params: dict = None,
         variable: List[str] = None,  # This is really required for the moment
         variable_dof: List[int] = None,
-        setup_loggers: bool = True,
 ) -> Tuple[List[pp.GridBucket], List[dict]]:
     """ Run a model on a grid, refined n times.
 
@@ -454,10 +419,9 @@ def run_models_for_convergence_study(
     # 4. a. Step: Map the solution to the fine grid, and compute error.
     # 5. Step: Compute order of convergence, etc.
 
-    params = _prepare_params(
-        params,
-        setup_loggers=setup_loggers,
-    )
+    params = SetupParams(
+        **params,
+    ).dict()
     logger.info(f"Preparing setup for convergence study on {pendulum.now().to_atom_string()}")
 
     # 1. Step: Create n grids by uniform refinement.
@@ -513,33 +477,3 @@ def run_models_for_convergence_study(
     return gb_list, errors
 
 
-def stress_tensor():
-    """ Stress at ISC test site
-
-    Values from Krietsch et al 2019
-    """
-
-    # Note: Negative side due to compressive stresses
-    stress_value = - np.array([13.1, 9.2, 8.7]) * pp.MEGA * pp.PASCAL
-    dip_direction = np.array([104.48, 259.05, 3.72])
-    dip = np.array([39.21, 47.90, 12.89])
-
-    def r(th, gm):
-        """ Compute direction vector of a dip (th) and dip direction (gm)."""
-        rad = np.pi / 180
-        x = np.cos(th * rad) * np.sin(gm * rad)
-        y = np.cos(th * rad) * np.cos(gm * rad)
-        z = - np.sin(th * rad)
-        return np.array([x, y, z])
-
-    rot = r(th=dip, gm=dip_direction)
-
-    # Orthogonalize the rotation matrix (which is already close to orthogonal)
-    rot, _ = np.linalg.qr(rot)
-
-    # Stress tensor in principal coordinate system
-    stress = np.diag(stress_value)
-
-    # Stress tensor in euclidean coordinate system
-    stress_eucl = np.dot(np.dot(rot, stress), rot.T)
-    return stress_eucl

@@ -109,10 +109,10 @@ class ContactMechanicsISC(ContactMechanics):
         # --- ADJUST CERTAIN PARAMETERS FOR TESTING ---
 
         # Turn on/off mechanical gravity term
-        self._gravity_src = params.get("_gravity_src", True)
+        self._gravity_src = params.get("_gravity_src", False)
 
         # Turn on/off gravitational effects on (Neumann) mechanical boundary conditions
-        self._gravity_bc = params.get("_gravity_bc", True)
+        self._gravity_bc = params.get("_gravity_bc", False)
 
     @trace(logger)
     def create_grid(self, overwrite_grid: bool = False):
@@ -162,13 +162,6 @@ class ContactMechanicsISC(ContactMechanics):
             path = f"{self.viz_folder_name}/gmsh_frac_file"
             self.gb = network.mesh(mesh_args=self.mesh_args, file_name=path)
 
-            # --- Scale the grid ---
-            # self.gb_export = self.gb.copy()  #TODO: Do deep copy of grid bucket or generate separate gb from .msh file
-            # for g, _ in self.gb:
-            #     g.nodes = g.nodes / self.length_scale
-            # self.gb.compute_geometry()  # TODO: Inefficient method. Calls g.compute_geometry() v. many times.
-            # self.box = self.gb.bounding_box(as_dict=True)
-
             pp.contact_conditions.set_projections(self.gb)
             self.Nd = self.gb.dim_max()
 
@@ -177,21 +170,27 @@ class ContactMechanicsISC(ContactMechanics):
             #   Currently, we assume that fracture order is preserved in creation process.
             #   This may be untrue if fractures are (completely) split in the process.
             # Set fracture grid names:
-            self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids.
-            fracture_grids = self.gb.get_grids(lambda g: g.dim == self.Nd - 1)
+            # The 3D grid is tagged by 'None'
+            # 2D fractures are tagged by their shearzone name (S1_1, S1_2, etc.)
+            # 1D (and 0D) fracture intersections are tagged by 'None'.
+            self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids. (value is 'None' by default)
+            fracture_grids = self.gb.get_grids(lambda _g: _g.dim == self.Nd - 1)
             assert fracture_grids.size == self.n_frac, "We expect all shear zones to be meshed"
 
+            # Set node property 'name' to each fracture with value being name of the shear zone.
             if self.n_frac > 0:
                 for i, sz_name in enumerate(self.shearzone_names):
                     self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
                     # Note: Use self.gb.node_props(g, 'name') to get value.
+
+        # If a grid is already set, do some sanity checks.
         else:
             assert (self.Nd is not None) and (self.n_frac is not None), \
                 "Attributes Nd and n_frac must be set in an existing grid."
 
             if self.n_frac > 0:
                 # We require that fracture grids have a name.
-                g = self.gb.get_grids(lambda g: g.dim == self.Nd - 1)
+                g = self.gb.get_grids(lambda _g: _g.dim == self.Nd - 1)
                 for i, sz in enumerate(self.shearzone_names):
                     assert (self.gb.node_props(g[i], "name") is not None), \
                         "All 2D grids must have a name."
@@ -211,6 +210,15 @@ class ContactMechanicsISC(ContactMechanics):
             for i, sz_name in enumerate(self.shearzone_names):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
+    def grids_by_name(self, name, key='name') -> np.ndarray:
+        """ Get grid by grid bucket node property 'name'
+
+        """
+        gb = self.gb
+        grids = gb.get_grids(lambda g: gb.node_props(g, key) == name)
+
+        return grids
+
     def faces_to_fix(self, g: pp.Grid):
         """ Fix some boundary faces to dirichlet to ensure unique solution to problem.
 
@@ -228,15 +236,16 @@ class ContactMechanicsISC(ContactMechanics):
             ]
         )
         distances = pp.distances.point_pointset(point, g.face_centers[:, all_bf])
-        indexes = np.argsort(distances)
+        indexes = np.argpartition(distances, self.Nd)[:self.Nd]
+        old_indexes = np.argsort(distances)
+        assert np.allclose(np.sort(indexes), np.sort(old_indexes[:self.Nd]))  # Temporary: test new argpartition method
         faces = all_bf[indexes[: self.Nd]]
         return faces
 
     def bc_type(self, g: pp.Grid) -> pp.BoundaryConditionVectorial:
-        """
-        We set Neumann values on all but a few boundary faces. Fracture faces also set to Dirichlet.
+        """ We set Neumann values on all but a few boundary faces. Fracture faces are set to Dirichlet.
 
-        Three boundary faces (see method faces_to_fix(self, g)) are set to 0 displacement (Dirichlet).
+        Three boundary faces (see self.faces_to_fix()) are set to 0 displacement (Dirichlet).
         This ensures a unique solution to the problem.
         Furthermore, the fracture faces are set to 0 displacement (Dirichlet).
         """
@@ -273,7 +282,7 @@ class ContactMechanicsISC(ContactMechanics):
         bc_values[:, all_bf] += bf_stress / self.scalar_scale  # Mechanical stress
 
         # --- gravitational forces ---
-        # See init-method to turn on/off gravity effects (Default: ON)
+        # See init-method to turn on/off gravity effects (Default: OFF)
         if self._gravity_bc:
             lithostatic_bc = self._adjust_stress_for_depth(g, outward_normals)
 
@@ -326,7 +335,7 @@ class ContactMechanicsISC(ContactMechanics):
         negative (i.e. the vector given will be
         pointing upwards)
         """
-        # See init-method to turn on/off gravity effects (Default: ON)
+        # See init-method to turn on/off gravity effects (Default: OFF)
         if not self._gravity_src:
             return np.zeros(self.Nd * g.num_cells)
 
@@ -585,7 +594,7 @@ class GrimselGranodiorite(pp.UnitRock):
             self.YOUNG_MODULUS, self.POISSON_RATIO
         )
 
-        self.FRICTION_COEFFICIENT = 0.2  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
+        self.FRICTION_COEFFICIENT = 0.8  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
         self.POROSITY = 0.7 / 100
 
     def lithostatic_pressure(self, depth):

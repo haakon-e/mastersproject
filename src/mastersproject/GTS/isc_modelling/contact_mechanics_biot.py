@@ -33,10 +33,17 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-# TODO: Re-introduce all scaling when it is properly understood.
 class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
-    """
-    TODO: Write class description
+    """ Biot model with contact mechanics for the Grimsel Test Site ISC experiment.
+
+    This class defines the model setup for the In-Situ Stimulation and Circulation (ISC)
+    experiment at the Grimsel Test Site (GTS).
+
+    See Berge et al (2019):
+        Finite volume discretization for poroelastic media with fractures
+        modeled by contact mechanics
+    in particular, Equation (1), for details.
+
     """
 
     def __init__(self, params: dict):
@@ -83,31 +90,34 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         # --- PHYSICAL PARAMETERS ---
         self.set_rock_and_fluid()
 
-        self.transmissivity = {  # Unscaled
-            'S1_1': 1e-12 * pp.METER ** 2 / pp.SECOND,
-            'S1_2': 1e-12 * pp.METER ** 2 / pp.SECOND,
-            'S1_3': 1e-12 * pp.METER ** 2 / pp.SECOND,
-            'S3_1': 1e-6 * pp.METER ** 2 / pp.SECOND,
-            'S3_2': 1e-6 * pp.METER ** 2 / pp.SECOND,
-            None: 1e-14 * pp.METER ** 2 / pp.SECOND,  # 3D matrix
+        # For now, constant permeability in fractures
+        # For details on values, see "2020-04-21 Møtereferat" (Veiledningsmøte)
+        mean_frac_permeability = 4.9e-16 * pp.METER ** 2
+        mean_intact_permeability = 2e-20 * pp.METER ** 2
+        self.initial_permeability = {  # Unscaled
+            'S1_1': mean_frac_permeability,
+            'S1_2': mean_frac_permeability,
+            'S1_3': mean_frac_permeability,
+            'S3_1': mean_frac_permeability,
+            'S3_2': mean_frac_permeability,
+            None: mean_intact_permeability,  # 3D matrix
         }
-        self.aquifer_thickness = {  # Unscaled
-            'S1_1': 1000 * pp.MILLI * pp.METER,
-            'S1_2': 1000 * pp.MILLI * pp.METER,
-            'S1_3': 1000 * pp.MILLI * pp.METER,
-            'S3_1': 170 * pp.MILLI * pp.METER,
-            'S3_2': 170 * pp.MILLI * pp.METER,
-            None: 1,  # 3D matrix
+
+        # Use cubic law to compute initial apertures in fractures.
+        # k = a^2 / 12 => a=sqrt(12k)
+        self.initial_aperture = {
+            sz: np.sqrt(12*k) for sz, k in self.initial_permeability.items()
         }
+        self.initial_aperture[None] = 1  # Set 3D matrix aperture to 1.
 
         #
         # --- ADJUST CERTAIN PARAMETERS FOR TESTING ---
 
         # # Turn on/off scalar gravity term
-        # self._gravity_src_p = params.get("_gravity_src_p", True)
+        # self._gravity_src_p = params.get("_gravity_src_p", False)
 
         # Turn on/off gravitational effects on (Dirichlet) scalar boundary conditions
-        self._gravity_bc_p = params.get("_gravity_bc_p", True)
+        self._gravity_bc_p = params.get("_gravity_bc_p", False)
 
     def bc_type_mechanics(self, g) -> pp.BoundaryConditionVectorial:
         """
@@ -125,25 +135,29 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         return super().bc_values(g)
 
     def bc_values_scalar(self, g) -> np.array:
-        """ Hydrostatic flow values
+        """ Boundary condition values - zero or hydrostatic.
+
+        Prescribe either homogenous pressure values
+        or
+        hydrostatic (depth-dependent) pressure values.
         credit: porepy paper
         """
-        # TODO: Hydrostatic scalar BC's (values).
+        # DIRICHLET
         all_bf, *_ = self.domain_boundary_sides(g)
         bc_values = np.zeros(g.num_faces)
-        depth = self._depth(g.face_centers[:, all_bf])
 
-        # DIRICHLET
+        # Hydrostatic
         if self._gravity_bc_p:
+            depth = self._depth(g.face_centers[:, all_bf])
             bc_values[all_bf] += self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
         return bc_values
 
     def bc_type_scalar(self, g) -> pp.BoundaryCondition:
         """ Known boundary conditions (Dirichlet)
+
+        Dirichlet scalar BCs are prescribed on all external boundaries
         """
-        # Define boundary regions
         all_bf, *_ = self.domain_boundary_sides(g)
-        # Define boundary condition on faces
         return pp.BoundaryCondition(g, all_bf, ["dir"] * all_bf.size)
 
     def source_flow_rate(self) -> float:
@@ -158,7 +172,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         Afterwards, the system is shut-in for 40 minutes.
         """
         self.simulation_protocol()
-        injection_rate = self.current_injection_rate
+        injection_rate = self.current_injection_rate  # injection rate [l / s], unscaled
         return injection_rate * pp.MILLI * (pp.METER / self.length_scale) ** self.Nd
 
     def well_cells(self) -> None:
@@ -174,18 +188,24 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         _mask = (df.shearzone == bh_sz["shearzone"]) & (
                 df.borehole == bh_sz["borehole"]
         )
+
+        # Get the intersection coordinates of the borehole and the shearzone. (unscaled)
         result = df.loc[_mask, ("x_sz", "y_sz", "z_sz")]
         if result.empty:
             raise ValueError("No intersection found.")
 
+        # Scale the intersection coordinates by length_scale. (scaled)
         pts = result.to_numpy().T / self.length_scale
         assert pts.shape[1] == 1, "Should only be one intersection"
-        tagged = False
 
+        # Loop through the grids. Tag all cells with 0.
+        # The closest discrete cell to the intersection coordinates is tagged with 1.
+        tagged = False
         for g, d in self.gb:
+            # By default: All cells are tagged with 0 (not the closest point).
             tags = np.zeros(g.num_cells)
 
-            # Get name of grid
+            # Get name of grid. See ContactMechanicsISC.create_grid() for details.
             grid_name = self.gb.node_props(g, "name")
 
             # We only tag cells in the desired fracture
@@ -195,7 +215,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
                 ids, dsts = g.closest_cell(pts, return_distance=True)
                 # TODO: log distance in unscaled lengths
-                logger.info(f"Closest cell found has distance: {dsts[0]:4f}")
+                logger.info(f"Closest cell found has (unscaled) distance: {dsts[0]*self.length_scale:4f}")
 
                 # Tag the injection cell
                 tags[ids] = 1
@@ -228,77 +248,101 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         """ Scaled gravity term. """
         return super().source(g)
 
-    def set_permeability_from_transmissivity(self) -> None:
-        """ Set permeability in fracture and matrix from transmissivity
+    def set_permeability_from_aperture(self) -> None:
+        """ Set permeability by cubic law in fractures.
 
-        The formula,
-        k = T * mu / (rho * g * b)
-        where b is aquifer thickness, and T is transmissivity (see above)
-        is used.
-
-        In shear zones, we use its thickness as b.
-        In the 3D rock matrix, we use 1.
+        Currently, we simply set the initial permeability.
         """
 
+        # Scaled dynamic viscosity
         viscosity = self.fluid.dynamic_viscosity() * (pp.PASCAL / self.scalar_scale)
+
         gb = self.gb
+        param_key = self.scalar_parameter_key
         for g, d in gb:
-            permeability, aperture = self.permeability_and_aperture(g)  # scaled quantities
+            # get the shearzone
+            shearzone = self.gb.node_props(g, 'name')
 
-            # specific volume
-            specific_volume = np.power(aperture, self.Nd - g.dim)
+            # permeability [m2] (scaled)
+            k = self.initial_permeability[shearzone] * (pp.METER / self.length_scale) ** 2
 
-            diffusivity = pp.SecondOrderTensor(
-                specific_volume * permeability / viscosity * np.ones(g.num_cells)
-            )
-            d[pp.PARAMETERS][self.scalar_parameter_key]["second_order_tensor"] = diffusivity
+            # Multiply by the volume of the flattened dimension (specific volume)
+            k *= self.specific_volume(g, scaled=True)
+
+            kxx = k / viscosity
+            diffusivity = pp.SecondOrderTensor(kxx)
+            d[pp.PARAMETERS][param_key]["second_order_tensor"] = diffusivity
 
         # Normal permeability inherited from the neighboring fracture g_l
         for e, data_edge in gb.edges():
             mg = data_edge["mortar_grid"]
-            g_l, g_h = gb.nodes_of_edge(e)  # get the lower-dimensional neighbor.
+            g_l, g_h = gb.nodes_of_edge(e)  # get the neighbors
 
-            # Compute quantities from transmissivity and aquifer thickness
-            permeability, aperture = self.permeability_and_aperture(g_l)  # scaled quantities
-            _, a_h = self.permeability_and_aperture(g_h)  # scaled quantities
+            # get aperture data from lower dim neighbour
+            aperture_l = self.aperture(g_l, scaled=True)  # one value per grid cell
 
-            # We assume isotropic permeability in the fracture, i.e. the normal
-            # permeability equals the tangential one
-            kappa = permeability / viscosity * np.ones(g_l.num_cells)  # scaled k/mu
-            specific_volume = np.power(a_h, self.Nd - g_h.dim)
+            # Take trace of and then project specific volumes from g_h
+            v_h = (
+                mg.master_to_mortar_avg()
+                * np.abs(g_h.cell_faces)
+                * self.specific_volume(g_h, scaled=True)
+            )
+
+            # Get diffusivity from lower-dimensional neighbour
+            data_l = gb.node_props(g_l)
+            diffusivity = data_l[pp.PARAMETERS][param_key]["second_order_tensor"].values[0, 0]
 
             # Division through half the aperture represents taking the (normal) gradient
-            normal_diffusivity = mg.slave_to_mortar_int() * np.divide(kappa, aperture / 2) * specific_volume
-            data_edge = pp.initialize_data(
-                e,
+            normal_diffusivity = (
+                mg.slave_to_mortar_int()
+                * np.divide(diffusivity, aperture_l / 2)
+            )
+            # The interface flux is to match fluxes across faces of g_h,
+            # and therefore need to be weighted by the corresponding
+            # specific volumes
+            normal_diffusivity *= v_h
+
+            # Set the data
+            pp.initialize_data(
+                mg,
                 data_edge,
-                self.scalar_parameter_key,
+                param_key,
                 {"normal_diffusivity": normal_diffusivity},
             )
 
-    def permeability_and_aperture(self, g: pp.Grid, theta=None) -> (float, float):
-        """ Convenience function to compute permeability [m2] and aperture [m] on a grid for given values"""
-        # Compute quantities from transmissivity and aquifer thickness
+    def aperture(self, g: pp.Grid, scaled=False) -> np.ndarray:
+        """
+        Aperture is a characteristic thickness of a cell, with units [m].
+        1 in matrix, thickness of fractures and "side length" of cross-sectional
+        area/volume (or "specific volume") for intersections of co-dimension 2 and 3.
+        See also specific_volume.
+        """
+        aperture = np.ones(g.num_cells)
+        # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
         shearzone = self.gb.node_props(g, 'name')
-        transmissivity = self.transmissivity[shearzone]  # Unscaled
-        aquifer_thickness = self.aquifer_thickness[shearzone]  # Unscaled
+        aperture *= self.initial_aperture[shearzone]
 
-        # Compute unscaled quantities
-        aperture = self.fluid.aperture_from_transmissivity(T=transmissivity, b=aquifer_thickness, theta=theta)
-        permeability = self.fluid.permeability_from_transmissivity(T=transmissivity, b=aquifer_thickness, theta=theta)
+        if scaled:
+            aperture *= (pp.METER / self.length_scale)
 
-        # scaled permeability and aperture
-        scaled_permeability = permeability * (pp.METER / self.length_scale) ** 2
-        scaled_aperture = aperture * (pp.METER / self.length_scale)
+        return aperture
 
-        return scaled_permeability, scaled_aperture
+    def specific_volume(self, g: pp.Grid, scaled=False) -> np.ndarray:
+        """
+        The specific volume of a cell accounts for the dimension reduction and has
+        dimensions [m^(Nd - d)].
+        Typically equals 1 in Nd, the aperture in codimension 1 and the square/cube
+        of aperture in codimensions 2 and 3.
+        """
+        a = self.aperture(g, scaled)
+        return np.power(a, self.Nd - g.dim)
 
     def set_rock_and_fluid(self) -> None:
         """
-            Set rock and fluid properties to those of granite and water.
-            We ignore all temperature effects.
-            Credits: PorePy paper
-            """
+        Set rock and fluid properties to those of granite and water.
+        We ignore all temperature effects.
+        Credits: PorePy paper
+        """
 
         super().set_rock()
 
@@ -367,9 +411,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         porosity = self.rock.POROSITY
         for g, d in gb:
             # specific volume
-            _, aperture = self.permeability_and_aperture(g)
-            scaled_aperture = aperture * (pp.METER / self.length_scale)  # scaled aperture [m]
-            specific_volume = np.power(scaled_aperture, self.Nd - g.dim)
+            specific_volume = self.specific_volume(g, scaled=True)
 
             # Boundary and source conditions
             bc = self.bc_type_scalar(g)
@@ -387,7 +429,11 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                 {
                     "bc": bc,
                     "bc_values": bc_values,
-                    "mass_weight": compressibility * porosity * specific_volume * np.ones(g.num_cells),
+                    "mass_weight": (  # TODO: Simplified version off mass_weight?
+                            compressibility
+                            * porosity
+                            * specific_volume
+                            * np.ones(g.num_cells)),
                     "biot_alpha": alpha,
                     "source": source_values,
                     "time_step": self.time_step,
@@ -395,7 +441,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
             )
 
         # Set permeability on grid, fracture and mortar grids.
-        self.set_permeability_from_transmissivity()
+        self.set_permeability_from_aperture()
 
     def set_viz(self):
         """ Set exporter for visualization """
@@ -478,50 +524,50 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         """ Implementation of export pvd"""
         self.viz.write_pvd(self.export_times)
 
-    def initial_condition(self):
-        """
-        Initial guess for Newton iteration, scalar variable and bc_values (for time
-        discretization).
-
-        When stimulation phase is reached, we use displacements of last solution in
-        initialize phase as initial condition for the cell displacements.
-        """
-        super().initial_condition()
-        # TODO: Set hydrostatic initial condition
-        for g, d in self.gb:
-            depth = self._depth(g.cell_centers)
-            initial_scalar_value = self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
-            d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
-
-        # TODO What hydrostatic scalar initial condition should be set on the mortar grid? lower dim value?
-        for _, d in self.gb.edges():
-            mg = d["mortar_grid"]
-            initial_value = np.zeros(mg.num_cells)
-            d[pp.STATE][self.mortar_scalar_variable] = initial_value
-
-        # TODO: Scale variables
-        if self.current_phase > 0:  # Stimulation phase
-
-            for g, d in self.gb:
-                if g.dim == self.Nd:
-                    initial_displacements = d["initial_cell_displacements"]
-                    pp.set_state(d, {self.displacement_variable: initial_displacements})
-
-            for e, d in self.gb.edges():
-                if e[0].dim == self.Nd:
-                    try:
-                        initial_displacements = d["initial_cell_displacements"]
-                    except KeyError:
-                        logger.warning("We got KeyError on d['initial_cell_displacements'].")
-                        mg = d["mortar_grid"]
-                        initial_displacements = np.zeros(mg.num_cells * self.Nd)
-                    state = {
-                        self.mortar_displacement_variable: initial_displacements,
-                        "previous_iterate": {
-                            self.mortar_displacement_variable: initial_displacements,
-                        },
-                    }
-                    pp.set_state(d, state)
+    # def initial_condition(self):
+    #     """
+    #     Initial guess for Newton iteration, scalar variable and bc_values (for time
+    #     discretization).
+    #
+    #     When stimulation phase is reached, we use displacements of last solution in
+    #     initialize phase as initial condition for the cell displacements.
+    #     """
+    #     super().initial_condition()
+    #     # TODO: Set hydrostatic initial condition
+    #     for g, d in self.gb:
+    #         depth = self._depth(g.cell_centers)
+    #         initial_scalar_value = self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
+    #         d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
+    #
+    #     # TODO What hydrostatic scalar initial condition should be set on the mortar grid? lower dim value?
+    #     for _, d in self.gb.edges():
+    #         mg = d["mortar_grid"]
+    #         initial_value = np.zeros(mg.num_cells)
+    #         d[pp.STATE][self.mortar_scalar_variable] = initial_value
+    #
+    #     # TODO: Scale variables
+    #     if self.current_phase > 0:  # Stimulation phase
+    #
+    #         for g, d in self.gb:
+    #             if g.dim == self.Nd:
+    #                 initial_displacements = d["initial_cell_displacements"]
+    #                 pp.set_state(d, {self.displacement_variable: initial_displacements})
+    #
+    #         for e, d in self.gb.edges():
+    #             if e[0].dim == self.Nd:
+    #                 try:
+    #                     initial_displacements = d["initial_cell_displacements"]
+    #                 except KeyError:
+    #                     logger.warning("We got KeyError on d['initial_cell_displacements'].")
+    #                     mg = d["mortar_grid"]
+    #                     initial_displacements = np.zeros(mg.num_cells * self.Nd)
+    #                 state = {
+    #                     self.mortar_displacement_variable: initial_displacements,
+    #                     "previous_iterate": {
+    #                         self.mortar_displacement_variable: initial_displacements,
+    #                     },
+    #                 }
+    #                 pp.set_state(d, state)
 
     @trace(logger)
     def before_newton_loop(self):
@@ -579,8 +625,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         # # end time
         # self.end_time = 0
         self.time = 0
-        self.time_step = 40 * pp.MINUTE
-        self.end_time = 40 * pp.MINUTE
+        self.time_step = 1 * pp.DAY
+        self.end_time = self.time_step * 3
 
     def prepare_main_run(self):
         """ Adjust parameters between initial run and main run
@@ -646,7 +692,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         ]
 
         # TODO: TEMPORARY CONSTANT INJECTION
-        injection_amount = [20] * 6
+        injection_amount = [1e-6] * 6
 
         # injection_amount = [
         #     0,      # Phase 0
