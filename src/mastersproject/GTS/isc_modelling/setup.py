@@ -34,6 +34,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# --- RUN MODEL METHODS ---
 
 @trace(logger)
 def run_biot_model(
@@ -166,6 +167,8 @@ def gts_biot_model(setup, params):
     pp.run_time_dependent_model(setup=setup, params=params)
 
 
+# * RUN ABSTRACT METHOD *
+
 def run_abstract_model(
         model: Type[ContactMechanics],
         run_model_method: Callable,
@@ -217,6 +220,8 @@ def run_abstract_model(
 
     return setup
 
+
+# --- PREPARE SIMULATIONS: DIRECTORIES AND PARAMETERS ---
 
 def prepare_directories(head, date=True, root=None, **kwargs):
     # --------------------------------------------------
@@ -280,6 +285,8 @@ class SetupParams(BaseModel):
     class Config:
         arbitrary_types_allowed = True
 
+
+# --- METHODS FOR CONVERGENCE STUDY ---
 
 def create_isc_domain(
         viz_folder_name: Union[str, Path],
