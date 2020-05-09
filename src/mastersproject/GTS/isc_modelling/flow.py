@@ -445,6 +445,11 @@ class Flow(AbstractModel):
         See also self.assemble_and_solve_linear_system()
         """
 
+        # # Compute exact condition number:
+        # A, _ = self.assembler.assemble_matrix_rhs()
+        # cond = spla.norm(A, 1) * spla.norm(spla.inv(A), 1)
+        # logger.info(f"Exact condition number: {cond:.2e}")
+
         solver = self.params.get("linear_solver", "direct")
 
         if solver == "direct":
@@ -473,6 +478,12 @@ class Flow(AbstractModel):
         logger.info(
             f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and "
             f"min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum."
+        )
+
+        # UMFPACK Estimate of condition number
+        logger.info(
+            f"UMFPACK Condition number estimate: "
+            f"{np.min(np.abs(A.diagonal())) / np.max(np.abs(A.diagonal())) :.2e}"
         )
 
         if self.linear_solver == "direct":
