@@ -847,7 +847,8 @@ class FlowISC(Flow):
         """ Tag well cells right after creation.
         Called by self.prepare_simulation()
         """
-        super()._prepare_grid()
+        if self.gb is None:
+            super()._prepare_grid()
         self.well_cells()  # tag well cells
 
 
