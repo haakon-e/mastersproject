@@ -280,7 +280,7 @@ class SetupParams(BaseModel):
     folder_name: Path = prepare_directories(head="default/default_1")
 
     # shearzones
-    shearzone_names: List[str] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
+    shearzone_names: Union[List[str], None] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
 
     # scaling coefficients
     length_scale: float = 0.05
