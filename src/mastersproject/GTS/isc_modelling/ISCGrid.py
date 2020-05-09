@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Dict, List
 
 import porepy as pp
@@ -73,4 +74,44 @@ def create_grid(
             # Note: Use self.gb.node_props(g, 'name') to get value.
 
     return gb, box, network
+
+
+def optimize_grid(in_file, out_file=None, method='', force=False, dim_tags=[]):
+    """ Optimize a grid using an optimizer
+
+    See: https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/api/gmsh.py#L1444
+
+    Parameters
+    ----------
+    in_file : str
+        path to .msh file to be optimized
+    out_file : str
+        output file. By default, in_file+"optimized"
+    method : str
+        name of optimizer.
+        Default: '' (gmsh default tetrahedral optimizer)
+        Other options:
+            'Netgen': Netgen optimizer
+            'HighOrder': direct high-order mesh optimizer
+            'HighOrderElastic': high-order elastic smoother
+            'HighOrderFastCurving': fast curving algorithm
+            'Laplace2D': Laplace smoothing
+            'Relocate2D': Node relocation, 2d
+            'Relocate3D': Node relocation, 3d
+    force : bool
+        If set, apply the optimization also to discrete entities
+    dim_tags : List
+        If supplied, only apply the optimizer to the given entities
+
+    """
+    assert Path(in_file).is_file()
+
+    import gmsh
+    gmsh.initialize()
+    gmsh.open(in_file)
+
+    gmsh.model.mesh.optimize(method=method, force=force, dimTags=dim_tags)
+
+
+
 
