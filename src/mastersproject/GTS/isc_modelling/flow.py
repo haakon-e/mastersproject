@@ -713,6 +713,24 @@ class FlowISC(Flow):
 
         self.Nd = self.gb.dim_max()
 
+    def set_grid(self, gb: pp.GridBucket):
+        """ Set a new grid
+        """
+        self.gb = gb
+        pp.contact_conditions.set_projections(self.gb)
+        self.Nd = gb.dim_max()
+        self.n_frac = gb.get_grids(lambda _g: _g.dim == self.Nd - 1).size
+        self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids.
+
+        # Set the box
+        self.box = gb.bounding_box(as_dict=True)
+
+        # Set fracture grid names
+        if self.n_frac > 0:
+            fracture_grids = self.gb.get_grids(lambda g: g.dim == self.Nd - 1)
+            for i, sz_name in enumerate(self.shearzone_names):
+                self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
+
     def grids_by_name(self, name, key='name') -> np.ndarray:
         """ Get grid by grid bucket node property 'name'
 
