@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict, List
 
 import porepy as pp
+import numpy as np
 
 from GTS.ISC_data.fracture import fracture_network
 
@@ -74,6 +75,28 @@ def create_grid(
             # Note: Use self.gb.node_props(g, 'name') to get value.
 
     return gb, box, network
+
+
+def create_structured_grid(
+        nx: np.ndarray,
+        physdims: np.ndarray,
+        length_scale: float,
+):
+    """ Create a structured 3d grid
+
+    nx : np.ndarray
+        Number of cells in (x,y,z)
+    physdims : np.ndarray
+        Physical dimensions of (x,y,z).
+    length_scale : float
+        Length scale of physical dimension.
+    """
+    gb = pp.meshing.cart_grid(
+        [],
+        nx=nx,
+        physdims=physdims/length_scale,
+    )
+    return gb
 
 
 def optimize_grid(in_file, out_file=None, method='', force=False, dim_tags=[]):
