@@ -22,7 +22,7 @@ from porepy.models.abstract_model import AbstractModel
 import pendulum
 
 import GTS as gts
-from GTS.prototype_1.mechanics.isotropic_setup import IsotropicSetup
+from GTS.isc_modelling.ISCGrid import create_grid
 
 # --- LOGGING UTIL ---
 try:
@@ -115,17 +115,19 @@ class ContactMechanicsISC(ContactMechanics):
         self._gravity_bc = params.get("_gravity_bc", False)
 
     @trace(logger)
-    def create_grid(self, overwrite_grid: bool = False):
+    def create_grid(self):
         """ Create a GridBucket of a 3D domain with fractures
         defined by the ISC dataset.
 
-        Parameters
-        ----------
-        overwrite_grid : bool
-            Overwrite an existing grid.
-
-        The method requires the following attribute:
-            mesh_args (dict): Containing the mesh sizes.
+        The method requires the following attributes:
+            mesh_args : dict
+                Containing the mesh sizes.
+            length_scale : float
+                length scaling coefficient
+            box : dict
+                Bounding box of domain. Unscaled
+            viz_folder_name : str
+                path for where to store mesh files.
 
         Returns
         -------
@@ -142,58 +144,20 @@ class ContactMechanicsISC(ContactMechanics):
             Nd : int
                 The dimension of the matrix, i.e., the highest
                 dimension in the grid bucket.
+            network : pp.FractureNetwork3d
+                fracture network of the domain
 
         """
-        if (self.gb is None) or overwrite_grid:
+        # Create grid
+        gb, scaled_box, network = create_grid(
+            self.mesh_args, self.length_scale, self.box,
+            self.shearzone_names, self.viz_folder_name,
+        )
+        self.gb = gb
+        self.box = scaled_box
+        self.network = network
 
-            # Scale mesh args by length_scale:
-            self.mesh_args = {k: v / self.length_scale for k, v in self.mesh_args.items()}
-            # Scale bounding box by length_scale:
-            self.box = {k: v / self.length_scale for k, v in self.box.items()}
-
-            network = gts.fracture_network(
-                shearzone_names=self.shearzone_names,
-                export_vtk=True,
-                domain=self.box,
-                length_scale=self.length_scale,
-                network_path=f"{self.viz_folder_name}/fracture_network.vtu",
-            )
-            self._network = network  # Usually only used to re-create gb from .msh-file.
-            path = f"{self.viz_folder_name}/gmsh_frac_file"
-            self.gb = network.mesh(mesh_args=self.mesh_args, file_name=path)
-
-            pp.contact_conditions.set_projections(self.gb)
-            self.Nd = self.gb.dim_max()
-
-            # TODO: Make this procedure "safe".
-            #   E.g. assign names by comparing normal vector and centroid.
-            #   Currently, we assume that fracture order is preserved in creation process.
-            #   This may be untrue if fractures are (completely) split in the process.
-            # Set fracture grid names:
-            # The 3D grid is tagged by 'None'
-            # 2D fractures are tagged by their shearzone name (S1_1, S1_2, etc.)
-            # 1D (and 0D) fracture intersections are tagged by 'None'.
-            self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids. (value is 'None' by default)
-            fracture_grids = self.gb.get_grids(lambda _g: _g.dim == self.Nd - 1)
-            assert fracture_grids.size == self.n_frac, "We expect all shear zones to be meshed"
-
-            # Set node property 'name' to each fracture with value being name of the shear zone.
-            if self.n_frac > 0:
-                for i, sz_name in enumerate(self.shearzone_names):
-                    self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
-                    # Note: Use self.gb.node_props(g, 'name') to get value.
-
-        # If a grid is already set, do some sanity checks.
-        else:
-            assert (self.Nd is not None) and (self.n_frac is not None), \
-                "Attributes Nd and n_frac must be set in an existing grid."
-
-            if self.n_frac > 0:
-                # We require that fracture grids have a name.
-                g = self.gb.get_grids(lambda _g: _g.dim == self.Nd - 1)
-                for i, sz in enumerate(self.shearzone_names):
-                    assert (self.gb.node_props(g[i], "name") is not None), \
-                        "All 2D grids must have a name."
+        self.Nd = self.gb.dim_max()
 
     def set_grid(self, gb: pp.GridBucket):
         """ Set a new grid
