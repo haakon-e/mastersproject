@@ -78,23 +78,51 @@ def create_grid(
 
 
 def create_structured_grid(
-        nx: np.ndarray,
-        physdims: np.ndarray,
         length_scale: float,
 ):
     """ Create a structured 3d grid
 
-    nx : np.ndarray
-        Number of cells in (x,y,z)
-    physdims : np.ndarray
-        Physical dimensions of (x,y,z).
     length_scale : float
         Length scale of physical dimension.
     """
+    nx = np.array([20, 20, 20])
+    physdims = np.array([300, 300, 300])
     gb = pp.meshing.cart_grid(
         [],
         nx=nx,
         physdims=physdims/length_scale,
+    )
+    return gb
+
+
+def structured_grid_1_frac(length_scale: float):
+    nx = np.array([20, 20, 20])
+    physdims = np.array([300, 300, 300])
+
+    frac_pts = np.array(
+        [[150, 150, 150, 150],
+         [0, 300, 300, 0],
+         [0, 0, 150, 150]])
+    gb = pp.meshing.cart_grid(
+        [frac_pts],
+        nx=nx,
+        physdims=physdims / length_scale,
+    )
+    return gb
+
+
+def structured_grid_1_frac_horizontal(length_scale: float):
+    nx = np.array([20, 20, 20])
+    physdims = np.array([300, 300, 300])
+
+    frac_pts = np.array(
+        [[0, 300, 300, 0],
+         [150, 150, 150, 150],
+         [0, 0, 150, 150]])
+    gb = pp.meshing.cart_grid(
+        [frac_pts],
+        nx=nx,
+        physdims=physdims / length_scale,
     )
     return gb
 
@@ -136,5 +164,48 @@ def optimize_grid(in_file, out_file=None, method='', force=False, dim_tags=[]):
     gmsh.model.mesh.optimize(method=method, force=force, dimTags=dim_tags)
 
 
+def create_unstructured_grid_fully_blocking_fracture(folder_name) -> pp.GridBucket:
+    """ Domain with fully blocking fracture """
+    domain = {
+        'xmin': 0, 'ymin': 0, 'zmin': 0,
+        'xmax': 300, 'ymax': 300, 'zmax': 300
+    }
+
+    frac_pts = np.array(
+        [[50, 50, 250, 250],
+         [0, 300, 300, 0],
+         [0, 0, 300, 300]])
+    frac = pp.Fracture(frac_pts)
+
+    frac_network = pp.FractureNetwork3d(frac, domain)
+    mesh_args = {'mesh_size_frac': 10, 'mesh_size_min': 4.0, 'mesh_size_bound': 40}
+
+    gb = frac_network.mesh(mesh_args, file_name=folder_name + "/gmsh_frac_file")
+    return gb
+
+
+def two_intersecting_blocking_fractures(folder_name) -> pp.GridBucket:
+    """ Domain with fully blocking fracture """
+    domain = {
+        'xmin': 0, 'ymin': 0, 'zmin': 0,
+        'xmax': 300, 'ymax': 300, 'zmax': 300
+    }
+
+    frac_pts1 = np.array(
+        [[50, 50, 250, 250],
+         [0, 300, 300, 0],
+         [0, 0, 300, 300]])
+    frac1 = pp.Fracture(frac_pts1)
+    frac_pts2 = np.array(
+        [[300, 300, 50, 50],
+         [0, 300, 300, 0],
+         [50, 50, 300, 300]])
+    frac2 = pp.Fracture(frac_pts2)
+
+    frac_network = pp.FractureNetwork3d([frac1, frac2], domain)
+    mesh_args = {'mesh_size_frac': 30, 'mesh_size_min': 20, 'mesh_size_bound': 60}
+
+    gb = frac_network.mesh(mesh_args, file_name=folder_name + "/gmsh_frac_file")
+    return gb
 
 
