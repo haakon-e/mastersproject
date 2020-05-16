@@ -62,8 +62,7 @@ def assemble_isc_matrix(values):
         "mesh_size_bound": 3 * _sz,
     }
 
-    time_ns = time.time_ns()
-    folder = prepare_directories(f"test_optimal_scaling/{time_ns}")
+    folder = prepare_directories(f"test_optimal_scaling/ls{length_scale:.2e}_ss{scalar_scale:.2e}")
     params = SetupParams(
         folder_name=folder,
         length_scale=length_scale,
