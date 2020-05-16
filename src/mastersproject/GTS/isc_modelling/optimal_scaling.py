@@ -27,9 +27,13 @@ def best_cond_numb(initial_guess: np.array = None):
     results = pd.DataFrame(columns=['ls', 'log_ss', 'cond_pp', 'cond_umfpack'])
     for ls in length_scales:
         for log_ss in log_scalar_scales:
-            A = assemble_isc_matrix([ls, log_ss])
-            cond_pp = condition_number_porepy(A)
-            cond_umfpack = condition_number_umfpack(A)
+            try:
+                A = assemble_isc_matrix([ls, log_ss])
+                cond_pp = condition_number_porepy(A)
+                cond_umfpack = condition_number_umfpack(A)
+            except ValueError:
+                cond_pp = "singular"
+                cond_umfpack = "singular"
             v = {
                 'ls': ls,
                 'log_ss': log_ss,
