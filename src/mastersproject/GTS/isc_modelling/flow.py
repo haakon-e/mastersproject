@@ -851,5 +851,75 @@ class FlowISC(Flow):
             super()._prepare_grid()
         self.well_cells()  # tag well cells
 
+    # -- For testing --
 
+    def after_simulation(self):
+        super().after_simulation()
 
+        # Intro:
+        summary_intro = f"Time of simulation: {time.asctime()}\n"
+
+        # Get negative values
+        g: pp.Grid = self._nd_grid()
+        d = self.gb.node_props(g)
+        p: np.ndarray = d[pp.STATE][self.p_exp]
+        neg_ind = np.where(p < 0)[0]
+        negneg_ind = np.where(p < -1e-10)[0]
+
+        p_neg = p[neg_ind]
+
+        summary_p_common = (f"\nInformation on negative values:\n"
+                            f"pressure values. "
+                            f"max: {p.max():.2e}. "
+                            f"Mean: {p.mean():.2e}. "
+                            f"Min: {p.min():.2e}\n")
+        if neg_ind.size > 0:
+            summary_p = (f"{summary_p_common}"
+                         f"all negative indices: p<0: count:{neg_ind.size}, indices: {neg_ind}\n"
+                         f"very negative indices: p<-1e-10: count: {negneg_ind.size}, indices: {negneg_ind}\n"
+                         f"neg pressure range: [{p_neg.min():.2e}, {p_neg.max():.2e}]\n")
+        else:
+            summary_p = (f"{summary_p_common}"
+                         f"No negative pressure values. count:{neg_ind.size}\n")
+
+        self.neg_ind = neg_ind
+        self.negneg_ind = negneg_ind
+
+        # Condition number
+        A, _ = self.assembler.assemble_matrix_rhs()
+        row_sum = np.sum(np.abs(A), axis=1)
+        pp_cond = np.max(row_sum) / np.min(row_sum)
+        diag = np.abs(A.diagonal())
+        umfpack_cond = np.max(diag) / np.min(diag)
+
+        summary_param = (f"\nSummary of relevant parameters:\n"
+                         f"length scale: {self.length_scale:.2e}\n"
+                         f"scalar scale: {self.scalar_scale:.2e}\n"
+                         f"3d permeability: {self.initial_permeability[None]:.2e}\n"
+                         f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
+                         f"3d cells: {g.num_cells}\n"
+                         f"pp condition number: {pp_cond:.2e}\n"
+                         f"umfpack condition number: {umfpack_cond:.2e}\n")
+
+        scalar_parameters = d[pp.PARAMETERS][self.scalar_parameter_key]
+        diffusive_term = scalar_parameters['second_order_tensor'].values[0, 0, 0]
+        mass_term = scalar_parameters['mass_weight'][0]
+        source_term = scalar_parameters['source']
+        nnz_source = np.where(source_term != 0)[0].size
+        cv = g.cell_volumes
+        summary_terms = (f"\nEstimates on term sizes, 3d grid:\n"
+                         f"diffusive term: {diffusive_term:.2e}\n"
+                         f"mass term: {mass_term:.2e}\n"
+                         f"source; max: {source_term.max():.2e}; "
+                         f"number of non-zero sources: {nnz_source}\n"
+                         f"cell volumes. "
+                         f"max:{cv.max():.2e}, "
+                         f"min:{cv.min():.2e}, "
+                         f"mean:{cv.mean():.2e}\n")
+
+        # Write summary to file
+        summary_path = self.viz_folder_name / "summary.txt"
+        summary_text = summary_intro + summary_p + summary_param + summary_terms
+        logger.info(summary_text)
+        with open(summary_path, mode='w') as f:
+            f.write(summary_text)
