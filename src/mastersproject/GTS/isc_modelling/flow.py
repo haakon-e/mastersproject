@@ -15,6 +15,7 @@ from GTS.ISC_data.isc import ISCData
 from util.logging_util import timer, trace
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -557,7 +558,7 @@ class Flow(AbstractModel):
         all_bf = g.get_boundary_faces()
         return all_bf, east, west, north, south, top, bottom
 
-    def _nd_grid(self):
+    def _nd_grid(self) -> pp.Grid:
         """ Get the grid of the highest dimension. Assumes self.gb is set.
         """
         return self.gb.grids_of_dimension(self.Nd)[0]
