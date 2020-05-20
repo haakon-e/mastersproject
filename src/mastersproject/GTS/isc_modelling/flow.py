@@ -365,6 +365,7 @@ class Flow(AbstractModel):
         """
         self._prepare_grid()
 
+        self.Nd = self.gb.dim_max()
         self.set_scalar_parameters()
         self.assign_variables()
         self.assign_discretizations()
@@ -377,7 +378,6 @@ class Flow(AbstractModel):
     def _prepare_grid(self):
         """ Wrapper to create grid"""
         self.create_grid()
-        self.Nd = self.gb.dim_max()
 
     def check_convergence(
         self,
