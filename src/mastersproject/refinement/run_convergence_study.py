@@ -24,7 +24,7 @@ def gb_refinements(
         network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
         gmsh_folder_path: Union[str, Path],
         mesh_args: dict,
-) -> Generator[pp.GridBucket]:
+) -> Generator[pp.GridBucket, None, None]:
     """ Create n refinements of a fracture network.
 
     This method is used if you have a pp.FractureNetwork, but not a .geo file describing the mesh.
@@ -41,7 +41,7 @@ def gb_refinements(
 
     Returns
     -------
-    gb : Generator[pp.GridBucket]
+    gb : Generator[pp.GridBucket, None, None]
         A generator for grid buckets
     """
 
