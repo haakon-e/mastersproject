@@ -1,0 +1,22 @@
+Time of simulation: Sat May 16 12:17:37 2020
+
+Information on negative values:
+pressure values. max: 1.26e+04. Mean: 3.53e+00. Min: -1.16e+00
+all negative indices: p<0: count:2, indices: [1462 1812]
+very negative indices: p<-1e-10: count: 2, indices: [1462 1812]
+neg pressure range: [-1.16e+00, -2.10e-01]
+
+Summary of relevant parameters:
+length scale: 1.00e+02
+scalar scale: 1.00e+00
+3d permeability: 1.00e-13
+time step: 0.0167 hours
+3d cells: 4603
+pp condition number: 6.23e+00
+umfpack condition number: 7.08e+00
+
+Estimates on term sizes, 3d grid:
+diffusive term: 7.91e-15
+mass term: 4.00e-10
+source; max: 1.00e-08; number of non-zero sources: 1
+cell volumes. max:1.42e-02, min:1.72e-03, mean:5.87e-03
