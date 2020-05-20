@@ -12,6 +12,7 @@ from pathlib import Path
 from datetime import datetime
 import porepy as pp
 
+from GTS.isc_modelling.flow import Flow
 from porepy.models.contact_mechanics_model import ContactMechanics
 from refinement.grid_refinement import gb_coarse_fine_cell_mapping, refine_mesh_by_splitting
 from refinement.grid_convergence import grid_error
@@ -98,7 +99,7 @@ def gb_refinements(
 
 
 def run_model_for_convergence_study(
-        model: Type[ContactMechanics],
+        model: Union[Type[Flow], Type[ContactMechanics]],
         run_model_method: Callable,
         network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
         params: dict,
