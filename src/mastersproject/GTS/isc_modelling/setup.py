@@ -36,16 +36,17 @@ logger = logging.getLogger(__name__)
 
 # --- RUN MODEL METHODS ---
 
+
 @trace(logger)
 def run_biot_model(
-        *,
-        viz_folder_name: str = None,
-        mesh_args: Mapping[str, int] = None,
-        bounding_box: Mapping[str, int] = None,
-        shearzone_names: List[str] = None,
-        source_scalar_borehole_shearzone: Mapping[str, str] = None,
-        length_scale: float = None,
-        scalar_scale: float = None,
+    *,
+    viz_folder_name: str = None,
+    mesh_args: Mapping[str, int] = None,
+    bounding_box: Mapping[str, int] = None,
+    shearzone_names: List[str] = None,
+    source_scalar_borehole_shearzone: Mapping[str, str] = None,
+    length_scale: float = None,
+    scalar_scale: float = None,
 ):
     """ Send all initialization parameters to contact mechanics biot class
 
@@ -104,13 +105,13 @@ def run_biot_gts_model(params):
 
 @trace(logger)
 def run_mechanics_model(
-        *,
-        viz_folder_name: str = None,
-        mesh_args: Mapping[str, int] = None,
-        bounding_box: Mapping[str, int] = None,
-        shearzone_names: List[str] = None,
-        length_scale: float = None,
-        scalar_scale: float = None,
+    *,
+    viz_folder_name: str = None,
+    mesh_args: Mapping[str, int] = None,
+    bounding_box: Mapping[str, int] = None,
+    shearzone_names: List[str] = None,
+    length_scale: float = None,
+    scalar_scale: float = None,
 ):
     """ Send all initialization parameters to contact mechanics class
 
@@ -161,7 +162,9 @@ def gts_biot_model(setup, params):
         f"Initial simulation complete. Exporting solution. Time: {pendulum.now().to_atom_string()}"
     )
     # Stimulation phase
-    logger.info(f"Starting stimulation phase at time: {pendulum.now().to_atom_string()}")
+    logger.info(
+        f"Starting stimulation phase at time: {pendulum.now().to_atom_string()}"
+    )
     setup.prepare_main_run()
     logger.info("Setup complete. Starting time-dependent simulation")
     pp.run_time_dependent_model(setup=setup, params=params)
@@ -169,11 +172,12 @@ def gts_biot_model(setup, params):
 
 # * RUN ABSTRACT METHOD *
 
+
 def run_abstract_model(
-        model: Type[ContactMechanics],
-        run_model_method: Callable,
-        params: dict = None,
-        newton_params: dict = None,
+    model: Type[ContactMechanics],
+    run_model_method: Callable,
+    params: dict = None,
+    newton_params: dict = None,
 ):
     """ Set up and run an abstract model
 
@@ -194,9 +198,7 @@ def run_abstract_model(
     # -------------------
     # --- SETUP MODEL ---
     # -------------------
-    params = SetupParams(
-        **params,
-    ).dict()
+    params = SetupParams(**params,).dict()
 
     setup = model(params=params)
 
@@ -216,12 +218,15 @@ def run_abstract_model(
 
     run_model_method(setup=setup, params=default_options)
 
-    logger.info(f"Simulation complete. Exporting solution. Time: {pendulum.now().to_atom_string()}")
+    logger.info(
+        f"Simulation complete. Exporting solution. Time: {pendulum.now().to_atom_string()}"
+    )
 
     return setup
 
 
 # --- PREPARE SIMULATIONS: DIRECTORIES AND PARAMETERS ---
+
 
 def prepare_directories(head, date=True, root=None, **kwargs):
     # --------------------------------------------------
@@ -259,12 +264,12 @@ class SetupParams(BaseModel):
     #     'zmax': 75,
     # }
     bounding_box: Dict[str, float] = {
-        'xmin': -100,
-        'xmax': 200,
-        'ymin': 0,
-        'ymax': 300,
-        'zmin': -100,
-        'zmax': 200,
+        "xmin": -100,
+        "xmax": 200,
+        "ymin": 0,
+        "ymax": 300,
+        "zmin": -100,
+        "zmax": 200,
     }
 
     # Injection location
@@ -280,7 +285,7 @@ class SetupParams(BaseModel):
     folder_name: Path = prepare_directories(head="default/default_1")
 
     # shearzones
-    shearzone_names: List[str] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
+    shearzone_names: Union[List[str], None] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
 
     # scaling coefficients
     length_scale: float = 0.05
@@ -296,12 +301,13 @@ class SetupParams(BaseModel):
 
 # --- METHODS FOR CONVERGENCE STUDY ---
 
+
 def create_isc_domain(
-        viz_folder_name: Union[str, Path],
-        shearzone_names: List[str],
-        bounding_box: dict,
-        mesh_args: dict,
-        n_refinements: int = 0
+    viz_folder_name: Union[str, Path],
+    shearzone_names: List[str],
+    bounding_box: dict,
+    mesh_args: dict,
+    n_refinements: int = 0,
 ) -> List[pp.GridBucket]:
     """ Create a domain (.geo file) for the ISC test site.
 
@@ -327,14 +333,14 @@ def create_isc_domain(
         shearzone_names=shearzone_names,
         export_vtk=True,
         domain=bounding_box,
-        network_path=f"{viz_folder_name}/fracture_network.vtu"
+        network_path=f"{viz_folder_name}/fracture_network.vtu",
     )
 
     gmsh_file_name = str(viz_folder_name / "gmsh_frac_file")
     gb = network.mesh(mesh_args=mesh_args, file_name=gmsh_file_name)
 
     gb_list = refine_mesh(
-        in_file=f'{gmsh_file_name}.geo',
+        in_file=f"{gmsh_file_name}.geo",
         out_file=f"{gmsh_file_name}.msh",
         dim=3,
         network=network,
@@ -360,13 +366,13 @@ def create_isc_domain(
 
 @timer(logger)
 def run_models_for_convergence_study(
-        model: Type[ContactMechanics],
-        run_model_method: Callable,
-        params: dict,
-        n_refinements: int = 1,
-        newton_params: dict = None,
-        variable: List[str] = None,  # This is really required for the moment
-        variable_dof: List[int] = None,
+    model: Type[ContactMechanics],
+    run_model_method: Callable,
+    params: dict,
+    n_refinements: int = 1,
+    newton_params: dict = None,
+    variable: List[str] = None,  # This is really required for the moment
+    variable_dof: List[int] = None,
 ) -> Tuple[List[pp.GridBucket], List[dict]]:
     """ Run a model on a grid, refined n times.
 
@@ -419,17 +425,17 @@ def run_models_for_convergence_study(
     # 4. a. Step: Map the solution to the fine grid, and compute error.
     # 5. Step: Compute order of convergence, etc.
 
-    params = SetupParams(
-        **params,
-    ).dict()
-    logger.info(f"Preparing setup for convergence study on {pendulum.now().to_atom_string()}")
+    params = SetupParams(**params,).dict()
+    logger.info(
+        f"Preparing setup for convergence study on {pendulum.now().to_atom_string()}"
+    )
 
     # 1. Step: Create n grids by uniform refinement.
     gb_list = create_isc_domain(
-        viz_folder_name=params['folder_name'],
-        shearzone_names=params['shearzone_names'],
-        bounding_box=params['bounding_box'],
-        mesh_args=params['mesh_args'],
+        viz_folder_name=params["folder_name"],
+        shearzone_names=params["shearzone_names"],
+        bounding_box=params["bounding_box"],
+        mesh_args=params["mesh_args"],
         n_refinements=n_refinements,
     )
 
@@ -467,13 +473,8 @@ def run_models_for_convergence_study(
         gb_coarse_fine_cell_mapping(gb=gb_i, gb_ref=gb_ref)
 
         _error = grid_error(
-            gb=gb_i,
-            gb_ref=gb_ref,
-            variable=variable,
-            variable_dof=variable_dof,
+            gb=gb_i, gb_ref=gb_ref, variable=variable, variable_dof=variable_dof,
         )
         errors.append(_error)
 
     return gb_list, errors
-
-

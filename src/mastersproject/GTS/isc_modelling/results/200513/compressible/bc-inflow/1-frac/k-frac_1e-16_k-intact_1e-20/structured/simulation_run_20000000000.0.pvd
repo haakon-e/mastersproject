@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
+<Collection>
+	<DataSet group="" part="" file="simulation_run_2_20000000000.0.vtu"/>
+	<DataSet group="" part="" file="simulation_run_3_20000000000.0.vtu"/>
+	<DataSet group="" part="" file="simulation_run_mortar_2_20000000000.0.vtu"/>
+</Collection>
+</VTKFile>
