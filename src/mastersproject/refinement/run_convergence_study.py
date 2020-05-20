@@ -60,36 +60,11 @@ def gb_refinements(
     in_file = f'{gmsh_file_name}.geo'
     out_file = f"{gmsh_file_name}.msh"
 
-    # TODO: Consider separating the start FractureNetwork3d.mesh, to avoid us copying its contents here
-    # We need to generate a .geo file for refine_mesh_by_splitting.
-    # refine_mesh_by_splitting will mesh the coarsest grid for us (in addition to all refinements),
-    # so we don't need to call network.mesh(...). Instead, we emulate its behaviour except for meshing itself.
-    # -- Start of FractureNetwork3d.mesh(...)
-    if not network.bounding_box_imposed:
-        network.impose_external_boundary(network.domain)
-
-    # Find intersections between fractures
-    if not network.has_checked_intersections:
-        network.find_intersections()
-    else:
-        logger.info("Use existing intersections")
-
-    if "mesh_size_frac" not in mesh_args.keys():
-        raise ValueError("Meshing algorithm needs argument mesh_size_frac")
-    if "mesh_size_min" not in mesh_args.keys():
-        raise ValueError("Meshing algorithm needs argument mesh_size_min")
-
-    mesh_size_frac = mesh_args.get("mesh_size_frac", None)
-    mesh_size_min = mesh_args.get("mesh_size_min", None)
-    mesh_size_bound = mesh_args.get("mesh_size_bound", None)
-    network._insert_auxiliary_points(mesh_size_frac, mesh_size_min, mesh_size_bound)
-
-    # Process intersections to get a description of the geometry in non-intersecting lines and polygons
-    network.split_intersections()
+    # Impose various parameters on the network. See method definition for details / issues.
+    network = _impose_network_parameters(network, mesh_args)
 
     # Dump the network description to gmsh .geo format
     network.to_gmsh(in_file, in_3d=True)
-    # -- End of method: .geo file created
 
     yield from refine_mesh_by_splitting(
         in_file=in_file,
@@ -203,3 +178,35 @@ def run_model_for_convergence_study(
         errors.append(_error)
 
     return gb_list, errors
+
+
+def _impose_network_parameters(network: pp.FractureNetwork3d, mesh_args: dict):
+    """ TODO: Consider separating the start FractureNetwork3d.mesh, to avoid us copying its contents here
+    We need to generate a .geo file for refine_mesh_by_splitting.
+    refine_mesh_by_splitting will mesh the coarsest grid for us (in addition to all refinements),
+    so we don't need to call network.mesh(...). Instead, we emulate its behaviour except for meshing itself.
+    -- Start of FractureNetwork3d.mesh(...) below:
+    """
+    if not network.bounding_box_imposed:
+        network.impose_external_boundary(network.domain)
+
+    # Find intersections between fractures
+    if not network.has_checked_intersections:
+        network.find_intersections()
+    else:
+        logger.info("Use existing intersections")
+
+    if "mesh_size_frac" not in mesh_args.keys():
+        raise ValueError("Meshing algorithm needs argument mesh_size_frac")
+    if "mesh_size_min" not in mesh_args.keys():
+        raise ValueError("Meshing algorithm needs argument mesh_size_min")
+
+    mesh_size_frac = mesh_args.get("mesh_size_frac", None)
+    mesh_size_min = mesh_args.get("mesh_size_min", None)
+    mesh_size_bound = mesh_args.get("mesh_size_bound", None)
+    network._insert_auxiliary_points(mesh_size_frac, mesh_size_min, mesh_size_bound)
+
+    # Process intersections to get a description of the geometry in non-intersecting lines and polygons
+    network.split_intersections()
+
+    return network
