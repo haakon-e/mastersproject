@@ -94,7 +94,6 @@ def gb_refinements(
         in_file=in_file,
         out_file=out_file,
         dim=dim,
-        network=network,
     )
 
 

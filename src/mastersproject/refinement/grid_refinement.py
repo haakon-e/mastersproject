@@ -19,7 +19,6 @@ def refine_mesh_by_splitting(
     in_file: Union[str, Path],
     out_file: Union[str, Path],
     dim: int,
-    network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
     gb_set_projections: bool = True,
 ) -> Generator[pp.GridBucket, None, None]:
     """ Refine a mesh by splitting using gmsh
@@ -39,8 +38,6 @@ def refine_mesh_by_splitting(
         path to new .msh file to store mesh in, excluding the ending '.msh'.
     dim : int {2, 3}
         Dimension of domain to mesh
-    network : Union[pp.FractureNetwork2d, pp.FractureNetwork3d]
-        PorePy class defining the fracture network that is described by the .geo in_file
     gb_set_projections : bool (Default: True)
         Call pp.contact_conditions.set_projections(gb) before yielding result
     Returns
@@ -83,7 +80,7 @@ def refine_mesh_by_splitting(
 
             gmsh.write(out_file_name)  # Write the result to '.msh' file
             # Generate List[pp.Grid]
-            grids = tetrahedral_grid_from_gmsh(network=network, file_name=out_file_name)
+            grids = tetrahedral_grid_from_gmsh(file_name=out_file_name)
             # Convert List[pp.Grid] to pp.GridBucket
             gb = grid_list_to_grid_bucket(grids)
 
