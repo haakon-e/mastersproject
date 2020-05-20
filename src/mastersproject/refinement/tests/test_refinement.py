@@ -4,7 +4,7 @@ import os
 import porepy as pp
 import numpy as np
 
-from refinement.grid_refinement import refine_mesh
+from refinement.grid_refinement import refine_mesh_by_splitting
 
 
 def setup(tail_folders):
