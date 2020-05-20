@@ -23,7 +23,7 @@ import GTS as gts
 
 # Refinement
 from refinement import gb_coarse_fine_cell_mapping
-from refinement.convergence import grid_error
+from refinement.grid_convergence import grid_error
 from refinement import refine_mesh
 
 # --- LOGGING UTIL ---
