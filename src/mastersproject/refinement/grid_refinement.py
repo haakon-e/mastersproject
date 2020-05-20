@@ -15,8 +15,11 @@ from typing import (  # noqa
     TypeVar,
     Union,
 )
+from pathlib import Path
 
 import porepy as pp
+from porepy.fracs.simplex import tetrahedral_grid_from_gmsh
+from porepy.fracs.meshing import grid_list_to_grid_bucket
 import numpy as np
 import scipy.sparse as sps
 
@@ -30,26 +33,43 @@ logger = logging.getLogger(__name__)
 
 
 @trace(logger)
-def refine_mesh(
-        in_file: str, out_file: str, dim: int,
+def refine_mesh_by_splitting(
+        in_file: Union[str, Path],
+        out_file: Union[str, Path],
+        dim: int,
         network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
-        num_refinements: int = 1,
-) -> List[pp.GridBucket]:
-    """ Refine a mesh by splitting, using gmsh
+        gb_set_projections: bool = True,
+) -> Generator[pp.GridBucket, None, None]:
+    """ Refine a mesh by splitting using gmsh
+
+    The method generates refinements on the fly by yielding GridBuckets as desired.
+
+    Note:
+    When the desired number of refinements is reached, you should call
+        refine_mesh_by_splitting.close()
+    so that gmsh.finalize() is called.
 
     Parameters
     ----------
-    in_file : str
+    in_file : Union[str, Path]
         path to .geo file to read
-    out_file : str
+    out_file : Union[str, Path]
         path to new .msh file to store mesh in, excluding the ending '.msh'.
     dim : int {2, 3}
         Dimension of domain to mesh
     network : Union[pp.FractureNetwork2d, pp.FractureNetwork3d]
         PorePy class defining the fracture network that is described by the .geo in_file
-    num_refinements : int : Optional. Default = 1
-        Number of refinements
+    gb_set_projections : bool (Default: True)
+        Call pp.contact_conditions.set_projections(gb) before yielding result
+    Returns
+    -------
+    Generator[gb]
+        A generator for the refined grid buckets, starting with the coarsest.
     """
+    # Ensure that in- and out paths are formatted correctly.
+    assert Path(in_file).is_file()
+    out_file = Path(out_file)
+    out_file = out_file.parent / out_file.stem
 
     try:
         import gmsh
@@ -61,37 +81,42 @@ def refine_mesh(
             "export PYTHONPATH=${PYTHONPATH}:path/to/gmsh*-sdk.*/lib"
         )
 
-    from porepy.fracs.simplex import tetrahedral_grid_from_gmsh
-    from porepy.fracs.meshing import grid_list_to_grid_bucket
+    # gmsh must always be finalized after it has be initialized (see 'finally' clause).
+    # Therefore, we wrap the entire function body in a try-finally context.
+    try:
+        # Initialize gmsh and generate the first (coarsest) mesh
+        gmsh.initialize()
+        gmsh.open(in_file)
+        gmsh.model.mesh.generate(dim=dim)
 
-    assert os.path.isfile(in_file)
+        num_refinements = 0
 
-    # Run gmsh
-    gmsh.initialize()
-    gmsh.open(in_file)
-    gmsh.model.mesh.generate(dim=dim)
-    if out_file[-4:] == ".msh":
-        out_file = out_file[:-4]
+        # Enter an infinite loop
+        while True:
+            out_file_name = f"{out_file}_{num_refinements}.msh"
 
-    # Save coarsest grid
-    fname = f"{out_file}_0.msh"
-    gmsh.write(fname)
-    grid_list_ref = tetrahedral_grid_from_gmsh(network=network, file_name=fname)
-    gb_list = [grid_list_to_grid_bucket(grid_list_ref)]
+            # The first mesh is already done. Start refining all subsequent meshes.
+            if num_refinements > 0:
+                gmsh.model.mesh.refine()  # Refine the mesh
 
-    for i in range(num_refinements):
-        gmsh.model.mesh.refine()  # Refined grid
+            gmsh.write(out_file_name)  # Write the result to '.msh' file
+            # Generate List[pp.Grid]
+            grids = tetrahedral_grid_from_gmsh(network=network, file_name=out_file_name)
+            # Convert List[pp.Grid] to pp.GridBucket
+            gb = grid_list_to_grid_bucket(grids)
 
-        fname = f"{out_file}_{i + 1}.msh"
-        gmsh.write(fname)
+            # Set projection operators for mixed-dimensional grids
+            if gb_set_projections:
+                pp.contact_conditions.set_projections(gb)
 
-        # Create grid bucket from refined grid output
-        grid_list_ref = tetrahedral_grid_from_gmsh(network=network, file_name=fname)
-        gb_ref = grid_list_to_grid_bucket(grid_list_ref)
-        gb_list.append(gb_ref.copy())
+            # yield the resulting grid bucket
+            yield gb
 
-    gmsh.finalize()
-    return gb_list
+            # finally, prepare the next iteration
+            num_refinements += 1
+    finally:
+        # When refine_mesh_by_splitting.close() is called, we get here.
+        gmsh.finalize()
 
 
 @trace(logger)
