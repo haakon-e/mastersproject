@@ -801,7 +801,11 @@ class FlowISC(Flow):
         for g, d in self.gb:
             tags = np.zeros(g.num_cells)
 
-            grid_name = self.gb.node_props(g, "name")
+            try:
+                grid_name = self.gb.node_props(g, "name")
+            except KeyError:
+                continue
+
             if grid_name == shearzone:
                 logger.info(f"Tag injection cell on {grid_name!r} (dim: {g.dim}).")
 
