@@ -704,7 +704,7 @@ class FlowISC(Flow):
         # --- COMPUTATIONAL MESH ---
         self.mesh_args: Dict[str, float] = params.get("mesh_args")
         self.box: Dict[str, float] = params.get("bounding_box")
-        self.gb: Optional[pp.GridBucket] = None
+        self._gb: Optional[pp.GridBucket] = None
         self.Nd: Optional[int] = None
         self.network = None
 
@@ -732,7 +732,7 @@ class FlowISC(Flow):
         """
 
         # Create grid
-        gb, scaled_box, network = create_grid(
+        gb, network = create_grid(
             self.mesh_args,
             self.length_scale,
             self.box,
@@ -740,15 +740,19 @@ class FlowISC(Flow):
             self.viz_folder_name,
         )
         self.gb = gb
-        self.box = scaled_box
         self.network = network
 
-        self.Nd = self.gb.dim_max()
+    @property
+    def gb(self) -> pp.GridBucket:
+        return self._gb
 
-    def set_grid(self, gb: pp.GridBucket):
-        """ Set a new grid
+    @gb.setter
+    def gb(self, gb: pp.GridBucket):
+        """ Set a grid bucket to the class
         """
-        self.gb = gb
+        self._gb = gb
+        if gb is None:
+            return
         pp.contact_conditions.set_projections(self.gb)
         self.Nd = gb.dim_max()
         self.n_frac = gb.get_grids(lambda _g: _g.dim == self.Nd - 1).size
