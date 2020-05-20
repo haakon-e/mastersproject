@@ -1,20 +1,5 @@
-import os
 import logging
-from typing import (  # noqa
-    Any,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Generator, Union
 from pathlib import Path
 
 import porepy as pp
@@ -24,21 +9,18 @@ import numpy as np
 import scipy.sparse as sps
 
 # --- LOGGING UTIL ---
-try:
-    from src.mastersproject.util.logging_util import timer, trace
-except ImportError:
-    from util.logging_util import timer, trace
+from util.logging_util import trace
 
 logger = logging.getLogger(__name__)
 
 
 @trace(logger)
 def refine_mesh_by_splitting(
-        in_file: Union[str, Path],
-        out_file: Union[str, Path],
-        dim: int,
-        network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
-        gb_set_projections: bool = True,
+    in_file: Union[str, Path],
+    out_file: Union[str, Path],
+    dim: int,
+    network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
+    gb_set_projections: bool = True,
 ) -> Generator[pp.GridBucket, None, None]:
     """ Refine a mesh by splitting using gmsh
 
@@ -173,7 +155,7 @@ def gb_coarse_fine_cell_mapping(gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e
 
 @trace(logger)
 def coarse_fine_cell_mapping(
-        g: pp.Grid, g_ref: pp.Grid, point_in_poly_tol=1e-8
+    g: pp.Grid, g_ref: pp.Grid, point_in_poly_tol=1e-8
 ) -> sps.csc_matrix:
     """ Construct a mapping between cells of a grid and its refined version
 
@@ -323,6 +305,6 @@ def coarse_fine_cell_mapping(
     coarse_fine = sps.csc_matrix((data, indices, indptr))
 
     assert (
-            indices.size == g_ref.num_cells
+        indices.size == g_ref.num_cells
     ), "Every fine cell should be inside exactly one coarse cell"
     return coarse_fine
