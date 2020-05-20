@@ -1,5 +1,5 @@
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import porepy as pp
 from porepy.models.abstract_model import AbstractModel
@@ -44,13 +44,13 @@ class Flow(AbstractModel):
         self.params = params
 
         # File name
-        self.file_name = params.get('file_name', 'simulation_run')
-        self.viz_folder_name = params.get('folder_name')
+        self.file_name = params.get("file_name", "simulation_run")
+        self.viz_folder_name = params.get("folder_name")
 
         # Time
         self.time = 0
-        self.time_step = 1
-        self.end_time = 1
+        self.time_step = 1 * pp.HOUR  # 1 * pp.MINUTE # 1
+        self.end_time = self.time_step * 4  # 1
 
         # Pressure
         self.scalar_variable = "p"
@@ -59,8 +59,8 @@ class Flow(AbstractModel):
         self.scalar_parameter_key = "flow"
 
         # Scaling coefficients
-        self.scalar_scale = params.get('scalar_scale', 1)
-        self.length_scale = params.get('length_scale', 1)
+        self.scalar_scale = params.get("scalar_scale", 1)
+        self.length_scale = params.get("length_scale", 1)
 
         # Grid
         self.gb = None  # pp.GridBucket
@@ -70,7 +70,7 @@ class Flow(AbstractModel):
         # Parameters
 
         # Constant in-situ temperature. Default is ISC temp.
-        temperature = params.get('temperature', 11)
+        temperature = params.get("temperature", 11)
         self.fluid = pp.Water(theta_ref=temperature)
 
         # Initialize simulation/solver options
@@ -132,7 +132,7 @@ class Flow(AbstractModel):
             aperture *= 0.1
 
         if scaled:
-            aperture *= (pp.METER / self.length_scale)
+            aperture *= pp.METER / self.length_scale
         return aperture
 
     def specific_volume(self, g: pp.Grid, scaled) -> np.ndarray:
@@ -152,7 +152,10 @@ class Flow(AbstractModel):
         """
         gb = self.gb
 
-        compressibility = self.fluid.COMPRESSIBILITY * (self.scalar_scale / pp.PASCAL)  # scaled. [1/Pa]
+        # Set to 0 for steady state
+        compressibility = self.fluid.COMPRESSIBILITY * (
+            self.scalar_scale / pp.PASCAL
+        )  # scaled. [1/Pa]
         for g, d in gb:
             porosity = self.porosity(g)  # Default: 1 [-]
             # specific volume
@@ -165,10 +168,7 @@ class Flow(AbstractModel):
 
             # Mass weight  # TODO: Simplified version of mass_weight?
             mass_weight = (
-                    compressibility
-                    * porosity
-                    * specific_volume
-                    * np.ones(g.num_cells)
+                compressibility * porosity * specific_volume * np.ones(g.num_cells)
             )
 
             # Initialize data
@@ -225,19 +225,20 @@ class Flow(AbstractModel):
 
             # Take trace of and then project specific volumes from g_h
             v_h = (
-                    mg.master_to_mortar_avg()
-                    * np.abs(g_h.cell_faces)
-                    * self.specific_volume(g_h, scaled=True)
+                mg.master_to_mortar_avg()
+                * np.abs(g_h.cell_faces)
+                * self.specific_volume(g_h, scaled=True)
             )
 
             # Get diffusivity from lower-dimensional neighbour
             data_l = gb.node_props(g_l)
-            diffusivity = data_l[pp.PARAMETERS][scalar_key]["second_order_tensor"].values[0, 0]
+            diffusivity = data_l[pp.PARAMETERS][scalar_key][
+                "second_order_tensor"
+            ].values[0, 0]
 
             # Division through half the aperture represents taking the (normal) gradient
-            normal_diffusivity = (
-                    mg.slave_to_mortar_int()
-                    * np.divide(diffusivity, aperture_l / 2)
+            normal_diffusivity = mg.slave_to_mortar_int() * np.divide(
+                diffusivity, aperture_l / 2
             )
             # The interface flux is to match fluxes across faces of g_h,
             # and therefore need to be weighted by the corresponding
@@ -246,10 +247,7 @@ class Flow(AbstractModel):
 
             # Set the data
             pp.initialize_data(
-                mg,
-                data_edge,
-                scalar_key,
-                {"normal_diffusivity": normal_diffusivity},
+                mg, data_edge, scalar_key, {"normal_diffusivity": normal_diffusivity},
             )
 
     # --- Primary variables and discretizations ---
@@ -265,17 +263,17 @@ class Flow(AbstractModel):
         for _, d in gb:
             add_nonpresent_dictionary(d, primary_vars)
 
-            d[primary_vars].update({
-                self.scalar_variable: {"cells": 1},
-            })
+            d[primary_vars].update(
+                {self.scalar_variable: {"cells": 1},}
+            )
 
         # Then for the edges
         for _, d in gb.edges():
             add_nonpresent_dictionary(d, primary_vars)
 
-            d[primary_vars].update({
-                self.mortar_scalar_variable: {"cells": 1},
-            })
+            d[primary_vars].update(
+                {self.mortar_scalar_variable: {"cells": 1},}
+            )
 
     def assign_discretizations(self) -> None:
         """
@@ -300,31 +298,35 @@ class Flow(AbstractModel):
         for g, d in gb:
             add_nonpresent_dictionary(d, discr_key)
 
-            d[discr_key].update({
-                var_s: {
-                    "diffusion": diff_disc_s,
-                    "mass": mass_disc_s,
-                    "source": source_disc_s,
-                },
-            })
+            d[discr_key].update(
+                {
+                    var_s: {
+                        "diffusion": diff_disc_s,
+                        "mass": mass_disc_s,
+                        "source": source_disc_s,
+                    },
+                }
+            )
 
         # Assign edge discretizations
         for e, d in gb.edges():
             g_l, g_h = gb.nodes_of_edge(e)
             add_nonpresent_dictionary(d, coupling_discr_key)
 
-            d[coupling_discr_key].update({
-                self.scalar_coupling_term: {
-                    g_h: (var_s, "diffusion"),
-                    g_l: (var_s, "diffusion"),
-                    e: (
-                        self.mortar_scalar_variable,
-                        pp.RobinCoupling(key_s, diff_disc_s),
-                    ),
-                },
-            })
+            d[coupling_discr_key].update(
+                {
+                    self.scalar_coupling_term: {
+                        g_h: (var_s, "diffusion"),
+                        g_l: (var_s, "diffusion"),
+                        e: (
+                            self.mortar_scalar_variable,
+                            pp.RobinCoupling(key_s, diff_disc_s),
+                        ),
+                    },
+                }
+            )
 
-    @timer(logger, level='INFO')
+    @timer(logger, level="INFO")
     def discretize(self) -> None:
         """ Discretize all terms
         """
@@ -378,8 +380,11 @@ class Flow(AbstractModel):
         self.Nd = self.gb.dim_max()
 
     def check_convergence(
-            self, solution: np.ndarray, prev_solution: np.ndarray,
-            init_solution: np.ndarray, nl_params: Dict = None,
+        self,
+        solution: np.ndarray,
+        prev_solution: np.ndarray,
+        init_solution: np.ndarray,
+        nl_params: Dict = None,
     ):
 
         if not self._is_nonlinear_problem():
@@ -404,10 +409,7 @@ class Flow(AbstractModel):
         scalar_dof = np.array([], dtype=np.int)
         for g, _ in self.gb:
             scalar_dof = np.hstack(
-                (
-                    scalar_dof,
-                    self.assembler.dof_ind(g, self.scalar_variable)
-                )
+                (scalar_dof, self.assembler.dof_ind(g, self.scalar_variable))
             )
 
         # Unscaled pressure solutions
@@ -422,23 +424,28 @@ class Flow(AbstractModel):
 
         # -- Scalar solution --
         # The if is intended to avoid division through zero
-        if difference_in_iterates_scalar < tol_convergence:  # and scalar_norm < tol_convergence
+        if (
+            difference_in_iterates_scalar < tol_convergence
+        ):  # and scalar_norm < tol_convergence
             converged = True
             error_scalar = difference_in_iterates_scalar
             logger.info(f"pressure converged absolutely")
         else:
             # Relative convergence criterion:
-            if difference_in_iterates_scalar < tol_convergence * difference_from_init_scalar:
+            if (
+                difference_in_iterates_scalar
+                < tol_convergence * difference_from_init_scalar
+            ):
                 converged = True
                 logger.info(f"pressure converged relatively")
 
-            error_scalar = (difference_in_iterates_scalar / difference_from_init_scalar)
+            error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
 
         logger.info(f"Error in pressure is {error_scalar:.6e}.")
 
         return error_scalar, converged, diverged
 
-    @timer(logger, level='INFO')
+    @timer(logger, level="INFO")
     def initialize_linear_solver(self):
         """ Initialize linear solver
 
@@ -493,7 +500,9 @@ class Flow(AbstractModel):
             sol = spla.spsolve(A, b)
             logger.info(f"Done. Elapsed time {time.time() - tic}")
             logger.info(f"||b-Ax|| = {np.linalg.norm(b - A * sol)}")
-            logger.info(f"||b-Ax|| / ||b|| = {np.linalg.norm(b - A * sol) / np.linalg.norm(b)}")
+            logger.info(
+                f"||b-Ax|| / ||b|| = {np.linalg.norm(b - A * sol) / np.linalg.norm(b)}"
+            )
             return sol
 
         else:
@@ -593,11 +602,13 @@ class Flow(AbstractModel):
 
     def set_viz(self):
         """ Set exporter for visualization """
-        self.viz = pp.Exporter(self.gb, file_name=self.file_name, folder_name=self.viz_folder_name)
+        self.viz = pp.Exporter(
+            self.gb, file_name=self.file_name, folder_name=self.viz_folder_name
+        )
         # list of time steps to export with visualization.
         self.export_times = []
 
-        self.p_exp = 'p_exp'
+        self.p_exp = "p_exp"
 
         self.export_fields = [
             self.p_exp,
@@ -608,12 +619,16 @@ class Flow(AbstractModel):
         for g, d in self.gb:
             # Export pressure variable
             if self.scalar_variable in d[pp.STATE]:
-                d[pp.STATE][self.p_exp] = d[pp.STATE][self.scalar_variable].copy() * self.scalar_scale
+                d[pp.STATE][self.p_exp] = (
+                    d[pp.STATE][self.scalar_variable].copy() * self.scalar_scale
+                )
             else:
                 d[pp.STATE][self.p_exp] = np.zeros((self.Nd, g.num_cells))
 
         if write_vtk:
-            self.viz.write_vtk(data=self.export_fields, time_step=self.time)  # Write visualization
+            self.viz.write_vtk(
+                data=self.export_fields, time_step=self.time
+            )  # Write visualization
             self.export_times.append(self.time)
 
     def export_pvd(self):
@@ -654,13 +669,15 @@ class FlowISC(Flow):
         super().__init__(params)
 
         # --- FRACTURES ---
-        self.shearzone_names: List[str] = params.get('shearzone_names')
+        self.shearzone_names: List[str] = params.get("shearzone_names")
         self.n_frac = len(self.shearzone_names) if self.shearzone_names else 0
 
         # --- PHYSICAL PARAMETERS ---
 
         # * Source injection *
-        self.source_scalar_borehole_shearzone = params.get('source_scalar_borehole_shearzone')
+        self.source_scalar_borehole_shearzone = params.get(
+            "source_scalar_borehole_shearzone"
+        )
 
         # * Permeability and aperture *
 
@@ -685,10 +702,10 @@ class FlowISC(Flow):
         self.initial_aperture[None] = 1  # Set 3D matrix aperture to 1.
 
         # --- COMPUTATIONAL MESH ---
-        self.mesh_args: Dict[str, float] = params.get('mesh_args')
-        self.box: Dict[str, float] = params.get('bounding_box')
-        self.gb = None
-        self.Nd = None
+        self.mesh_args: Dict[str, float] = params.get("mesh_args")
+        self.box: Dict[str, float] = params.get("bounding_box")
+        self.gb: Optional[pp.GridBucket] = None
+        self.Nd: Optional[int] = None
         self.network = None
 
     # --- Grid methods ---
@@ -716,8 +733,11 @@ class FlowISC(Flow):
 
         # Create grid
         gb, scaled_box, network = create_grid(
-            self.mesh_args, self.length_scale, self.box,
-            self.shearzone_names, self.viz_folder_name,
+            self.mesh_args,
+            self.length_scale,
+            self.box,
+            self.shearzone_names,
+            self.viz_folder_name,
         )
         self.gb = gb
         self.box = scaled_box
@@ -743,7 +763,7 @@ class FlowISC(Flow):
             for i, sz_name in enumerate(self.shearzone_names):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
-    def grids_by_name(self, name, key='name') -> np.ndarray:
+    def grids_by_name(self, name, key="name") -> np.ndarray:
         """ Get grid by grid bucket node property 'name'
 
         """
@@ -786,6 +806,8 @@ class FlowISC(Flow):
                 logger.info(f"Tag injection cell on {grid_name!r} (dim: {g.dim}).")
 
                 # Find closest cell
+                assert np.atleast_2d(pts).shape == (3, 1), \
+                    "We compare only one point; array needs shape 3x1"
                 ids, dsts = g.closest_cell(pts, return_distance=True)
                 logger.info(f"Closest cell found has (unscaled) distance: {dsts[0] * self.length_scale:4f}")
 
@@ -814,7 +836,7 @@ class FlowISC(Flow):
         aperture *= self.initial_aperture[shearzone]
 
         if scaled:
-            aperture *= (pp.METER / self.length_scale)
+            aperture *= pp.METER / self.length_scale
 
         return aperture
 
@@ -869,19 +891,25 @@ class FlowISC(Flow):
 
         p_neg = p[neg_ind]
 
-        summary_p_common = (f"\nInformation on negative values:\n"
-                            f"pressure values. "
-                            f"max: {p.max():.2e}. "
-                            f"Mean: {p.mean():.2e}. "
-                            f"Min: {p.min():.2e}\n")
+        summary_p_common = (
+            f"\nInformation on negative values:\n"
+            f"pressure values. "
+            f"max: {p.max():.2e}. "
+            f"Mean: {p.mean():.2e}. "
+            f"Min: {p.min():.2e}\n"
+        )
         if neg_ind.size > 0:
-            summary_p = (f"{summary_p_common}"
-                         f"all negative indices: p<0: count:{neg_ind.size}, indices: {neg_ind}\n"
-                         f"very negative indices: p<-1e-10: count: {negneg_ind.size}, indices: {negneg_ind}\n"
-                         f"neg pressure range: [{p_neg.min():.2e}, {p_neg.max():.2e}]\n")
+            summary_p = (
+                f"{summary_p_common}"
+                f"all negative indices: p<0: count:{neg_ind.size}, indices: {neg_ind}\n"
+                f"very negative indices: p<-1e-10: count: {negneg_ind.size}, indices: {negneg_ind}\n"
+                f"neg pressure range: [{p_neg.min():.2e}, {p_neg.max():.2e}]\n"
+            )
         else:
-            summary_p = (f"{summary_p_common}"
-                         f"No negative pressure values. count:{neg_ind.size}\n")
+            summary_p = (
+                f"{summary_p_common}"
+                f"No negative pressure values. count:{neg_ind.size}\n"
+            )
 
         self.neg_ind = neg_ind
         self.negneg_ind = negneg_ind
@@ -893,34 +921,38 @@ class FlowISC(Flow):
         diag = np.abs(A.diagonal())
         umfpack_cond = np.max(diag) / np.min(diag)
 
-        summary_param = (f"\nSummary of relevant parameters:\n"
-                         f"length scale: {self.length_scale:.2e}\n"
-                         f"scalar scale: {self.scalar_scale:.2e}\n"
-                         f"3d permeability: {self.initial_permeability[None]:.2e}\n"
-                         f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
-                         f"3d cells: {g.num_cells}\n"
-                         f"pp condition number: {pp_cond:.2e}\n"
-                         f"umfpack condition number: {umfpack_cond:.2e}\n")
+        summary_param = (
+            f"\nSummary of relevant parameters:\n"
+            f"length scale: {self.length_scale:.2e}\n"
+            f"scalar scale: {self.scalar_scale:.2e}\n"
+            f"3d permeability: {self.initial_permeability[None]:.2e}\n"
+            f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
+            f"3d cells: {g.num_cells}\n"
+            f"pp condition number: {pp_cond:.2e}\n"
+            f"umfpack condition number: {umfpack_cond:.2e}\n"
+        )
 
         scalar_parameters = d[pp.PARAMETERS][self.scalar_parameter_key]
-        diffusive_term = scalar_parameters['second_order_tensor'].values[0, 0, 0]
-        mass_term = scalar_parameters['mass_weight'][0]
-        source_term = scalar_parameters['source']
+        diffusive_term = scalar_parameters["second_order_tensor"].values[0, 0, 0]
+        mass_term = scalar_parameters["mass_weight"][0]
+        source_term = scalar_parameters["source"]
         nnz_source = np.where(source_term != 0)[0].size
         cv = g.cell_volumes
-        summary_terms = (f"\nEstimates on term sizes, 3d grid:\n"
-                         f"diffusive term: {diffusive_term:.2e}\n"
-                         f"mass term: {mass_term:.2e}\n"
-                         f"source; max: {source_term.max():.2e}; "
-                         f"number of non-zero sources: {nnz_source}\n"
-                         f"cell volumes. "
-                         f"max:{cv.max():.2e}, "
-                         f"min:{cv.min():.2e}, "
-                         f"mean:{cv.mean():.2e}\n")
+        summary_terms = (
+            f"\nEstimates on term sizes, 3d grid:\n"
+            f"diffusive term: {diffusive_term:.2e}\n"
+            f"mass term: {mass_term:.2e}\n"
+            f"source; max: {source_term.max():.2e}; "
+            f"number of non-zero sources: {nnz_source}\n"
+            f"cell volumes. "
+            f"max:{cv.max():.2e}, "
+            f"min:{cv.min():.2e}, "
+            f"mean:{cv.mean():.2e}\n"
+        )
 
         # Write summary to file
         summary_path = self.viz_folder_name / "summary.txt"
         summary_text = summary_intro + summary_p + summary_param + summary_terms
         logger.info(summary_text)
-        with open(summary_path, mode='w') as f:
+        with open(summary_path, mode="w") as f:
             f.write(summary_text)

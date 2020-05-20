@@ -24,7 +24,7 @@ def best_cond_numb(initial_guess: np.array = None):
     length_scales = np.array((1 / 4, 1 / 2, 1, 2, 4)) * ls_0
     log_scalar_scales = np.array((-2, -1, 0, 1, 2)) + log_ss_0
 
-    results = pd.DataFrame(columns=['ls', 'log_ss', 'cond_pp', 'cond_umfpack'])
+    results = pd.DataFrame(columns=["ls", "log_ss", "cond_pp", "cond_umfpack"])
     for ls in length_scales:
         for log_ss in log_scalar_scales:
             try:
@@ -35,10 +35,10 @@ def best_cond_numb(initial_guess: np.array = None):
                 cond_pp = "singular"
                 cond_umfpack = "singular"
             v = {
-                'ls': ls,
-                'log_ss': log_ss,
-                'cond_pp': cond_pp,
-                'cond_umfpack': cond_umfpack,
+                "ls": ls,
+                "log_ss": log_ss,
+                "cond_pp": cond_pp,
+                "cond_umfpack": cond_umfpack,
             }
             results = results.append(v, ignore_index=True)
 
@@ -62,7 +62,9 @@ def assemble_isc_matrix(values):
         "mesh_size_bound": 3 * _sz,
     }
 
-    folder = prepare_directories(f"test_optimal_scaling/ls{length_scale:.2e}_ss{scalar_scale:.2e}")
+    folder = prepare_directories(
+        f"test_optimal_scaling/ls{length_scale:.2e}_ss{scalar_scale:.2e}"
+    )
     params = SetupParams(
         folder_name=folder,
         length_scale=length_scale,
@@ -84,7 +86,3 @@ def condition_number_porepy(A):
 def condition_number_umfpack(A):
     diag = np.abs(A.diagonal())
     return np.max(diag) / np.min(diag)
-
-
-
-
