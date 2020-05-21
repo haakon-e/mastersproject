@@ -37,9 +37,6 @@ def create_grid(
     -------
         gb : pp.GridBucket
             The produced grid bucket
-        box : dict
-            The SCALED bounding box of the domain, defined through
-            minimum and maximum values in each dimension.
         network : pp.FractureNetwork3d
             fracture network
 
@@ -76,7 +73,7 @@ def create_grid(
             gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
             # Note: Use self.gb.node_props(g, 'name') to get value.
 
-    return gb, box, network
+    return gb, network
 
 
 def create_structured_grid(length_scale: float, ):
