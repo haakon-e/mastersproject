@@ -99,7 +99,7 @@ def refine_mesh_by_splitting(
 
 
 @trace(logger)
-def gb_coarse_fine_cell_mapping(gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e-8):
+def gb_coarse_fine_cell_mapping(gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e-8) -> None:
     """ Wrapper for coarse_fine_cell_mapping to construct mapping for grids in
     GridBucket.
 
@@ -138,10 +138,8 @@ def gb_coarse_fine_cell_mapping(gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e
     for i in np.arange(len(grids)):
         g, g_ref = grids[i], grids_ref[i]
 
-        node_num, node_num_ref = (
-            gb._nodes[g]["node_number"],
-            gb_ref._nodes[g_ref]["node_number"],
-        )
+        node_num = gb.node_props(g, "node_number")
+        node_num_ref = gb_ref.node_props(g_ref, "node_number")
         assert node_num == node_num_ref, "Weakly check that grids refer to same domain."
 
         # Compute the mapping for this grid-pair,
