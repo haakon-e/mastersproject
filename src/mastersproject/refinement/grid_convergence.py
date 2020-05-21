@@ -1,24 +1,8 @@
-import os
 import logging
-from typing import (  # noqa
-    Any,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import List
 
 import porepy as pp
 import numpy as np
-import scipy.sparse as sps
 
 # --- LOGGING UTIL ---
 try:
