@@ -207,6 +207,7 @@ class Flow(AbstractModel):
         for g, d in gb:
             # permeability [m2] (scaled)
             k = self.permeability(g) * (pp.METER / self.length_scale) ** 2
+            logger.info(f"Scaled permeability in dim {g.dim} set to {k:.3e}")
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -817,8 +818,11 @@ class FlowISC(Flow):
                 assert np.atleast_2d(pts).shape == (3, 1), \
                     "We compare only one point; array needs shape 3x1"
                 ids, dsts = g.closest_cell(pts, return_distance=True)
-                logger.info(f"Closest cell found has (unscaled) distance: {dsts[0] * self.length_scale:4f}")
-
+                logger.info(
+                    f"Closest cell found has (unscaled) distance: {dsts[0] * self.length_scale:4f}\n"
+                    f"ideal point coordinate:\n {pts}\n"
+                    f"nearest cell center coordinate:\n {g.cell_centers[:, ids]}\n"
+                )
                 # Tag the injection cell
                 tags[ids] = 1
                 tagged = True
