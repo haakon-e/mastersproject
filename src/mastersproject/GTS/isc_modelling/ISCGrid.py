@@ -112,16 +112,17 @@ def structured_grid_1_frac_horizontal(length_scale: float):
     return gb
 
 
-def optimize_grid(in_file, out_file=None, method="", force=False, dim_tags=[]):
-    """ Optimize a grid using an optimizer
+def optimize_mesh(in_file, out_file=None, method="", force=False, dim_tags=[], dim=3):
+    """ Optimize a mesh using an optimizer
 
     See: https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/api/gmsh.py#L1444
 
     Parameters
     ----------
-    in_file : str
-        path to .msh file to be optimized
-    out_file : str
+    in_file : Path or str
+        path to .geo file to be optimized
+        Note: You are unable to optimize .msh-files. Therefore, only .geo files can be passed.
+    out_file : Path or str
         output file. By default, in_file+"optimized"
     method : str
         name of optimizer.
@@ -138,16 +139,31 @@ def optimize_grid(in_file, out_file=None, method="", force=False, dim_tags=[]):
         If set, apply the optimization also to discrete entities
     dim_tags : List
         If supplied, only apply the optimizer to the given entities
+    dim : int
+        Which dimension to mesh. Defaults to 3D.
 
     """
-    assert Path(in_file).is_file()
+    # Check in- and out-file paths
+    in_file = Path(in_file)
+    out_file = Path(out_file)
+    assert in_file.is_file()
+    assert in_file.suffix == ".geo"
+    out_file.parent.mkdir(exist_ok=True, parents=True)
+    out_file.with_suffix(".msh")
 
+    print(out_file)
+    # Optimize the mesh.
     import gmsh
 
     gmsh.initialize()
-    gmsh.open(in_file)
+    gmsh.open(str(in_file))
 
+    gmsh.model.mesh.generate(dim=dim)
     gmsh.model.mesh.optimize(method=method, force=force, dimTags=dim_tags)
+
+    # Write to .msh and close gmsh
+    gmsh.write(str(out_file))
+    gmsh.finalize()
 
 
 def create_unstructured_grid_fully_blocking_fracture(folder_name) -> pp.GridBucket:
