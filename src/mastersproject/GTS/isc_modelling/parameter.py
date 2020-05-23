@@ -11,6 +11,7 @@ from GTS import ISCData
 from pydantic import BaseModel, validator
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +23,7 @@ def stress_tensor() -> np.ndarray:
     """
 
     # Note: Negative side due to compressive stresses
-    stress_value = - np.array([13.1, 9.2, 8.7]) * pp.MEGA * pp.PASCAL
+    stress_value = -np.array([13.1, 9.2, 8.7]) * pp.MEGA * pp.PASCAL
     dip_direction = np.array([104.48, 259.05, 3.72])
     dip = np.array([39.21, 47.90, 12.89])
 
@@ -31,7 +32,7 @@ def stress_tensor() -> np.ndarray:
         rad = np.pi / 180
         x = np.cos(th * rad) * np.sin(gm * rad)
         y = np.cos(th * rad) * np.cos(gm * rad)
-        z = - np.sin(th * rad)
+        z = -np.sin(th * rad)
         return np.array([x, y, z])
 
     rot = r(th=dip, gm=dip_direction)
@@ -49,6 +50,7 @@ def stress_tensor() -> np.ndarray:
 
 # --- Models ---
 
+
 class BaseParameters(BaseModel):
     """ Common parameters for any model implementation
 
@@ -63,6 +65,7 @@ class BaseParameters(BaseModel):
     time, time_step, end_time : float
         time stepping
     """
+
     # Scaling
     length_scale: float = 1  # > 0
     scalar_scale: float = 1  # > 0
@@ -86,15 +89,15 @@ class BaseParameters(BaseModel):
 
     # --- Validators ---
 
-    @validator('length_scale', 'scalar_scale')
+    @validator("length_scale", "scalar_scale")
     def validate_scaling(cls, v):  # noqa
         assert v > 0
         return v
 
-    @validator('folder_name', always=True)
+    @validator("folder_name", always=True)
     def construct_absolute_path(cls, p: Optional[Path], values):  # noqa
         """ Construct a valid path, either from 'folder_name' or 'head'."""
-        head = values['head']
+        head = values["head"]
         if not bool(head) ^ bool(p):  # XOR operator
             raise ValueError("Exactly one of head and folder_name should be set")
 
@@ -113,6 +116,7 @@ class BaseParameters(BaseModel):
 
 class GeometryParameters(BaseParameters):
     """ Parameters for geometry"""
+
     shearzone_names: Optional[List[str]] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
     intact_name: str = "intact"
 
@@ -139,6 +143,7 @@ class GeometryParameters(BaseParameters):
 
 class MechanicsParameters(GeometryParameters):
     """ Parameters for a mechanics model"""
+
     stress: np.ndarray
 
     # Parameters for Newton solver
@@ -162,6 +167,7 @@ class FlowParameters(GeometryParameters):
         A method to tag non-zero injection cells
     injection_rate
     """
+
     source_scalar_borehole_shearzone: Dict[str, str] = {
         "shearzone": "S1_2",
         "borehole": "INJ1",
@@ -177,7 +183,7 @@ class FlowParameters(GeometryParameters):
     intact_permeability: float
 
     # Validators
-    @validator('source_scalar_borehole_shearzone')
+    @validator("source_scalar_borehole_shearzone")
     def validate_source_scalar_borehole_shearzone(self, v, values):
         assert "shearzone" in v
         assert "borehole" in v
@@ -185,6 +191,7 @@ class FlowParameters(GeometryParameters):
 
 
 # --- Flow injection cell taggers ---
+
 
 def nd_injection_cell_center(params: FlowParameters, gb: pp.GridBucket) -> None:
     """ Tag the center cell of the nd-grid with 1 (injection)
@@ -235,13 +242,17 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
 
     # Get the grid to inject to
     injection_grid = gb.get_grids(lambda g: gb.node_props(g, "name") == shearzone)[0]
-    assert injection_grid.dim == gb.dim_max() - 1, "Injection grid should be a Nd-1 fracture"
+    assert (
+        injection_grid.dim == gb.dim_max() - 1
+    ), "Injection grid should be a Nd-1 fracture"
 
     # Tag injection grid with 1 in the injection cell
     _tag_injection_cell(gb, injection_grid, pts, params.length_scale)
 
 
-def _tag_injection_cell(gb: pp.GridBucket, g: pp.Grid, pts: np.ndarray, length_scale) -> None:
+def _tag_injection_cell(
+    gb: pp.GridBucket, g: pp.Grid, pts: np.ndarray, length_scale
+) -> None:
     """ Helper method to tag find closest point on g to pts
 
     The tag is set locally to g and to node props on gb.
@@ -272,6 +283,7 @@ def _tag_injection_cell(gb: pp.GridBucket, g: pp.Grid, pts: np.ndarray, length_s
 
 
 # --- other models ---
+
 
 class GTSModel(BaseModel):
     """ Parameters used at Grimsel Test Site.

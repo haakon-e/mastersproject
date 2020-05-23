@@ -8,11 +8,11 @@ from GTS.ISC_data.fracture import fracture_network
 
 
 def create_grid(
-        mesh_args: Dict[str, float],
-        length_scale: float,
-        box: Dict[str, float],
-        shearzone_names: List[str],
-        viz_folder_name: str,
+    mesh_args: Dict[str, float],
+    length_scale: float,
+    box: Dict[str, float],
+    shearzone_names: List[str],
+    viz_folder_name: str,
 ):
     """ Create a GridBucket of a 3D domain with fractures defined by the ISC data set.
 
@@ -76,7 +76,7 @@ def create_grid(
     return gb, network
 
 
-def create_structured_grid(length_scale: float, ):
+def create_structured_grid(length_scale: float,):
     """ Create a structured 3d grid
 
     length_scale : float
@@ -84,7 +84,7 @@ def create_structured_grid(length_scale: float, ):
     """
     nx = np.array([20, 20, 20])
     physdims = np.array([300, 300, 300])
-    gb = pp.meshing.cart_grid([], nx=nx, physdims=physdims / length_scale, )
+    gb = pp.meshing.cart_grid([], nx=nx, physdims=physdims / length_scale,)
     return gb
 
 
@@ -92,10 +92,12 @@ def structured_grid_1_frac(length_scale: float):
     nx = np.array([20, 20, 20])
     physdims = np.array([300, 300, 300])
 
+    # fmt: off
     frac_pts = np.array(
         [[150, 150, 150, 150],
          [0, 300, 300, 0],
          [0, 0, 150, 150]])
+    # fmt: on
     gb = pp.meshing.cart_grid([frac_pts], nx=nx, physdims=physdims / length_scale,)
     return gb
 
@@ -104,10 +106,12 @@ def structured_grid_1_frac_horizontal(length_scale: float):
     nx = np.array([20, 20, 20])
     physdims = np.array([300, 300, 300])
 
+    # fmt: off
     frac_pts = np.array(
         [[0, 300, 300, 0],
          [150, 150, 150, 150],
          [0, 0, 150, 150]])
+    # fmt: on
     gb = pp.meshing.cart_grid([frac_pts], nx=nx, physdims=physdims / length_scale,)
     return gb
 
@@ -168,6 +172,7 @@ def optimize_mesh(in_file, out_file=None, method="", force=False, dim_tags=[], d
 
 def create_unstructured_grid_fully_blocking_fracture(folder_name) -> pp.GridBucket:
     """ Domain with fully blocking fracture """
+    # fmt: off
     domain = {
         'xmin': 0, 'ymin': 0, 'zmin': 0,
         'xmax': 300, 'ymax': 300, 'zmax': 300
@@ -177,6 +182,7 @@ def create_unstructured_grid_fully_blocking_fracture(folder_name) -> pp.GridBuck
         [[50, 50, 250, 250],
          [0, 300, 300, 0],
          [0, 0, 300, 300]])
+    # fmt: on
     frac = pp.Fracture(frac_pts)
 
     frac_network = pp.FractureNetwork3d(frac, domain)
@@ -188,6 +194,7 @@ def create_unstructured_grid_fully_blocking_fracture(folder_name) -> pp.GridBuck
 
 def two_intersecting_blocking_fractures(folder_name) -> pp.GridBucket:
     """ Domain with fully blocking fracture """
+    # fmt: off
     domain = {
         'xmin': 0, 'ymin': 0, 'zmin': 0,
         'xmax': 300, 'ymax': 300, 'zmax': 300
@@ -202,6 +209,7 @@ def two_intersecting_blocking_fractures(folder_name) -> pp.GridBucket:
         [[300, 300, 50, 50],
          [0, 300, 300, 0],
          [50, 50, 300, 300]])
+    # fmt: on
     frac2 = pp.Fracture(frac_pts2)
 
     frac_network = pp.FractureNetwork3d([frac1, frac2], domain)
