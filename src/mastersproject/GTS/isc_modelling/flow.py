@@ -842,10 +842,18 @@ class FlowISC(Flow):
         area/volume (or "specific volume") for intersections of co-dimension 2 and 3.
         See also specific_volume.
         """
+        # TODO: This does not resolve what happens in 1D fractures
         aperture = np.ones(g.num_cells)
-        # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
-        shearzone = self.gb.node_props(g, 'name')
-        aperture *= self.initial_aperture[shearzone]
+
+        if g.dim == self.Nd or g.dim == self.Nd - 1:
+            # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
+            shearzone = self.gb.node_props(g, "name")
+            aperture *= self.initial_aperture[shearzone]
+        else:
+            # Temporary solution: Just take one of the higher-dim grids' aperture
+            g_h = self.gb.node_neighbors(g, only_higher=True)[0]
+            shearzone = self.gb.node_props(g_h, "name")
+            aperture *= self.initial_aperture[shearzone]
 
         if scaled:
             aperture *= pp.METER / self.length_scale
@@ -856,9 +864,22 @@ class FlowISC(Flow):
 
     def permeability(self, g):
         """ Set (uniform) permeability in a subdomain"""
-        # get the shearzone
-        shearzone = self.gb.node_props(g, 'name')
-        return self.initial_permeability[shearzone]
+
+        # TODO: This does not resolve what happens in 1D fractures
+        if g.dim == self.Nd or g.dim == self.Nd - 1:
+            # get the shearzone
+            shearzone = self.gb.node_props(g, "name")
+            k = self.initial_permeability[shearzone]
+        else:
+            # Set the permeability in fracture intersections as
+            # the average of the neighbouring fractures
+
+            # Temporary solution: Just take one of the higher-dim grids' permeability
+            g_h = self.gb.node_neighbors(g, only_higher=True)[0]
+            shearzone = self.gb.node_props(g_h, "name")
+            k = self.initial_permeability[shearzone]
+
+        return k
 
     def porosity(self, g):
         # TODO: Set porosity in fractures and matrix. (Usually set by pp.Rock)
