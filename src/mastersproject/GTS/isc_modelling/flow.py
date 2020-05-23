@@ -63,9 +63,9 @@ class Flow(AbstractModel):
         self.length_scale = params.get("length_scale", 1)
 
         # Grid
-        self.gb = None  # pp.GridBucket
-        self.Nd = None  # int
-        self.box = None  # Dict[float]
+        self.gb: Optional[pp.GridBucket] = None
+        self.Nd: Optional[int] = None
+        self.bounding_box: Optional[Dict[str, float]] = None  # Keep this as it will change due to scaling
 
         # Parameters
 
