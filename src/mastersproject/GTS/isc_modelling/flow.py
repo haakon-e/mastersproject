@@ -987,5 +987,5 @@ class FlowISC(Flow):
         summary_path = self.viz_folder_name / "summary.txt"
         summary_text = summary_intro + summary_p + summary_param + summary_terms
         logger.info(summary_text)
-        with open(summary_path, mode="w") as f:
+        with summary_path.open(mode="w") as f:
             f.write(summary_text)
