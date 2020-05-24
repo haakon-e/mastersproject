@@ -84,8 +84,8 @@ class BaseParameters(BaseModel):
     time_step: float = 1
     end_time: float = 1
 
-    # Temperature. Default is ISC temp.
-    temperature: float = 11
+    # Fluid and temperature. Default is ISC temp (11 C).
+    fluid: pp.UnitFluid = pp.Water(theta_ref=11)
 
     # --- Validators ---
 
@@ -112,6 +112,10 @@ class BaseParameters(BaseModel):
 
         p.mkdir(parents=True, exist_ok=True)
         return p
+
+    class Config:
+        # Needed to allow fluid initiation
+        arbitrary_types_allowed = True
 
 
 class GeometryParameters(BaseParameters):

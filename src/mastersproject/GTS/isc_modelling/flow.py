@@ -49,11 +49,6 @@ class Flow(AbstractModel):
             Dict[str, float]
         ] = None  # Keep this as it will change due to scaling
 
-        # Parameters
-
-        # Constant in-situ temperature.
-        self.fluid = pp.Water(theta_ref=params.temperature)
-
         # Initialize assembler
         self.assembler = None
 
@@ -133,7 +128,7 @@ class Flow(AbstractModel):
         gb = self.gb
 
         # Set to 0 for steady state
-        compressibility = self.fluid.COMPRESSIBILITY * (
+        compressibility = self.params.fluid.COMPRESSIBILITY * (
             self.params.scalar_scale / pp.PASCAL
         )  # scaled. [1/Pa]
         for g, d in gb:
@@ -183,7 +178,7 @@ class Flow(AbstractModel):
         scalar_key = self.scalar_parameter_key
 
         # Scaled dynamic viscosity
-        viscosity = self.fluid.dynamic_viscosity() * (
+        viscosity = self.params.fluid.dynamic_viscosity() * (
             pp.PASCAL / self.params.scalar_scale
         )
         for g, d in gb:
