@@ -13,6 +13,7 @@ from datetime import datetime
 import porepy as pp
 
 from GTS.isc_modelling.flow import Flow
+from GTS.isc_modelling.parameter import GeometryParameters
 from porepy.models.contact_mechanics_model import ContactMechanics
 from refinement.grid_refinement import gb_coarse_fine_cell_mapping, refine_mesh_by_splitting
 from refinement.grid_convergence import grid_error
@@ -77,7 +78,7 @@ def run_model_for_convergence_study(
         model: Union[Type[Flow], Type[ContactMechanics]],
         run_model_method: Callable,
         network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
-        params: dict,
+        params: GeometryParameters,
         n_refinements: int = 1,
         newton_params: dict = None,
         variable: List[str] = None,  # This is really required for the moment
@@ -99,8 +100,8 @@ def run_model_for_convergence_study(
         Typically pp.run_stationary_model or pp.run_time_dependent_model
     network : Union[pp.FractureNetwork3d, pp.FractureNetwork2d]
         Fracture network
-    params : dict (Default: None)
-        Custom parameters to pass to model
+    params : GeometryParameters
+        Parameters to pass to the model
     n_refinements : int (Default: 1)
         Number of grid refinements
     newton_params : dict (Default: None)
@@ -138,8 +139,8 @@ def run_model_for_convergence_study(
     # 1. Step: Create n grids by uniform refinement.
     gb_generator = gb_refinements(
         network=network,
-        gmsh_folder_path=params['folder_name'],
-        mesh_args=params['mesh_args'],
+        gmsh_folder_path=params.folder_name,
+        mesh_args=params.mesh_args,
     )
     gb_list = [next(gb_generator) for _ in range(0, n_refinements + 1)]
     gb_generator.close()
