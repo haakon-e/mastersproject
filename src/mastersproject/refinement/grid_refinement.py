@@ -145,7 +145,7 @@ def gb_coarse_fine_cell_mapping(gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e
         # Compute the mapping for this grid-pair,
         # and assign the result to the node of the coarse gb
         mapping = coarse_fine_cell_mapping(g, g_ref, point_in_poly_tol=tol)
-        gb.set_node_prop(g=g, key="coarse_fine_cell_mapping", val=mapping)
+        gb.set_node_prop(g, key="coarse_fine_cell_mapping", val=mapping)
 
 
 @trace(logger)
