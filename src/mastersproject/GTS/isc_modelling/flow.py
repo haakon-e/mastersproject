@@ -4,7 +4,9 @@ from typing import Dict, Optional
 import porepy as pp
 from porepy.models.abstract_model import AbstractModel
 from porepy.params.data import add_nonpresent_dictionary
-from porepy.utils.derived_discretizations import implicit_euler as IE_discretizations
+from porepy.utils.derived_discretizations import (
+    implicit_euler as IE_discretizations,  # noqa
+)
 import numpy as np
 import scipy.sparse.linalg as spla
 
@@ -84,7 +86,7 @@ class Flow(AbstractModel):
         # Define boundary condition on faces
         return pp.BoundaryCondition(g, all_bf, ["dir"] * all_bf.size)
 
-    def bc_values_scalar(self, g: pp.Grid) -> np.ndarray:
+    def bc_values_scalar(self, g: pp.Grid) -> np.ndarray:  # noqa
         """
         Note that Dirichlet values should be divided by scalar_scale.
         """
@@ -242,7 +244,7 @@ class Flow(AbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.scalar_variable: {"cells": 1},}
+                {self.scalar_variable: {"cells": 1},}  # noqa
             )
 
         # Then for the edges
@@ -250,7 +252,7 @@ class Flow(AbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.mortar_scalar_variable: {"cells": 1},}
+                {self.mortar_scalar_variable: {"cells": 1},}  # noqa
             )
 
     def assign_discretizations(self) -> None:
@@ -396,7 +398,7 @@ class Flow(AbstractModel):
         scalar_init = init_solution[scalar_dof] * self.params.scalar_scale
 
         # Calculate norms
-        scalar_norm = np.sum(scalar_now ** 2)
+        # scalar_norm = np.sum(scalar_now ** 2)
         difference_in_iterates_scalar = np.sum((scalar_now - scalar_prev) ** 2)
         difference_from_init_scalar = np.sum((scalar_now - scalar_init) ** 2)
 
@@ -455,7 +457,7 @@ class Flow(AbstractModel):
     def assemble_and_solve_linear_system(self, tol):
         """ Assemble a solve the linear system"""
 
-        A, b = self.assembler.assemble_matrix_rhs()
+        A, b = self.assembler.assemble_matrix_rhs()  # noqa
 
         # Estimate condition number
         logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")
@@ -570,7 +572,7 @@ class Flow(AbstractModel):
 
         return state
 
-    def _is_nonlinear_problem(self):
+    def _is_nonlinear_problem(self):  # noqa
         """ flow problems are linear even with fractures """
         return False
 
@@ -578,17 +580,17 @@ class Flow(AbstractModel):
 
     def set_viz(self):
         """ Set exporter for visualization """
-        self.viz = pp.Exporter(
+        self.viz = pp.Exporter(  # noqa
             self.gb,
             file_name=self.params.viz_file_name,
             folder_name=self.params.folder_name,
         )
         # list of time steps to export with visualization.
-        self.export_times = []
+        self.export_times = []  # noqa
 
-        self.p_exp = "p_exp"
+        self.p_exp = "p_exp"  # noqa
 
-        self.export_fields = [
+        self.export_fields = [  # noqa
             self.p_exp,
         ]
 
@@ -628,16 +630,7 @@ class FlowISC(Flow):
         super().__init__(params)
         self.params = params
 
-        # --- FRACTURES ---
-        # self.shearzone_names: List[str] = params.get("shearzone_names")
-        # self.n_frac = len(self.shearzone_names) if self.shearzone_names else 0
-
         # --- PHYSICAL PARAMETERS ---
-
-        # * Source injection *
-        # self.source_scalar_borehole_shearzone = params.get(
-        #     "source_scalar_borehole_shearzone"
-        # )
 
         # * Permeability and aperture *
 
@@ -734,8 +727,9 @@ class FlowISC(Flow):
         # Set fracture grid names
         if self.params.n_frac > 0:
             fracture_grids = self.gb.get_grids(lambda g: g.dim == self.Nd - 1)
-            assert len(fracture_grids) == self.params.n_frac, \
-                "There should be equal number of Nd-1 fractures as shearzone names"
+            assert (
+                len(fracture_grids) == self.params.n_frac
+            ), "There should be equal number of Nd-1 fractures as shearzone names"
             # We assume that order of fractures on grid creation (self.create_grid) is preserved.
             for i, sz_name in enumerate(self.params.shearzone_names):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
@@ -895,11 +889,11 @@ class FlowISC(Flow):
                 f"No negative pressure values. count:{neg_ind.size}\n"
             )
 
-        self.neg_ind = neg_ind
-        self.negneg_ind = negneg_ind
+        self.neg_ind = neg_ind  # noqa
+        self.negneg_ind = negneg_ind  # noqa
 
         # Condition number
-        A, _ = self.assembler.assemble_matrix_rhs()
+        A, _ = self.assembler.assemble_matrix_rhs()  # noqa
         row_sum = np.sum(np.abs(A), axis=1)
         pp_cond = np.max(row_sum) / np.min(row_sum)
         diag = np.abs(A.diagonal())
