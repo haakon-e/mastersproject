@@ -730,6 +730,8 @@ class FlowISC(Flow):
         # Set fracture grid names
         if self.params.n_frac > 0:
             fracture_grids = self.gb.get_grids(lambda g: g.dim == self.Nd - 1)
+            assert len(fracture_grids) == self.params.n_frac, \
+                "There should be equal number of Nd-1 fractures as shearzone names"
             # We assume that order of fractures on grid creation (self.create_grid) is preserved.
             for i, sz_name in enumerate(self.params.shearzone_names):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
