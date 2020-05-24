@@ -643,7 +643,7 @@ class FlowISC(Flow):
         # For now, constant permeability in fractures
         initial_frac_permeability = {
             sz: params.frac_permeability for sz in params.shearzone_names
-        }
+        } if params.shearzone_names else {}
         initial_intact_permeability = {params.intact_name: params.intact_permeability}
         self.initial_permeability = {**initial_frac_permeability, **initial_intact_permeability}
 
@@ -916,7 +916,7 @@ class FlowISC(Flow):
             f"\nSummary of relevant parameters:\n"
             f"length scale: {self.params.length_scale:.2e}\n"
             f"scalar scale: {self.params.scalar_scale:.2e}\n"
-            f"3d permeability: {self.initial_permeability[None]:.2e}\n"
+            f"3d permeability: {self.initial_permeability[self.params.intact_name]:.2e}\n"
             f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
             f"3d cells: {g.num_cells}\n"
             f"pp condition number: {pp_cond:.2e}\n"
