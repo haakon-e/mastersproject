@@ -665,6 +665,10 @@ class FlowISC(Flow):
         self.Nd: Optional[int] = None
         self.network = None
 
+        # ADJUST TIME STEP WITH PERMEABILITY
+        # self.time_step = self.length_scale**2 / self.initial_permeability[None] / 1e10
+        # self.end_time = self.time_step * 4
+
     # --- Grid methods ---
 
     def create_grid(self):
@@ -811,6 +815,22 @@ class FlowISC(Flow):
     def porosity(self, g):
         # TODO: Set porosity in fractures and matrix. (Usually set by pp.Rock)
         return 1
+
+    # def bc_type_scalar(self, g: pp.Grid) -> pp.BoundaryCondition:
+    #     # Define boundary regions
+    #     all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(g)
+    #     dir = np.where(east + west)[0]
+    #     bc = pp.BoundaryCondition(g, dir, ["dir"] * dir.size)
+    #     return bc
+    #
+    # def bc_values_scalar(self, g: pp.Grid) -> np.ndarray:
+    #     """
+    #     Note that Dirichlet values should be divided by scalar_scale.
+    #     """
+    #     all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(g)
+    #     v = np.zeros(g.num_faces)
+    #     v[west] = 1 * (pp.PASCAL / self.params.scalar_scale)
+    #     return v
 
     @property
     def source_flow_rate(self) -> float:
