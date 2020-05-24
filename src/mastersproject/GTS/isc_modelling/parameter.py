@@ -185,7 +185,7 @@ class FlowParameters(GeometryParameters):
     # Validators
     @validator("source_scalar_borehole_shearzone")
     def validate_source_scalar_borehole_shearzone(cls, v, values):  # noqa
-        if values["shearzone_names"]:
+        if v:
             assert "shearzone" in v
             assert "borehole" in v
             assert v["shearzone"] in values["shearzone_names"]
