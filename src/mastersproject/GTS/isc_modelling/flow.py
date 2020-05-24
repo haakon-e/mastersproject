@@ -805,8 +805,12 @@ class FlowISC(Flow):
     @property
     def source_flow_rate(self) -> float:
         """ Scaled source flow rate """
-        injection_rate = 1  # injection rate [l / s], unscaled
-        return injection_rate * pp.MILLI * (pp.METER / self.length_scale) ** self.Nd
+        injection_rate = (
+            self.params.injection_rate
+        )  # 10 / 60  # 10 l/min  # injection rate [l / s], unscaled
+        return (
+            injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
+        )
 
     def source_scalar(self, g: pp.Grid) -> np.ndarray:
         """ Well-bore source (scaled)"""
