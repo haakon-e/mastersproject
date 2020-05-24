@@ -39,7 +39,7 @@ class TestOptimizeMesh:
             },
             source_scalar_borehole_shearzone=None,
             well_cells=nd_injection_cell_center,
-            injection_rate=1/6,
+            injection_rate=1 / 6,
             frac_permeability=0,
             intact_permeability=1e-13,
         )
@@ -54,9 +54,7 @@ class TestOptimizeMesh:
         in_file = params.folder_name / "gmsh_frac_file.geo"
         out_file = params.folder_name / "optimized/gmsh_frac_file.msh"
         optimize_mesh(
-            in_file=in_file,
-            out_file=out_file,
-            method="Netgen",
+            in_file=in_file, out_file=out_file, method="Netgen",
         )
         gb: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
 
@@ -113,9 +111,7 @@ class TestOptimizeMesh:
         in_file = params.folder_name / "gmsh_frac_file.geo"
         out_file = params.folder_name / "gmsh_frac_file-optimized.msh"
         optimize_mesh(
-            in_file=in_file,
-            out_file=out_file,
-            method="Netgen",
+            in_file=in_file, out_file=out_file, method="Netgen",
         )
         gb2: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
 

@@ -45,7 +45,9 @@ class Flow(AbstractModel):
         # Grid
         self.gb: Optional[pp.GridBucket] = None
         self.Nd: Optional[int] = None
-        self.bounding_box: Optional[Dict[str, float]] = None  # Keep this as it will change due to scaling
+        self.bounding_box: Optional[
+            Dict[str, float]
+        ] = None  # Keep this as it will change due to scaling
 
         # Parameters
 
@@ -181,7 +183,9 @@ class Flow(AbstractModel):
         scalar_key = self.scalar_parameter_key
 
         # Scaled dynamic viscosity
-        viscosity = self.fluid.dynamic_viscosity() * (pp.PASCAL / self.params.scalar_scale)
+        viscosity = self.fluid.dynamic_viscosity() * (
+            pp.PASCAL / self.params.scalar_scale
+        )
         for g, d in gb:
             # permeability [m2] (scaled)
             k = self.permeability(g) * (pp.METER / self.params.length_scale) ** 2
@@ -580,7 +584,9 @@ class Flow(AbstractModel):
     def set_viz(self):
         """ Set exporter for visualization """
         self.viz = pp.Exporter(
-            self.gb, file_name=self.params.viz_file_name, folder_name=self.params.folder_name
+            self.gb,
+            file_name=self.params.viz_file_name,
+            folder_name=self.params.folder_name,
         )
         # list of time steps to export with visualization.
         self.export_times = []
@@ -641,11 +647,16 @@ class FlowISC(Flow):
         # * Permeability and aperture *
 
         # For now, constant permeability in fractures
-        initial_frac_permeability = {
-            sz: params.frac_permeability for sz in params.shearzone_names
-        } if params.shearzone_names else {}
+        initial_frac_permeability = (
+            {sz: params.frac_permeability for sz in params.shearzone_names}
+            if params.shearzone_names
+            else {}
+        )
         initial_intact_permeability = {params.intact_name: params.intact_permeability}
-        self.initial_permeability = {**initial_frac_permeability, **initial_intact_permeability}
+        self.initial_permeability = {
+            **initial_frac_permeability,
+            **initial_intact_permeability,
+        }
 
         # Use cubic law to compute initial apertures in fractures.
         # k = a^2 / 12 => a=sqrt(12k)
@@ -685,13 +696,15 @@ class FlowISC(Flow):
 
         # Create grid
         gb, network = create_grid(
-            **self.params.dict(include={
-                'mesh_args',
-                'length_scale',
-                'bounding_box',
-                'shearzone_names',
-                'folder_name'
-            })
+            **self.params.dict(
+                include={
+                    "mesh_args",
+                    "length_scale",
+                    "bounding_box",
+                    "shearzone_names",
+                    "folder_name",
+                }
+            )
         )
         self.gb = gb
         self.bounding_box = gb.bounding_box(as_dict=True)
