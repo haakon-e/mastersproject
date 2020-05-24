@@ -1,15 +1,17 @@
 import time
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 import porepy as pp
 from porepy.models.abstract_model import AbstractModel
 from porepy.params.data import add_nonpresent_dictionary
-from porepy.utils.derived_discretizations import implicit_euler as IE_discretizations
+from porepy.utils.derived_discretizations import (
+    implicit_euler as IE_discretizations,  # noqa
+)
 import numpy as np
 import scipy.sparse.linalg as spla
 
 from GTS.isc_modelling.ISCGrid import create_grid
-from GTS.ISC_data.isc import ISCData
+from GTS.isc_modelling.parameter import BaseParameters, FlowParameters
 
 # --- LOGGING UTIL ---
 from util.logging_util import timer, trace
@@ -22,35 +24,19 @@ logger = logging.getLogger(__name__)
 class Flow(AbstractModel):
     """ General flow model for time-dependent Darcy Flow for fractured porous media"""
 
-    def __init__(self, params: Dict):
+    def __init__(self, params: BaseParameters):
         """ General flow model for time-dependent Darcy Flow
 
         Parameters
         ----------
-        params : dict
-            folder_name : str
-                Path to where visualization results are to be stored.
-
-            -- OPTIONAL --
-            scalar_scale : float (default: 1)
-                pressure scaling coefficient
-            length_scale : float (default: 1)
-                length scaling coefficient
-            temperature : float (default: 11 C)
-                Temperature of the fluid in pp.Water
-            file_name : str (default: 'simulation_run')
-
+        params : BaseParameters
         """
         self.params = params
 
-        # File name
-        self.file_name = params.get("file_name", "simulation_run")
-        self.viz_folder_name = params.get("folder_name")
-
-        # Time
-        self.time = 0
-        self.time_step = 1 * pp.HOUR  # 1 * pp.MINUTE # 1
-        self.end_time = self.time_step * 4  # 1
+        # Time (must be kept for compatibility with pp.run_time_dependent_model)
+        self.time = self.params.time
+        self.time_step = self.params.time_step
+        self.end_time = self.params.end_time
 
         # Pressure
         self.scalar_variable = "p"
@@ -58,24 +44,15 @@ class Flow(AbstractModel):
         self.scalar_coupling_term = "robin_" + self.scalar_variable
         self.scalar_parameter_key = "flow"
 
-        # Scaling coefficients
-        self.scalar_scale = params.get("scalar_scale", 1)
-        self.length_scale = params.get("length_scale", 1)
-
         # Grid
-        self.gb = None  # pp.GridBucket
-        self.Nd = None  # int
-        self.box = None  # Dict[float]
+        self.gb: Optional[pp.GridBucket] = None
+        self.Nd: Optional[int] = None
+        self.bounding_box: Optional[
+            Dict[str, float]
+        ] = None  # Keep this as it will change due to scaling
 
-        # Parameters
-
-        # Constant in-situ temperature. Default is ISC temp.
-        temperature = params.get("temperature", 11)
-        self.fluid = pp.Water(theta_ref=temperature)
-
-        # Initialize simulation/solver options
+        # Initialize assembler
         self.assembler = None
-        self.linear_solver = None
 
     # --- Grid methods ---
 
@@ -89,7 +66,7 @@ class Flow(AbstractModel):
 
         The method assigns the following attributes to self:
             gb (pp.GridBucket): The produced grid bucket.
-            box (dict): The bounding box of the domain, defined through minimum and
+            bounding_box (dict): The bounding box of the domain, defined through minimum and
                 maximum values in each dimension.
             Nd (int): The dimension of the matrix, i.e., the highest dimension in the
                 grid bucket.
@@ -109,7 +86,7 @@ class Flow(AbstractModel):
         # Define boundary condition on faces
         return pp.BoundaryCondition(g, all_bf, ["dir"] * all_bf.size)
 
-    def bc_values_scalar(self, g: pp.Grid) -> np.ndarray:
+    def bc_values_scalar(self, g: pp.Grid) -> np.ndarray:  # noqa
         """
         Note that Dirichlet values should be divided by scalar_scale.
         """
@@ -132,7 +109,7 @@ class Flow(AbstractModel):
             aperture *= 0.1
 
         if scaled:
-            aperture *= pp.METER / self.length_scale
+            aperture *= pp.METER / self.params.length_scale
         return aperture
 
     def specific_volume(self, g: pp.Grid, scaled) -> np.ndarray:
@@ -153,8 +130,8 @@ class Flow(AbstractModel):
         gb = self.gb
 
         # Set to 0 for steady state
-        compressibility = self.fluid.COMPRESSIBILITY * (
-            self.scalar_scale / pp.PASCAL
+        compressibility = self.params.fluid.COMPRESSIBILITY * (
+            self.params.scalar_scale / pp.PASCAL
         )  # scaled. [1/Pa]
         for g, d in gb:
             porosity = self.porosity(g)  # Default: 1 [-]
@@ -203,10 +180,13 @@ class Flow(AbstractModel):
         scalar_key = self.scalar_parameter_key
 
         # Scaled dynamic viscosity
-        viscosity = self.fluid.dynamic_viscosity() * (pp.PASCAL / self.scalar_scale)
+        viscosity = self.params.fluid.dynamic_viscosity() * (
+            pp.PASCAL / self.params.scalar_scale
+        )
         for g, d in gb:
             # permeability [m2] (scaled)
-            k = self.permeability(g) * (pp.METER / self.length_scale) ** 2
+            k = self.permeability(g) * (pp.METER / self.params.length_scale) ** 2
+            logger.info(f"Scaled permeability in dim {g.dim} set to {k:.3e}")
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -264,7 +244,7 @@ class Flow(AbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.scalar_variable: {"cells": 1},}
+                {self.scalar_variable: {"cells": 1},}  # noqa
             )
 
         # Then for the edges
@@ -272,7 +252,7 @@ class Flow(AbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.mortar_scalar_variable: {"cells": 1},}
+                {self.mortar_scalar_variable: {"cells": 1},}  # noqa
             )
 
     def assign_discretizations(self) -> None:
@@ -365,6 +345,7 @@ class Flow(AbstractModel):
         """
         self._prepare_grid()
 
+        self.Nd = self.gb.dim_max()
         self.set_scalar_parameters()
         self.assign_variables()
         self.assign_discretizations()
@@ -377,7 +358,6 @@ class Flow(AbstractModel):
     def _prepare_grid(self):
         """ Wrapper to create grid"""
         self.create_grid()
-        self.Nd = self.gb.dim_max()
 
     def check_convergence(
         self,
@@ -413,12 +393,12 @@ class Flow(AbstractModel):
             )
 
         # Unscaled pressure solutions
-        scalar_now = solution[scalar_dof] * self.scalar_scale
-        scalar_prev = prev_solution[scalar_dof] * self.scalar_scale
-        scalar_init = init_solution[scalar_dof] * self.scalar_scale
+        scalar_now = solution[scalar_dof] * self.params.scalar_scale
+        scalar_prev = prev_solution[scalar_dof] * self.params.scalar_scale
+        scalar_init = init_solution[scalar_dof] * self.params.scalar_scale
 
         # Calculate norms
-        scalar_norm = np.sum(scalar_now ** 2)
+        # scalar_norm = np.sum(scalar_now ** 2)
         difference_in_iterates_scalar = np.sum((scalar_now - scalar_prev) ** 2)
         difference_from_init_scalar = np.sum((scalar_now - scalar_init) ** 2)
 
@@ -458,9 +438,7 @@ class Flow(AbstractModel):
         # cond = spla.norm(A, 1) * spla.norm(spla.inv(A), 1)
         # logger.info(f"Exact condition number: {cond:.2e}")
 
-        solver = self.params.get("linear_solver", "direct")
-
-        if solver == "direct":
+        if self.params.linear_solver == "direct":
             """ In theory, it should be possible to instruct SuperLU to reuse the
             symbolic factorization from one iteration to the next. However, it seems
             the scipy wrapper around SuperLU has not implemented the necessary
@@ -471,15 +449,15 @@ class Flow(AbstractModel):
             We will therefore pass here, and pay the price of long computation times.
 
             """
-            self.linear_solver = "direct"
+            pass
 
         else:
-            raise ValueError(f"Unknown linear solver {solver}")
+            raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
 
     def assemble_and_solve_linear_system(self, tol):
         """ Assemble a solve the linear system"""
 
-        A, b = self.assembler.assemble_matrix_rhs()
+        A, b = self.assembler.assemble_matrix_rhs()  # noqa
 
         # Estimate condition number
         logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")
@@ -494,7 +472,7 @@ class Flow(AbstractModel):
             f"{np.min(np.abs(A.diagonal())) / np.max(np.abs(A.diagonal())) :.2e}"
         )
 
-        if self.linear_solver == "direct":
+        if self.params.linear_solver == "direct":
             tic = time.time()
             logger.info("Solve Ax=b using scipy")
             sol = spla.spsolve(A, b)
@@ -506,7 +484,7 @@ class Flow(AbstractModel):
             return sol
 
         else:
-            raise ValueError(f"Unknown linear solver {self.linear_solver}")
+            raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
 
     # --- Newton iterations ---
 
@@ -535,7 +513,7 @@ class Flow(AbstractModel):
         """ Called after a time-dependent problem
         """
         self.export_pvd()
-        logger.info(f"Solution exported to folder \n {self.viz_folder_name}")
+        logger.info(f"Solution exported to folder \n {self.params.folder_name}")
 
     def after_newton_failure(self, solution, errors, iteration_counter):
         """ Instead of raising error on failure, save and return available data.
@@ -553,7 +531,7 @@ class Flow(AbstractModel):
         boundaries.
         """
         tol = 1e-10
-        box = self.box
+        box = self.bounding_box
         east = g.face_centers[0] > box["xmax"] - tol
         west = g.face_centers[0] < box["xmin"] + tol
         north = g.face_centers[1] > box["ymax"] - tol
@@ -594,7 +572,7 @@ class Flow(AbstractModel):
 
         return state
 
-    def _is_nonlinear_problem(self):
+    def _is_nonlinear_problem(self):  # noqa
         """ flow problems are linear even with fractures """
         return False
 
@@ -602,15 +580,17 @@ class Flow(AbstractModel):
 
     def set_viz(self):
         """ Set exporter for visualization """
-        self.viz = pp.Exporter(
-            self.gb, file_name=self.file_name, folder_name=self.viz_folder_name
+        self.viz = pp.Exporter(  # noqa
+            self.gb,
+            file_name=self.params.viz_file_name,
+            folder_name=self.params.folder_name,
         )
         # list of time steps to export with visualization.
-        self.export_times = []
+        self.export_times = []  # noqa
 
-        self.p_exp = "p_exp"
+        self.p_exp = "p_exp"  # noqa
 
-        self.export_fields = [
+        self.export_fields = [  # noqa
             self.p_exp,
         ]
 
@@ -620,7 +600,7 @@ class Flow(AbstractModel):
             # Export pressure variable
             if self.scalar_variable in d[pp.STATE]:
                 d[pp.STATE][self.p_exp] = (
-                    d[pp.STATE][self.scalar_variable].copy() * self.scalar_scale
+                    d[pp.STATE][self.scalar_variable].copy() * self.params.scalar_scale
                 )
             else:
                 d[pp.STATE][self.p_exp] = np.zeros((self.Nd, g.num_cells))
@@ -639,59 +619,31 @@ class Flow(AbstractModel):
 class FlowISC(Flow):
     """ Flow model for fractured porous media. Specific to GTS-ISC project."""
 
-    def __init__(self, params: Dict):
+    def __init__(self, params: FlowParameters):
         """ Initialize the flow model
 
         Parameters
         ----------
-        params : dict
-            folder_name : str
-                Path to where visualization results are to be stored.
-            shearzone_names : List[str]
-                List of shearzones to mesh
-            source_scalar_borehole_shearzone : Dict[str, str]
-                Which borehole-shearzone intersection to inject to.
-            mesh_args : Dict[str, Float]
-                Coefficients to mesh the domain
-            bounding_box : Dict[str, Float]
-                Bounding box of domain.
-
-            -- OPTIONAL --
-            scalar_scale : float (default: 1)
-                pressure scaling coefficient
-            length_scale : float (default: 1)
-                length scaling coefficient
-            temperature : float (default: 11 C)
-                Temperature of the fluid in pp.Water
-            file_name : str (default: 'simulation_run')
+        params : FlowParameters
 
         """
         super().__init__(params)
-
-        # --- FRACTURES ---
-        self.shearzone_names: List[str] = params.get("shearzone_names")
-        self.n_frac = len(self.shearzone_names) if self.shearzone_names else 0
+        self.params = params
 
         # --- PHYSICAL PARAMETERS ---
-
-        # * Source injection *
-        self.source_scalar_borehole_shearzone = params.get(
-            "source_scalar_borehole_shearzone"
-        )
 
         # * Permeability and aperture *
 
         # For now, constant permeability in fractures
-        # For details on values, see "2020-04-21 Møtereferat" (Veiledningsmøte)
-        mean_frac_permeability = 4.9e-16 * pp.METER ** 2
-        mean_intact_permeability = 2e-20 * pp.METER ** 2
-        self.initial_permeability = {  # Unscaled
-            'S1_1': mean_frac_permeability,
-            'S1_2': mean_frac_permeability,
-            'S1_3': mean_frac_permeability,
-            'S3_1': mean_frac_permeability,
-            'S3_2': mean_frac_permeability,
-            None: mean_intact_permeability,  # 3D matrix
+        initial_frac_permeability = (
+            {sz: params.frac_permeability for sz in params.shearzone_names}
+            if params.shearzone_names
+            else {}
+        )
+        initial_intact_permeability = {params.intact_name: params.intact_permeability}
+        self.initial_permeability = {
+            **initial_frac_permeability,
+            **initial_intact_permeability,
         }
 
         # Use cubic law to compute initial apertures in fractures.
@@ -699,14 +651,16 @@ class FlowISC(Flow):
         self.initial_aperture = {
             sz: np.sqrt(12 * k) for sz, k in self.initial_permeability.items()
         }
-        self.initial_aperture[None] = 1  # Set 3D matrix aperture to 1.
+        self.initial_aperture[params.intact_name] = 1  # Set 3D matrix aperture to 1.
 
         # --- COMPUTATIONAL MESH ---
-        self.mesh_args: Dict[str, float] = params.get("mesh_args")
-        self.box: Dict[str, float] = params.get("bounding_box")
-        self.gb: Optional[pp.GridBucket] = None
+        self._gb: Optional[pp.GridBucket] = None
         self.Nd: Optional[int] = None
         self.network = None
+
+        # ADJUST TIME STEP WITH PERMEABILITY
+        # self.time_step = self.length_scale**2 / self.initial_permeability[None] / 1e10
+        # self.end_time = self.time_step * 4
 
     # --- Grid methods ---
 
@@ -720,10 +674,11 @@ class FlowISC(Flow):
 
         The method assigns the following attributes to self:
             gb (pp.GridBucket): The produced grid bucket.
-            box (dict): The SCALED bounding box of the domain, defined through minimum and
+            bounding_box (dict): The SCALED bounding box of the domain, defined through minimum and
                 maximum values in each dimension.
             Nd (int): The dimension of the matrix, i.e., the highest dimension in the
                 grid bucket.
+            network (pp.FractureNetwork3d): The fracture network associated to the domain.
 
         After self.gb is set, the method should also call
 
@@ -732,35 +687,51 @@ class FlowISC(Flow):
         """
 
         # Create grid
-        gb, scaled_box, network = create_grid(
-            self.mesh_args,
-            self.length_scale,
-            self.box,
-            self.shearzone_names,
-            self.viz_folder_name,
+        gb, network = create_grid(
+            **self.params.dict(
+                include={
+                    "mesh_args",
+                    "length_scale",
+                    "bounding_box",
+                    "shearzone_names",
+                    "folder_name",
+                }
+            )
         )
         self.gb = gb
-        self.box = scaled_box
+        self.bounding_box = gb.bounding_box(as_dict=True)
+        self.Nd = self.gb.dim_max()
         self.network = network
 
-        self.Nd = self.gb.dim_max()
+    @property
+    def gb(self) -> pp.GridBucket:
+        return self._gb
 
-    def set_grid(self, gb: pp.GridBucket):
-        """ Set a new grid
+    @gb.setter
+    def gb(self, gb: pp.GridBucket):
+        """ Set a grid bucket to the class
         """
-        self.gb = gb
+        self._gb = gb
+        if gb is None:
+            return
         pp.contact_conditions.set_projections(self.gb)
         self.Nd = gb.dim_max()
-        self.n_frac = gb.get_grids(lambda _g: _g.dim == self.Nd - 1).size
         self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids.
 
-        # Set the box
-        self.box = gb.bounding_box(as_dict=True)
+        # Set the bounding box
+        self.bounding_box = gb.bounding_box(as_dict=True)
+
+        # Set Nd grid name
+        self.gb.set_node_prop(self._nd_grid(), key="name", val=self.params.intact_name)
 
         # Set fracture grid names
-        if self.n_frac > 0:
+        if self.params.n_frac > 0:
             fracture_grids = self.gb.get_grids(lambda g: g.dim == self.Nd - 1)
-            for i, sz_name in enumerate(self.shearzone_names):
+            assert (
+                len(fracture_grids) == self.params.n_frac
+            ), "There should be equal number of Nd-1 fractures as shearzone names"
+            # We assume that order of fractures on grid creation (self.create_grid) is preserved.
+            for i, sz_name in enumerate(self.params.shearzone_names):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
     def grids_by_name(self, name, key="name") -> np.ndarray:
@@ -778,48 +749,14 @@ class FlowISC(Flow):
         Tag well cells with unity values, positive for injection cells and
         negative for production cells.
         """
-        isc = ISCData()
-        df = isc.borehole_plane_intersection()
-
-        # Shorthand
-        borehole = self.source_scalar_borehole_shearzone.get("borehole")
-        shearzone = self.source_scalar_borehole_shearzone.get("shearzone")
-
-        # Get the UNSCALED coordinates of the borehole - shearzone intersection.
-        _mask = (df.shearzone == shearzone) & \
-                (df.borehole == borehole)
-        result = df.loc[_mask, ("x_sz", "y_sz", "z_sz")]
-        if result.empty:
-            raise ValueError("No intersection found.")
-
-        # Scale the intersection coordinates by length_scale. (scaled)
-        pts = result.to_numpy().T / self.length_scale
-        assert pts.shape[1] == 1, "There should only be one intersection"
-
-        # Tag all grid cells. Tag 1 for injection cell, 0 otherwise.
-        tagged = False
+        # Initiate all tags to zero
         for g, d in self.gb:
             tags = np.zeros(g.num_cells)
-
-            grid_name = self.gb.node_props(g, "name")
-            if grid_name == shearzone:
-                logger.info(f"Tag injection cell on {grid_name!r} (dim: {g.dim}).")
-
-                # Find closest cell
-                assert np.atleast_2d(pts).shape == (3, 1), \
-                    "We compare only one point; array needs shape 3x1"
-                ids, dsts = g.closest_cell(pts, return_distance=True)
-                logger.info(f"Closest cell found has (unscaled) distance: {dsts[0] * self.length_scale:4f}")
-
-                # Tag the injection cell
-                tags[ids] = 1
-                tagged = True
-
             g.tags["well_cells"] = tags
             pp.set_state(d, {"well": tags.copy()})
 
-        if not tagged:
-            logger.warning("No injection cell was tagged.")
+        # Set injection cells
+        self.params.well_cells(self.params, self.gb)
 
     # --- Aperture related methods ---
 
@@ -830,13 +767,21 @@ class FlowISC(Flow):
         area/volume (or "specific volume") for intersections of co-dimension 2 and 3.
         See also specific_volume.
         """
+        # TODO: This does not resolve what happens in 1D fractures
         aperture = np.ones(g.num_cells)
-        # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
-        shearzone = self.gb.node_props(g, 'name')
-        aperture *= self.initial_aperture[shearzone]
+
+        if g.dim == self.Nd or g.dim == self.Nd - 1:
+            # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
+            shearzone = self.gb.node_props(g, "name")
+            aperture *= self.initial_aperture[shearzone]
+        else:
+            # Temporary solution: Just take one of the higher-dim grids' aperture
+            g_h = self.gb.node_neighbors(g, only_higher=True)[0]
+            shearzone = self.gb.node_props(g_h, "name")
+            aperture *= self.initial_aperture[shearzone]
 
         if scaled:
-            aperture *= pp.METER / self.length_scale
+            aperture *= pp.METER / self.params.length_scale
 
         return aperture
 
@@ -844,19 +789,52 @@ class FlowISC(Flow):
 
     def permeability(self, g):
         """ Set (uniform) permeability in a subdomain"""
-        # get the shearzone
-        shearzone = self.gb.node_props(g, 'name')
-        return self.initial_permeability[shearzone]
+
+        # TODO: This does not resolve what happens in 1D fractures
+        if g.dim == self.Nd or g.dim == self.Nd - 1:
+            # get the shearzone
+            shearzone = self.gb.node_props(g, "name")
+            k = self.initial_permeability[shearzone]
+        else:
+            # Set the permeability in fracture intersections as
+            # the average of the neighbouring fractures
+
+            # Temporary solution: Just take one of the higher-dim grids' permeability
+            g_h = self.gb.node_neighbors(g, only_higher=True)[0]
+            shearzone = self.gb.node_props(g_h, "name")
+            k = self.initial_permeability[shearzone]
+
+        return k
 
     def porosity(self, g):
         # TODO: Set porosity in fractures and matrix. (Usually set by pp.Rock)
         return 1
 
+    # def bc_type_scalar(self, g: pp.Grid) -> pp.BoundaryCondition:
+    #     # Define boundary regions
+    #     all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(g)
+    #     dir = np.where(east + west)[0]
+    #     bc = pp.BoundaryCondition(g, dir, ["dir"] * dir.size)
+    #     return bc
+    #
+    # def bc_values_scalar(self, g: pp.Grid) -> np.ndarray:
+    #     """
+    #     Note that Dirichlet values should be divided by scalar_scale.
+    #     """
+    #     all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(g)
+    #     v = np.zeros(g.num_faces)
+    #     v[west] = 1 * (pp.PASCAL / self.params.scalar_scale)
+    #     return v
+
     @property
     def source_flow_rate(self) -> float:
         """ Scaled source flow rate """
-        injection_rate = 1  # injection rate [l / s], unscaled
-        return injection_rate * pp.MILLI * (pp.METER / self.length_scale) ** self.Nd
+        injection_rate = (
+            self.params.injection_rate
+        )  # 10 / 60  # 10 l/min  # injection rate [l / s], unscaled
+        return (
+            injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
+        )
 
     def source_scalar(self, g: pp.Grid) -> np.ndarray:
         """ Well-bore source (scaled)"""
@@ -911,11 +889,11 @@ class FlowISC(Flow):
                 f"No negative pressure values. count:{neg_ind.size}\n"
             )
 
-        self.neg_ind = neg_ind
-        self.negneg_ind = negneg_ind
+        self.neg_ind = neg_ind  # noqa
+        self.negneg_ind = negneg_ind  # noqa
 
         # Condition number
-        A, _ = self.assembler.assemble_matrix_rhs()
+        A, _ = self.assembler.assemble_matrix_rhs()  # noqa
         row_sum = np.sum(np.abs(A), axis=1)
         pp_cond = np.max(row_sum) / np.min(row_sum)
         diag = np.abs(A.diagonal())
@@ -923,9 +901,9 @@ class FlowISC(Flow):
 
         summary_param = (
             f"\nSummary of relevant parameters:\n"
-            f"length scale: {self.length_scale:.2e}\n"
-            f"scalar scale: {self.scalar_scale:.2e}\n"
-            f"3d permeability: {self.initial_permeability[None]:.2e}\n"
+            f"length scale: {self.params.length_scale:.2e}\n"
+            f"scalar scale: {self.params.scalar_scale:.2e}\n"
+            f"3d permeability: {self.initial_permeability[self.params.intact_name]:.2e}\n"
             f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
             f"3d cells: {g.num_cells}\n"
             f"pp condition number: {pp_cond:.2e}\n"
@@ -951,8 +929,8 @@ class FlowISC(Flow):
         )
 
         # Write summary to file
-        summary_path = self.viz_folder_name / "summary.txt"
+        summary_path = self.params.folder_name / "summary.txt"
         summary_text = summary_intro + summary_p + summary_param + summary_terms
         logger.info(summary_text)
-        with open(summary_path, mode="w") as f:
+        with summary_path.open(mode="w") as f:
             f.write(summary_text)

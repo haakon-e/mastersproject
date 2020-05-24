@@ -8,11 +8,11 @@ from GTS.ISC_data.fracture import fracture_network
 
 
 def create_grid(
-        mesh_args: Dict[str, float],
-        length_scale: float,
-        box: Dict[str, float],
-        shearzone_names: List[str],
-        viz_folder_name: str,
+    mesh_args: Dict[str, float],
+    length_scale: float,
+    bounding_box: Dict[str, float],
+    shearzone_names: List[str],
+    folder_name: str,
 ):
     """ Create a GridBucket of a 3D domain with fractures defined by the ISC data set.
 
@@ -26,20 +26,17 @@ def create_grid(
         Mesh arguments (unscaled)
     length_scale : float
         length scale coefficient
-    box : Dict[str, float]
+    bounding_box : Dict[str, float]
         bounding box of domain (unscaled)
     shearzone_names : List[str]
         names of ISC shearzones to include or None
-    viz_folder_name : str
+    folder_name : str
         Path to store grid files
 
     Returns
     -------
         gb : pp.GridBucket
             The produced grid bucket
-        box : dict
-            The SCALED bounding box of the domain, defined through
-            minimum and maximum values in each dimension.
         network : pp.FractureNetwork3d
             fracture network
 
@@ -47,16 +44,16 @@ def create_grid(
     # Scale mesh args by length_scale:
     mesh_args = {k: v / length_scale for k, v in mesh_args.items()}
     # Scale bounding box by length_scale:
-    box = {k: v / length_scale for k, v in box.items()}
+    bounding_box = {k: v / length_scale for k, v in bounding_box.items()}
 
     network = fracture_network(
         shearzone_names=shearzone_names,
         export_vtk=True,
-        domain=box,
+        domain=bounding_box,
         length_scale=length_scale,
-        network_path=f"{viz_folder_name}/fracture_network.vtu",
+        network_path=f"{folder_name}/fracture_network.vtu",
     )
-    path = f"{viz_folder_name}/gmsh_frac_file"
+    path = f"{folder_name}/gmsh_frac_file"
     gb = network.mesh(mesh_args=mesh_args, file_name=path)
 
     pp.contact_conditions.set_projections(gb)
@@ -76,10 +73,10 @@ def create_grid(
             gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
             # Note: Use self.gb.node_props(g, 'name') to get value.
 
-    return gb, box, network
+    return gb, network
 
 
-def create_structured_grid(length_scale: float, ):
+def create_structured_grid(length_scale: float,):
     """ Create a structured 3d grid
 
     length_scale : float
@@ -87,7 +84,7 @@ def create_structured_grid(length_scale: float, ):
     """
     nx = np.array([20, 20, 20])
     physdims = np.array([300, 300, 300])
-    gb = pp.meshing.cart_grid([], nx=nx, physdims=physdims / length_scale, )
+    gb = pp.meshing.cart_grid([], nx=nx, physdims=physdims / length_scale,)
     return gb
 
 
@@ -95,10 +92,12 @@ def structured_grid_1_frac(length_scale: float):
     nx = np.array([20, 20, 20])
     physdims = np.array([300, 300, 300])
 
+    # fmt: off
     frac_pts = np.array(
         [[150, 150, 150, 150],
          [0, 300, 300, 0],
          [0, 0, 150, 150]])
+    # fmt: on
     gb = pp.meshing.cart_grid([frac_pts], nx=nx, physdims=physdims / length_scale,)
     return gb
 
@@ -107,24 +106,27 @@ def structured_grid_1_frac_horizontal(length_scale: float):
     nx = np.array([20, 20, 20])
     physdims = np.array([300, 300, 300])
 
+    # fmt: off
     frac_pts = np.array(
         [[0, 300, 300, 0],
          [150, 150, 150, 150],
          [0, 0, 150, 150]])
+    # fmt: on
     gb = pp.meshing.cart_grid([frac_pts], nx=nx, physdims=physdims / length_scale,)
     return gb
 
 
-def optimize_grid(in_file, out_file=None, method="", force=False, dim_tags=[]):
-    """ Optimize a grid using an optimizer
+def optimize_mesh(in_file, out_file=None, method="", force=False, dim_tags=[], dim=3):
+    """ Optimize a mesh using an optimizer
 
     See: https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/api/gmsh.py#L1444
 
     Parameters
     ----------
-    in_file : str
-        path to .msh file to be optimized
-    out_file : str
+    in_file : Path or str
+        path to .geo file to be optimized
+        Note: You are unable to optimize .msh-files. Therefore, only .geo files can be passed.
+    out_file : Path or str
         output file. By default, in_file+"optimized"
     method : str
         name of optimizer.
@@ -141,20 +143,73 @@ def optimize_grid(in_file, out_file=None, method="", force=False, dim_tags=[]):
         If set, apply the optimization also to discrete entities
     dim_tags : List
         If supplied, only apply the optimizer to the given entities
+    dim : int
+        Which dimension to mesh. Defaults to 3D.
 
     """
-    assert Path(in_file).is_file()
+    # Check in- and out-file paths
+    in_file = Path(in_file)
+    out_file = Path(out_file)
+    assert in_file.is_file()
+    assert in_file.suffix == ".geo"
+    out_file.parent.mkdir(exist_ok=True, parents=True)
+    out_file.with_suffix(".msh")
+
+    print(out_file)
+    # Optimize the mesh.
+    import gmsh
+
+    gmsh.initialize()
+
+    # Mesh Statistics
+    gmsh.option.setNumber("General.Terminal", 1)
+    gmsh.option.setNumber("Print.PostGamma", 1)
+    gmsh.option.setNumber("Print.PostEta", 1)
+    gmsh.option.setNumber("Print.PostSICN", 1)
+    gmsh.option.setNumber("Print.PostSIGE", 1)
+
+    gmsh.open(str(in_file))
+
+    gmsh.model.mesh.generate(dim=dim)
+    gmsh.model.mesh.optimize(method=method, force=force, dimTags=dim_tags)
+
+    # Write to .msh and close gmsh
+    gmsh.write(str(out_file))
+    gmsh.finalize()
+
+
+def mesh_statistics(in_file):
+    """ Compute mesh statistics for a .msh mesh realization
+
+    Parameters
+    ----------
+    in_file : Path
+        Path to a .msh file
+
+    Returns
+    -------
+
+    """
+    in_file = Path(in_file)
+    assert in_file.suffix == ".msh"
+    assert in_file.is_file()
 
     import gmsh
 
     gmsh.initialize()
+    gmsh.option.setNumber("Print.PostGamma", 1)
+    gmsh.option.setNumber("Print.PostEta", 1)
+    gmsh.option.setNumber("Print.PostSICN", 1)
+    gmsh.option.setNumber("Print.PostSIGE", 1)
+
     gmsh.open(in_file)
 
-    gmsh.model.mesh.optimize(method=method, force=force, dimTags=dim_tags)
+    gmsh.finalize()
 
 
 def create_unstructured_grid_fully_blocking_fracture(folder_name) -> pp.GridBucket:
     """ Domain with fully blocking fracture """
+    # fmt: off
     domain = {
         'xmin': 0, 'ymin': 0, 'zmin': 0,
         'xmax': 300, 'ymax': 300, 'zmax': 300
@@ -164,6 +219,7 @@ def create_unstructured_grid_fully_blocking_fracture(folder_name) -> pp.GridBuck
         [[50, 50, 250, 250],
          [0, 300, 300, 0],
          [0, 0, 300, 300]])
+    # fmt: on
     frac = pp.Fracture(frac_pts)
 
     frac_network = pp.FractureNetwork3d(frac, domain)
@@ -175,6 +231,7 @@ def create_unstructured_grid_fully_blocking_fracture(folder_name) -> pp.GridBuck
 
 def two_intersecting_blocking_fractures(folder_name) -> pp.GridBucket:
     """ Domain with fully blocking fracture """
+    # fmt: off
     domain = {
         'xmin': 0, 'ymin': 0, 'zmin': 0,
         'xmax': 300, 'ymax': 300, 'zmax': 300
@@ -189,6 +246,7 @@ def two_intersecting_blocking_fractures(folder_name) -> pp.GridBucket:
         [[300, 300, 50, 50],
          [0, 300, 300, 0],
          [50, 50, 300, 300]])
+    # fmt: on
     frac2 = pp.Fracture(frac_pts2)
 
     frac_network = pp.FractureNetwork3d([frac1, frac2], domain)

@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt32" compressor="vtkZLibDataCompressor">
+  <UnstructuredGrid>
+    <Piece NumberOfPoints="20"                   NumberOfCells="16"                  >
+      <PointData>
+      </PointData>
+      <CellData>
+        <DataArray type="Int32" Name="grid_dim" format="appended" RangeMin="1"                    RangeMax="1"                    offset="0"                   />
+        <DataArray type="Int32" Name="cell_id" format="appended" RangeMin="0"                    RangeMax="7"                    offset="44"                  />
+        <DataArray type="Int32" Name="grid_edge_number" format="appended" RangeMin="2"                    RangeMax="3"                    offset="112"                 />
+        <DataArray type="Int8" Name="is_mortar" format="appended" RangeMin="1"                    RangeMax="1"                    offset="160"                 />
+        <DataArray type="Int32" Name="mortar_side" format="appended" RangeMin="1"                    RangeMax="2"                    offset="200"                 />
+      </CellData>
+      <Points>
+        <DataArray type="Float32" Name="Points" NumberOfComponents="3" format="appended" RangeMin="0.81321197"           RangeMax="1.2129771907"         offset="252"                 >
+          <InformationKey name="L2_NORM_RANGE" location="vtkDataArray" length="2">
+            <Value index="0">
+              0.81321197
+            </Value>
+            <Value index="1">
+              1.2129771907
+            </Value>
+          </InformationKey>
+        </DataArray>
+      </Points>
+      <Cells>
+        <DataArray type="Int64" Name="connectivity" format="appended" RangeMin=""                     RangeMax=""                     offset="336"                 />
+        <DataArray type="Int64" Name="offsets" format="appended" RangeMin=""                     RangeMax=""                     offset="432"                 />
+        <DataArray type="UInt8" Name="types" format="appended" RangeMin=""                     RangeMax=""                     offset="520"                 />
+      </Cells>
+    </Piece>
+  </UnstructuredGrid>
+  <AppendedData encoding="base64">
+   _AQAAAACAAABAAAAADwAAAA==eJxjZGBgYKQAAwACYAARAQAAAACAAABAAAAAIAAAAA==eJxjYGBgYARiJiBmBmIWIGYFYjYgZmeAAHzyAAZgADk=AQAAAACAAABAAAAAEQAAAA==eJxjYmBgYMKDmQlgAAUQACk=AQAAAACAAAAQAAAACwAAAA==eJxjZEQFAACYABE=AQAAAACAAABAAAAAFAAAAA==eJxjZGBgYETCTGiYkYA8AAMwABk=AQAAAACAAADwAAAALAAAAA==eJyzPShon5aWZq+5VMTeFsg+e0YHzk5Le2aHYKfB2QxAgCQ+pPQCAI1UTAE=AQAAAACAAAAAAQAANgAAAA==eJxdxTkCwBAARUE7iSXB/e+q8Ks3zRhzWeywx0FHnXDGBT/61RU33PHQn/7xxAtvfQBpAAExAQAAAACAAACAAAAAMAAAAA==eJwtxdEGwCAAAMBMMkmSzEyy///KHrp7uSsc0cm3s4urm7uHH7/+PL38ewMzgAERAQAAAACAAAAQAAAACwAAAA==eJxjZkYFAAGoADE=
+  </AppendedData>
+</VTKFile>
