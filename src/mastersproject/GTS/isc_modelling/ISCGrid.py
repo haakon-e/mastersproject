@@ -12,7 +12,7 @@ def create_grid(
     length_scale: float,
     bounding_box: Dict[str, float],
     shearzone_names: List[str],
-    viz_folder_name: str,
+    folder_name: str,
 ):
     """ Create a GridBucket of a 3D domain with fractures defined by the ISC data set.
 
@@ -30,7 +30,7 @@ def create_grid(
         bounding box of domain (unscaled)
     shearzone_names : List[str]
         names of ISC shearzones to include or None
-    viz_folder_name : str
+    folder_name : str
         Path to store grid files
 
     Returns
@@ -51,9 +51,9 @@ def create_grid(
         export_vtk=True,
         domain=bounding_box,
         length_scale=length_scale,
-        network_path=f"{viz_folder_name}/fracture_network.vtu",
+        network_path=f"{folder_name}/fracture_network.vtu",
     )
-    path = f"{viz_folder_name}/gmsh_frac_file"
+    path = f"{folder_name}/gmsh_frac_file"
     gb = network.mesh(mesh_args=mesh_args, file_name=path)
 
     pp.contact_conditions.set_projections(gb)
