@@ -16,7 +16,7 @@ class TestRunModelForConvergenceStudy:
         """ No fractures, incompressible
         """
         _run_convergence_study_helper(
-            head="test_2_fracs_unit_domain",
+            head="test_0_frac_unit_domain",
             shearzone_names=None,
             sz=0.3,
             n_refinements=3,
