@@ -168,12 +168,12 @@ class FlowParameters(GeometryParameters):
     injection_rate
     """
 
-    source_scalar_borehole_shearzone: Dict[str, str] = {
+    source_scalar_borehole_shearzone: Optional[Dict[str, str]] = {
         "shearzone": "S1_2",
         "borehole": "INJ1",
     }
 
-    well_cells: Callable[[FlowParameters, pp.GridBucket], None] = None
+    well_cells: Callable[['FlowParameters', pp.GridBucket], None] = None
     injection_rate: float
 
     # Set uniform permeability in fractures and intact rock, respectively
@@ -184,10 +184,12 @@ class FlowParameters(GeometryParameters):
 
     # Validators
     @validator("source_scalar_borehole_shearzone")
-    def validate_source_scalar_borehole_shearzone(self, v, values):
-        assert "shearzone" in v
-        assert "borehole" in v
-        assert v["shearzone"] in values["shearzone_names"]
+    def validate_source_scalar_borehole_shearzone(cls, v, values):  # noqa
+        if values['shearzone_names']:
+            assert "shearzone" in v
+            assert "borehole" in v
+            assert v["shearzone"] in values["shearzone_names"]
+        return v
 
 
 # --- Flow injection cell taggers ---
