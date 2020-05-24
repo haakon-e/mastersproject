@@ -160,6 +160,14 @@ def optimize_mesh(in_file, out_file=None, method="", force=False, dim_tags=[], d
     import gmsh
 
     gmsh.initialize()
+
+    # Mesh Statistics
+    gmsh.option.setNumber("General.Terminal", 1)
+    gmsh.option.setNumber("Print.PostGamma", 1)
+    gmsh.option.setNumber("Print.PostEta", 1)
+    gmsh.option.setNumber("Print.PostSICN", 1)
+    gmsh.option.setNumber("Print.PostSIGE", 1)
+
     gmsh.open(str(in_file))
 
     gmsh.model.mesh.generate(dim=dim)
@@ -167,6 +175,35 @@ def optimize_mesh(in_file, out_file=None, method="", force=False, dim_tags=[], d
 
     # Write to .msh and close gmsh
     gmsh.write(str(out_file))
+    gmsh.finalize()
+
+
+def mesh_statistics(in_file):
+    """ Compute mesh statistics for a .msh mesh realization
+
+    Parameters
+    ----------
+    in_file : Path
+        Path to a .msh file
+
+    Returns
+    -------
+
+    """
+    in_file = Path(in_file)
+    assert in_file.suffix == ".msh"
+    assert in_file.is_file()
+
+    import gmsh
+
+    gmsh.initialize()
+    gmsh.option.setNumber("Print.PostGamma", 1)
+    gmsh.option.setNumber("Print.PostEta", 1)
+    gmsh.option.setNumber("Print.PostSICN", 1)
+    gmsh.option.setNumber("Print.PostSIGE", 1)
+
+    gmsh.open(in_file)
+
     gmsh.finalize()
 
 
