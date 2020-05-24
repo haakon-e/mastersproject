@@ -67,7 +67,7 @@ class Flow(AbstractModel):
 
         The method assigns the following attributes to self:
             gb (pp.GridBucket): The produced grid bucket.
-            box (dict): The bounding box of the domain, defined through minimum and
+            bounding_box (dict): The bounding box of the domain, defined through minimum and
                 maximum values in each dimension.
             Nd (int): The dimension of the matrix, i.e., the highest dimension in the
                 grid bucket.
@@ -713,7 +713,7 @@ class FlowISC(Flow):
         self.Nd = gb.dim_max()
         self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids.
 
-        # Set the box
+        # Set the bounding box
         self.bounding_box = gb.bounding_box(as_dict=True)
 
         # Set Nd grid name

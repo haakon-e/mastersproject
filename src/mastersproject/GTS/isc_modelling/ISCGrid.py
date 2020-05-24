@@ -10,7 +10,7 @@ from GTS.ISC_data.fracture import fracture_network
 def create_grid(
     mesh_args: Dict[str, float],
     length_scale: float,
-    box: Dict[str, float],
+    bounding_box: Dict[str, float],
     shearzone_names: List[str],
     viz_folder_name: str,
 ):
@@ -26,7 +26,7 @@ def create_grid(
         Mesh arguments (unscaled)
     length_scale : float
         length scale coefficient
-    box : Dict[str, float]
+    bounding_box : Dict[str, float]
         bounding box of domain (unscaled)
     shearzone_names : List[str]
         names of ISC shearzones to include or None
@@ -44,12 +44,12 @@ def create_grid(
     # Scale mesh args by length_scale:
     mesh_args = {k: v / length_scale for k, v in mesh_args.items()}
     # Scale bounding box by length_scale:
-    box = {k: v / length_scale for k, v in box.items()}
+    bounding_box = {k: v / length_scale for k, v in bounding_box.items()}
 
     network = fracture_network(
         shearzone_names=shearzone_names,
         export_vtk=True,
-        domain=box,
+        domain=bounding_box,
         length_scale=length_scale,
         network_path=f"{viz_folder_name}/fracture_network.vtu",
     )
