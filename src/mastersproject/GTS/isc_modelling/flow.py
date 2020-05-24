@@ -741,55 +741,14 @@ class FlowISC(Flow):
         Tag well cells with unity values, positive for injection cells and
         negative for production cells.
         """
-        isc = ISCData()
-        df = isc.borehole_plane_intersection()
-
-        # Shorthand
-        borehole = self.source_scalar_borehole_shearzone.get("borehole")
-        shearzone = self.source_scalar_borehole_shearzone.get("shearzone")
-
-        # Get the UNSCALED coordinates of the borehole - shearzone intersection.
-        _mask = (df.shearzone == shearzone) & \
-                (df.borehole == borehole)
-        result = df.loc[_mask, ("x_sz", "y_sz", "z_sz")]
-        if result.empty:
-            raise ValueError("No intersection found.")
-
-        # Scale the intersection coordinates by length_scale. (scaled)
-        pts = result.to_numpy().T / self.length_scale
-        assert pts.shape[1] == 1, "There should only be one intersection"
-
-        # Tag all grid cells. Tag 1 for injection cell, 0 otherwise.
-        tagged = False
+        # Initiate all tags to zero
         for g, d in self.gb:
             tags = np.zeros(g.num_cells)
-
-            try:
-                grid_name = self.gb.node_props(g, "name")
-            except KeyError:
-                continue
-
-            if grid_name == shearzone:
-                logger.info(f"Tag injection cell on {grid_name!r} (dim: {g.dim}).")
-
-                # Find closest cell
-                assert np.atleast_2d(pts).shape == (3, 1), \
-                    "We compare only one point; array needs shape 3x1"
-                ids, dsts = g.closest_cell(pts, return_distance=True)
-                logger.info(
-                    f"Closest cell found has (unscaled) distance: {dsts[0] * self.length_scale:4f}\n"
-                    f"ideal point coordinate:\n {pts}\n"
-                    f"nearest cell center coordinate:\n {g.cell_centers[:, ids]}\n"
-                )
-                # Tag the injection cell
-                tags[ids] = 1
-                tagged = True
-
             g.tags["well_cells"] = tags
             pp.set_state(d, {"well": tags.copy()})
 
-        if not tagged:
-            logger.warning("No injection cell was tagged.")
+        # Set injection cells
+        self.params.well_cells(self.params, self.gb)
 
     # --- Aperture related methods ---
 
