@@ -1,18 +1,23 @@
 from pathlib import Path
 from typing import Tuple
+import logging
 
 import porepy as pp
 import numpy as np
 
-import GTS as gts
-from GTS.isc_modelling.ISCGrid import create_grid
+from GTS.isc_modelling.parameter import nd_injection_cell_center, FlowParameters
 from GTS.isc_modelling.setup import SetupParams
 from GTS.isc_modelling.flow import FlowISC
-from refinement.run_convergence_study import run_model_for_convergence_study
+from refinement import gb_coarse_fine_cell_mapping
+from refinement.grid_convergence import grid_error
+
+logger = logging.getLogger(__name__)
 
 
 class TestGridError:
-    def test_grid_error(self):
+    # IMPORTANT: NOTE:
+    #   THIS DOESN'T WORK BECAUSE COARSE_FINE MAPPINGS AREN'T IMPLEMENTED FOR STRUCTURED GRIDS YET.
+    def test_grid_error_structured_grid(self):
         """ Set up and solve a simple 3d-problem with 2 fractures.
 
         Verify decreasing error.
@@ -20,20 +25,47 @@ class TestGridError:
         # TODO: Modify FlowISC so that it modifies permeability on setup.
 
         """
-        path_head = "TestGridError/test_grid_error"
-        gb, params, network = create_grid_with_two_fractures(path_head)
+        time_step = pp.HOUR
+        params = FlowParameters(
+            head="TestGridError/test_grid_error_structured_grid",
+            time_step=time_step,
+            end_time=time_step * 4,
+            fluid_type=pp.UnitFluid,
+            shearzone_names=["f1"],
+            mesh_args={},
+            source_scalar_borehole_shearzone=None,
+            well_cells=nd_injection_cell_center,
+            injection_rate=1,
+            frac_permeability=1,
+            intact_permeability=1,
+        )
+        n_ref = 2
+        gb_list = [structured_grid_1_frac_horizontal_with_refinements(ref)
+                   for ref in range(n_ref + 1)]
 
-        # Parameters for run_model_for_convergence_study
-        model_setup = {
-            "model": FlowISC,
-            "run_model_method": pp.run_time_dependent_model,
-            "network": network,
-            "params": params.dict(),
-            "n_refinements": 2,
-            "variable": ['p_exp'],
-            "variable_dof": [1],
-        }
-        gb_list, errors = run_model_for_convergence_study(**model_setup)
+        for gb in gb_list:
+            setup = FlowISC(params)
+            setup.gb = gb
+
+            pp.run_time_dependent_model(setup, {})
+
+        # --- Compute errors ---
+        gb_ref = gb_list[-1]
+
+        errors = []
+        for i in range(0, n_ref):
+            gb_i = gb_list[i]
+            gb_coarse_fine_cell_mapping(gb=gb_i, gb_ref=gb_ref)
+
+            _error = grid_error(
+                gb=gb_i,
+                gb_ref=gb_ref,
+                variable=['p_exp'],
+                variable_dof=[1],
+            )
+            errors.append(_error)
+
+        logger.info(errors)
 
 
 def create_grid_with_two_fractures(path_head: str) -> Tuple[pp.GridBucket, SetupParams, pp.FractureNetwork3d]:
@@ -91,3 +123,22 @@ def create_grid_with_two_fractures(path_head: str) -> Tuple[pp.GridBucket, Setup
     )
 
     return gb, params, frac_network
+
+
+def structured_grid_1_frac_horizontal_with_refinements(n_ref: int):
+    # Domain has physical dimension (size)^3
+    size = 10
+    physdims = np.ones(3, dtype=np.int) * size
+
+    # nx is initially (n_ref=0) (5)^3 cells
+    # Every iteration splits each cell in 4
+    nx = (np.ones(3, dtype=np.int) * 5) * (2 ** n_ref)
+
+    # fmt: off
+    frac_pts = np.array(
+        [[0.2, 0.8, 0.8, 0.2],
+         [0.2, 0.2, 0.8, 0.8],
+         [0.5, 0.5, 0.5, 0.5]]) * size
+    # fmt: on
+    gb = pp.meshing.cart_grid([frac_pts], nx=nx, physdims=physdims)
+    return gb
