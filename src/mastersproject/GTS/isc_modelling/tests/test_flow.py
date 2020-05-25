@@ -200,34 +200,39 @@ class TestFlowISC:
             frac_permeability=0,
             intact_permeability=intact_k,
         )
+        _helper_run_flowisc_optimized_grid(params)
 
-        _gb, network = create_grid(
-            **params.dict(
-                include={
-                    "mesh_args",
-                    "length_scale",
-                    "bounding_box",
-                    "shearzone_names",
-                    "folder_name",
-                }
-            )
+
+def _helper_run_flowisc_optimized_grid(self, params: FlowParameters):
+    """ Run FlowISC on optimized meshes"""
+
+    _gb, network = create_grid(
+        **params.dict(
+            include={
+                "mesh_args",
+                "length_scale",
+                "bounding_box",
+                "shearzone_names",
+                "folder_name",
+            }
         )
+    )
 
-        logger.info(f"gb cells non-optimized: {_gb.num_cells()}")
+    logger.info(f"gb cells non-optimized: {_gb.num_cells()}")
 
-        # Optimize the mesh
-        in_file = params.folder_name / "gmsh_frac_file.geo"
-        out_file = params.folder_name / "gmsh_frac_file-optimized.msh"
-        optimize_mesh(
-            in_file=in_file, out_file=out_file, method="Netgen",
-        )
-        gb: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
-        logger.info(f"gb cells optimized: {gb.num_cells()}")
-        assert _gb.num_cells() < gb.num_cells()
+    # Optimize the mesh
+    in_file = params.folder_name / "gmsh_frac_file.geo"
+    out_file = params.folder_name / "gmsh_frac_file-optimized.msh"
+    optimize_mesh(
+        in_file=in_file, out_file=out_file, method="Netgen",
+    )
+    gb: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
+    logger.info(f"gb cells optimized: {gb.num_cells()}")
+    assert _gb.num_cells() < gb.num_cells()
 
-        # Run FlowISC
-        setup = FlowISC(params)
-        setup.gb = gb
-        pp.run_time_dependent_model(setup, {})
+    # Run FlowISC
+    setup = FlowISC(params)
+    setup.gb = gb
+    pp.run_time_dependent_model(setup, {})
 
-        assert setup.neg_ind.size == 0
+    assert setup.neg_ind.size == 0
