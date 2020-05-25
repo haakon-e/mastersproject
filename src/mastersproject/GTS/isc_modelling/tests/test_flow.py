@@ -1,9 +1,13 @@
 from typing import Optional, List
+import logging
 
 import porepy as pp
 import numpy as np
 from GTS import FlowISC
+from GTS.isc_modelling.ISCGrid import create_grid, optimize_mesh
 from GTS.isc_modelling.parameter import FlowParameters, nd_injection_cell_center
+
+logger = logging.getLogger(__name__)
 
 
 class TestFlow:
@@ -170,3 +174,60 @@ def network_n_fractures(n_frac: int) -> pp.FractureNetwork3d:
         network.add(pp.Fracture(frac_pts2))
 
     return network
+
+
+class TestFlowISC:
+
+    def test_low_k_optimized_mesh(self):
+        """ Run FlowISC on optimized meshes"""
+        _sz = 10
+        intact_k = 1e-16
+
+        time_step = pp.MINUTE * 40
+        params = FlowParameters(
+            head=f"TestFlowISC/test_low_k_optimized_mesh/sz_{_sz}/k_{intact_k}/40min",
+            time_step=time_step,
+            end_time=time_step * 40,
+            shearzone_names=None,
+            mesh_args={
+                "mesh_size_frac": _sz,
+                "mesh_size_min": 0.2 * _sz,
+                "mesh_size_bound": 3 * _sz,
+            },
+            source_scalar_borehole_shearzone=None,
+            well_cells=nd_injection_cell_center,
+            injection_rate=1 / 6,
+            frac_permeability=0,
+            intact_permeability=intact_k,
+        )
+
+        _gb, network = create_grid(
+            **params.dict(
+                include={
+                    "mesh_args",
+                    "length_scale",
+                    "bounding_box",
+                    "shearzone_names",
+                    "folder_name",
+                }
+            )
+        )
+
+        logger.info(f"gb cells non-optimized: {_gb.num_cells()}")
+
+        # Optimize the mesh
+        in_file = params.folder_name / "gmsh_frac_file.geo"
+        out_file = params.folder_name / "gmsh_frac_file-optimized.msh"
+        optimize_mesh(
+            in_file=in_file, out_file=out_file, method="Netgen",
+        )
+        gb: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
+        logger.info(f"gb cells optimized: {gb.num_cells()}")
+        assert _gb.num_cells() < gb.num_cells()
+
+        # Run FlowISC
+        setup = FlowISC(params)
+        setup.gb = gb
+        pp.run_time_dependent_model(setup, {})
+
+        assert setup.neg_ind.size == 0
