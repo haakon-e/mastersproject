@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1" byte_order="LittleEndian" compressor="vtkZLibDataCompressor">
+<Collection>
+	<DataSet group="" part="" timestep="3600.000000" file="simulation_run_3_3600.0.vtu"/>
+	<DataSet group="" part="" timestep="7200.000000" file="simulation_run_3_7200.0.vtu"/>
+	<DataSet group="" part="" timestep="10800.000000" file="simulation_run_3_10800.0.vtu"/>
+	<DataSet group="" part="" timestep="14400.000000" file="simulation_run_3_14400.0.vtu"/>
+	<DataSet group="" part="" timestep="18000.000000" file="simulation_run_3_18000.0.vtu"/>
+	<DataSet group="" part="" timestep="21600.000000" file="simulation_run_3_21600.0.vtu"/>
+	<DataSet group="" part="" timestep="25200.000000" file="simulation_run_3_25200.0.vtu"/>
+	<DataSet group="" part="" timestep="28800.000000" file="simulation_run_3_28800.0.vtu"/>
+	<DataSet group="" part="" timestep="32400.000000" file="simulation_run_3_32400.0.vtu"/>
+	<DataSet group="" part="" timestep="36000.000000" file="simulation_run_3_36000.0.vtu"/>
+	<DataSet group="" part="" timestep="39600.000000" file="simulation_run_3_39600.0.vtu"/>
+	<DataSet group="" part="" timestep="43200.000000" file="simulation_run_3_43200.0.vtu"/>
+	<DataSet group="" part="" timestep="46800.000000" file="simulation_run_3_46800.0.vtu"/>
+	<DataSet group="" part="" timestep="50400.000000" file="simulation_run_3_50400.0.vtu"/>
+	<DataSet group="" part="" timestep="54000.000000" file="simulation_run_3_54000.0.vtu"/>
+	<DataSet group="" part="" timestep="57600.000000" file="simulation_run_3_57600.0.vtu"/>
+	<DataSet group="" part="" timestep="61200.000000" file="simulation_run_3_61200.0.vtu"/>
+	<DataSet group="" part="" timestep="64800.000000" file="simulation_run_3_64800.0.vtu"/>
+	<DataSet group="" part="" timestep="68400.000000" file="simulation_run_3_68400.0.vtu"/>
+	<DataSet group="" part="" timestep="72000.000000" file="simulation_run_3_72000.0.vtu"/>
+	<DataSet group="" part="" timestep="75600.000000" file="simulation_run_3_75600.0.vtu"/>
+	<DataSet group="" part="" timestep="79200.000000" file="simulation_run_3_79200.0.vtu"/>
+	<DataSet group="" part="" timestep="82800.000000" file="simulation_run_3_82800.0.vtu"/>
+	<DataSet group="" part="" timestep="86400.000000" file="simulation_run_3_86400.0.vtu"/>
+	<DataSet group="" part="" timestep="90000.000000" file="simulation_run_3_90000.0.vtu"/>
+	<DataSet group="" part="" timestep="93600.000000" file="simulation_run_3_93600.0.vtu"/>
+	<DataSet group="" part="" timestep="97200.000000" file="simulation_run_3_97200.0.vtu"/>
+	<DataSet group="" part="" timestep="100800.000000" file="simulation_run_3_100800.0.vtu"/>
+	<DataSet group="" part="" timestep="104400.000000" file="simulation_run_3_104400.0.vtu"/>
+	<DataSet group="" part="" timestep="108000.000000" file="simulation_run_3_108000.0.vtu"/>
+	<DataSet group="" part="" timestep="111600.000000" file="simulation_run_3_111600.0.vtu"/>
+	<DataSet group="" part="" timestep="115200.000000" file="simulation_run_3_115200.0.vtu"/>
+	<DataSet group="" part="" timestep="118800.000000" file="simulation_run_3_118800.0.vtu"/>
+	<DataSet group="" part="" timestep="122400.000000" file="simulation_run_3_122400.0.vtu"/>
+	<DataSet group="" part="" timestep="126000.000000" file="simulation_run_3_126000.0.vtu"/>
+	<DataSet group="" part="" timestep="129600.000000" file="simulation_run_3_129600.0.vtu"/>
+	<DataSet group="" part="" timestep="133200.000000" file="simulation_run_3_133200.0.vtu"/>
+	<DataSet group="" part="" timestep="136800.000000" file="simulation_run_3_136800.0.vtu"/>
+	<DataSet group="" part="" timestep="140400.000000" file="simulation_run_3_140400.0.vtu"/>
+	<DataSet group="" part="" timestep="144000.000000" file="simulation_run_3_144000.0.vtu"/>
+</Collection>
+</VTKFile>
