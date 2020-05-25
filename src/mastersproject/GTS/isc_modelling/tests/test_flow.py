@@ -203,7 +203,7 @@ class TestFlowISC:
         _helper_run_flowisc_optimized_grid(params)
 
 
-def _helper_run_flowisc_optimized_grid(self, params: FlowParameters):
+def _helper_run_flowisc_optimized_grid(params: FlowParameters):
     """ Run FlowISC on optimized meshes"""
 
     _gb, network = create_grid(
