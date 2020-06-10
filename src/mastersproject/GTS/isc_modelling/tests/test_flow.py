@@ -203,7 +203,7 @@ class TestFlowISC:
         _helper_run_flowisc_optimized_grid(params)
 
 
-def _helper_run_flowisc_optimized_grid(params: FlowParameters):
+def _helper_run_flowisc_optimized_grid(params: FlowParameters, optimize_method="Netgen"):
     """ Run FlowISC on optimized meshes"""
 
     _gb, network = create_grid(
@@ -224,7 +224,7 @@ def _helper_run_flowisc_optimized_grid(params: FlowParameters):
     in_file = params.folder_name / "gmsh_frac_file.geo"
     out_file = params.folder_name / "gmsh_frac_file-optimized.msh"
     optimize_mesh(
-        in_file=in_file, out_file=out_file, method="Netgen",
+        in_file=in_file, out_file=out_file, method=optimize_method, force=True, dim_tags=[3]
     )
     gb: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
     logger.info(f"gb cells optimized: {gb.num_cells()}")
