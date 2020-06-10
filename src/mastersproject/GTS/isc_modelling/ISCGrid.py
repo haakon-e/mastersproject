@@ -46,7 +46,8 @@ def create_grid(
     # Scale mesh args by length_scale:
     mesh_args = {k: v / length_scale for k, v in mesh_args.items()}
     # Scale bounding box by length_scale:
-    bounding_box = {k: v / length_scale for k, v in bounding_box.items()}
+    if bounding_box:
+        bounding_box = {k: v / length_scale for k, v in bounding_box.items()}
 
     network = fracture_network(
         shearzone_names=shearzone_names,
