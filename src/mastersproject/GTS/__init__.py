@@ -1,7 +1,7 @@
 # Import new model data
 from GTS.ISC_data.isc import (
-    ISCData,  # Data set
-    swiss_to_gts,  # Transformation
+    ISCData,                    # Data set
+    swiss_to_gts,               # Transformation
     borehole_to_global_coords,  # Transformation
 )
 
