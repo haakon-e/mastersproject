@@ -1,8 +1,7 @@
-
 # Import new model data
 from GTS.ISC_data.isc import (
-    ISCData,                    # Data set
-    swiss_to_gts,               # Transformation
+    ISCData,  # Data set
+    swiss_to_gts,  # Transformation
     borehole_to_global_coords,  # Transformation
 )
 
@@ -35,14 +34,10 @@ from GTS.isc_modelling.setup import (
 # --- MODELS ---
 
 # Contact mechanics model
-from GTS.isc_modelling.mechanics import (
-    ContactMechanicsISC,
-)
+from GTS.isc_modelling.mechanics import ContactMechanicsISC
 
 # Contact Mechanics Biot
-from GTS.isc_modelling.contact_mechanics_biot import (
-    ContactMechanicsBiotISC,
-)
+from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotISC
 
 # Flow model
 from GTS.isc_modelling.flow import (
@@ -56,4 +51,23 @@ from GTS.isc_modelling.setup import (
     SetupParams,
 )
 
-
+__all__ = [
+    "ISCData",
+    "swiss_to_gts",
+    "borehole_to_global_coords",
+    "convex_plane",
+    "fracture_network",
+    "plane_from_points",
+    "convex_hull",
+    "stress_tensor",
+    "run_mechanics_model",
+    "run_biot_model",
+    "run_biot_gts_model",
+    "run_abstract_model",
+    "ContactMechanicsISC",
+    "ContactMechanicsBiotISC",
+    "Flow",
+    "FlowISC",
+    "prepare_directories",
+    "SetupParams",
+]

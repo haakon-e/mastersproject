@@ -1,14 +1,10 @@
 import logging
 from typing import List
 
-import porepy as pp
 import numpy as np
 
-# --- LOGGING UTIL ---
-try:
-    from src.mastersproject.util.logging_util import timer, trace
-except ImportError:
-    from util.logging_util import timer, trace
+import porepy as pp
+from mastersproject.util.logging_util import trace
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +74,8 @@ def grid_error(
             var = variable[var_idx]
             var_dof = variable_dof[var_idx]
 
-            # Check if the variable exists on both the grid and reference grid
+            # Check if the variable exists on both
+            # the grid and reference grid
             state_keys = set(states.keys())
             state_ref_keys = set(states_ref.keys())
             check_keys = state_keys.intersection(state_ref_keys)
@@ -90,8 +87,10 @@ def grid_error(
                 continue
 
             # Compute errors relative to the reference grid
-            # TODO: Should the solution be divided by g.cell_volumes or similar?
-            # TODO: If scaling is used, consider that - or use the export-ready variables,
+            # TODO: Should the solution be divided by
+            #  g.cell_volumes or similar?
+            # TODO: If scaling is used, consider that
+            #  - or use the export-ready variables,
             #   'u_exp', 'p_exp', etc.
             sol = (
                 states[var].reshape((var_dof, -1), order="F").T

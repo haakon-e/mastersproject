@@ -1,10 +1,10 @@
+import logging
 from pathlib import Path
 from typing import Dict, List
-import logging
 
-import porepy as pp
 import numpy as np
 
+import porepy as pp
 from GTS.ISC_data.fracture import fracture_network
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,8 @@ def create_grid(
     """ Create a GridBucket of a 3D domain with fractures defined by the ISC data set.
 
     shearzone_names are used to give names to each fracture grid. We assume that the
-    order of names appearing in shearzone_names is preserved as fracture grids are constructed.
+    order of names appearing in shearzone_names is preserved as fracture grids
+    are constructed.
 
 
     Parameters
@@ -129,7 +130,8 @@ def optimize_mesh(in_file, out_file=None, method="", force=False, dim_tags=[], d
     ----------
     in_file : Path or str
         path to .geo file to be optimized
-        Note: You are unable to optimize .msh-files. Therefore, only .geo files can be passed.
+        Note: You are unable to optimize .msh-files.
+        Therefore, only .geo files can be passed.
     out_file : Path or str
         output file. By default, in_file+"optimized"
     method : str

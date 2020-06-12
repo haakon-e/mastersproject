@@ -1,13 +1,8 @@
 """ method to find optimal scaling of a problem """
-import time
-
 import numpy as np
 import pandas as pd
-import porepy as pp
-import scipy.optimize as optimize
 
-import GTS as gts
-from GTS import FlowISC, prepare_directories, SetupParams
+from GTS import FlowISC, SetupParams, prepare_directories
 
 
 def best_cond_numb(initial_guess: np.array = None):

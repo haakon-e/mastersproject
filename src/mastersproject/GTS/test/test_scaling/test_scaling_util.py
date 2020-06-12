@@ -1,10 +1,11 @@
-import GTS as gts
-from GTS.isc_modelling.setup import run_abstract_model, _prepare_params
-import porepy as pp
+import logging
+
 import numpy as np
 import pandas as pd
 
-import logging
+import GTS as gts
+from GTS.isc_modelling.setup import _prepare_params
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,22 +28,25 @@ def test_conditioning(*, length_scales, scalar_scales, **kwargs):
     # loop through all scaling coefficients
     for ls in length_scales:
         for ss in scalar_scales:
-            max_elem, max_A_sum, min_A_sum = test_condition_number(ls=ls, ss=ss, **kwargs)
+            max_elem, max_A_sum, min_A_sum = test_condition_number(
+                ls=ls, ss=ss, **kwargs
+            )
             v = {
                 "ls": ls,
                 "ss": ss,
                 "max_elem": max_elem,
                 "max_A_sum": max_A_sum,
-                "min_A_sum": min_A_sum
+                "min_A_sum": min_A_sum,
             }
             results = results.append(v, ignore_index=True)
 
-    results['ratio'] = results['max_A_sum'] / results['min_A_sum']
+    results["ratio"] = results["max_A_sum"] / results["min_A_sum"]
     return results
 
 
 def test_condition_number(**kwargs):
-    # TODO: Rename this method (and dependent notebooks usages) to something more suitable
+    # TODO: Rename this method (and dependent notebooks usages)
+    #  to something more suitable
     """ Method to create a mesh and discretize equations.
 
     Parameters
@@ -97,28 +101,26 @@ def make_params_for_scaling(**kwargs):
     sz = kwargs.get("sz", 80)
     ls = kwargs.get("ls", 1)
     ss = kwargs.get("ss", 1)
-    sz_names = kwargs.get("shearzone_names", None)  # ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
+    sz_names = kwargs.get(
+        "shearzone_names", None
+    )  # ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
 
     params = {
         "length_scale": ls,
         "scalar_scale": ss,
         "shearzone_names": sz_names,
-
         "mesh_args": {
             "mesh_size_frac": sz,
             "mesh_size_min": sz,
             "mesh_size_bound": sz,
         },
-
         # turn off gravity
         "_gravity_bc_p": False,
         "_gravity_src": False,
         "_gravity_bc": False,
-
         "path_head": kwargs.get("path_head", "test_fracture_complexity/test_1"),
     }
 
     params = _prepare_params(params=params, setup_loggers=False)
 
     return params
-

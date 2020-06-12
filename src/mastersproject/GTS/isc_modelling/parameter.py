@@ -1,16 +1,16 @@
 """ Parameter setup for Grimsel Test Site"""
 from __future__ import annotations  # forward reference to not-yet-constructed model
 
+import logging
 from pathlib import Path
-from typing import Optional, List, Dict, Callable
+from typing import Callable, Dict, List, Optional
 
 import numpy as np
 import pendulum
-import porepy as pp
-from GTS import ISCData
 from pydantic import BaseModel, validator
 
-import logging
+import porepy as pp
+from GTS import ISCData
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
-from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
+
 import porepy as pp
 from GTS import FlowISC
 from GTS.isc_modelling.parameter import FlowParameters, nd_injection_cell_center
@@ -52,17 +52,17 @@ class TestRunModelForConvergenceStudy:
             head="test_1_frac_unit_domain",
             shearzone_names=["f1"],
             sz=0.3,
-            n_refinements=2
+            n_refinements=2,
         )
 
 
 def _run_convergence_study_helper(
-        head: str,
-        shearzone_names: Optional[List[str]],
-        sz: float,
-        n_refinements: int,
-        frac_permeability: float = 1,
-        intact_permeability: float = 1,
+    head: str,
+    shearzone_names: Optional[List[str]],
+    sz: float,
+    n_refinements: int,
+    frac_permeability: float = 1,
+    intact_permeability: float = 1,
 ) -> None:
     """ Helper method for run_convergence_study tests
 
@@ -101,7 +101,7 @@ def _run_convergence_study_helper(
         params=params,
         n_refinements=n_refinements,
         newton_params=None,
-        variable=['p_exp'],
+        variable=["p_exp"],
         variable_dof=[1],
     )
 
@@ -114,24 +114,17 @@ def network_n_fractures(n_frac: int) -> pp.FractureNetwork3d:
     """
     assert 0 <= n_frac <= 2, "Only implemented between 0 and 2 fractures"
 
-    bounding_box = {
-        'xmin': 0, 'ymin': 0, 'zmin': 0,
-        'xmax': 1, 'ymax': 1, 'zmax': 1
-    }
+    bounding_box = {"xmin": 0, "ymin": 0, "zmin": 0, "xmax": 1, "ymax": 1, "zmax": 1}
     network = pp.FractureNetwork3d(None, bounding_box)
 
     if n_frac >= 1:
         frac_pts1 = np.array(
-            [[0.15, 0.15, 0.8, 0.8],
-             [0, 0.9, 0.9, 0],
-             [0, 0, 0.9, 0.9]])
+            [[0.15, 0.15, 0.8, 0.8], [0, 0.9, 0.9, 0], [0, 0, 0.9, 0.9]]
+        )
         network.add(pp.Fracture(frac_pts1))
 
     if n_frac >= 2:
-        frac_pts2 = np.array(
-            [[1, 1, 0.15, 0.15],
-             [0, 1, 1, 0],
-             [0.15, 0.15, 1, 1]])
+        frac_pts2 = np.array([[1, 1, 0.15, 0.15], [0, 1, 1, 0], [0.15, 0.15, 1, 1]])
         network.add(pp.Fracture(frac_pts2))
 
     return network

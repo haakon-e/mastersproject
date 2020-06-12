@@ -2,12 +2,8 @@ import logging
 
 import porepy as pp
 from GTS import FlowISC
-from GTS.isc_modelling.ISCGrid import optimize_mesh, create_grid
-
-from GTS.isc_modelling.parameter import (
-    FlowParameters,
-    nd_injection_cell_center,
-)
+from GTS.isc_modelling.ISCGrid import create_grid, optimize_mesh
+from GTS.isc_modelling.parameter import FlowParameters, nd_injection_cell_center
 
 logger = logging.getLogger(__name__)
 

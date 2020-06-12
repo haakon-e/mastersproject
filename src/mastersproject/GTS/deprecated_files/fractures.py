@@ -12,7 +12,7 @@ def get_fractures():
     fracs = {}
 
     for s in list(shearzones.keys()):
-        fracs[s] = convex_hull(shearzones[s]['proj'])
+        fracs[s] = convex_hull(shearzones[s]["proj"])
 
     return fracs
 
@@ -23,7 +23,7 @@ def get_fractures_manual():
     fracs = {}
 
     for s in list(planes.keys()):
-        fracs[s] = convex_hull(planes[s]['proj'])
+        fracs[s] = convex_hull(planes[s]["proj"])
 
     return fracs
 
@@ -35,10 +35,9 @@ def export_network(fracs, name):
         fracs (dict): Dictionary of fracture vertices.
         name (str): Filename of exported .vtu file.
     """
-    if name[-4:] != '.vtu':
-        name = name + '.vtu'
+    if name[-4:] != ".vtu":
+        name = name + ".vtu"
     fractures = [pp.Fracture(fracs[key]) for key in list(fracs.keys())]
     network = pp.FractureNetwork3d(fractures)
     network.to_vtk(name)
     return network
-
