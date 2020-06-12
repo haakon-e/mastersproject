@@ -1,14 +1,13 @@
 import logging
-from typing import Generator, Union
 from pathlib import Path
+from typing import Generator, Union
 
-import porepy as pp
-from porepy.fracs.simplex import tetrahedral_grid_from_gmsh
-from porepy.fracs.meshing import grid_list_to_grid_bucket
 import numpy as np
 import scipy.sparse as sps
 
-# --- LOGGING UTIL ---
+import porepy as pp
+from porepy.fracs.meshing import grid_list_to_grid_bucket
+from porepy.fracs.simplex import tetrahedral_grid_from_gmsh
 from util.logging_util import trace
 
 logger = logging.getLogger(__name__)
@@ -23,10 +22,12 @@ def refine_mesh_by_splitting(
 ) -> Generator[pp.GridBucket, None, None]:
     """ Refine a mesh by splitting using gmsh
 
-    The method generates refinements on the fly by yielding GridBuckets as desired.
+    The method generates refinements on the fly
+    by yielding GridBuckets as desired.
 
     Note:
-    When the desired number of refinements is reached, you should call
+    When the desired number of refinements is reached,
+    you should call
         refine_mesh_by_splitting.close()
     so that gmsh.finalize() is called.
 
@@ -35,11 +36,13 @@ def refine_mesh_by_splitting(
     in_file : Union[str, Path]
         path to .geo file to read
     out_file : Union[str, Path]
-        path to new .msh file to store mesh in, excluding the ending '.msh'.
+        path to new .msh file to store mesh in,
+        excluding the ending '.msh'.
     dim : int {2, 3}
         Dimension of domain to mesh
     gb_set_projections : bool (Default: True)
-        Call pp.contact_conditions.set_projections(gb) before yielding result
+        Call pp.contact_conditions.set_projections(gb)
+        before yielding result
     Returns
     -------
     Generator[gb]
@@ -60,7 +63,8 @@ def refine_mesh_by_splitting(
             "export PYTHONPATH=${PYTHONPATH}:path/to/gmsh*-sdk.*/lib"
         )
 
-    # gmsh must always be finalized after it has be initialized (see 'finally' clause).
+    # gmsh must always be finalized after it has be initialized
+    # (see 'finally' clause).
     # Therefore, we wrap the entire function body in a try-finally context.
     try:
         # Initialize gmsh and generate the first (coarsest) mesh
@@ -74,7 +78,8 @@ def refine_mesh_by_splitting(
         while True:
             out_file_name = f"{out_file}_{num_refinements}.msh"
 
-            # The first mesh is already done. Start refining all subsequent meshes.
+            # The first mesh is already done.
+            # Start refining all subsequent meshes.
             if num_refinements > 0:
                 gmsh.model.mesh.refine()  # Refine the mesh
 
@@ -99,7 +104,9 @@ def refine_mesh_by_splitting(
 
 
 @trace(logger)
-def gb_coarse_fine_cell_mapping(gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e-8) -> None:
+def gb_coarse_fine_cell_mapping(
+    gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e-8
+) -> None:
     """ Wrapper for coarse_fine_cell_mapping to construct mapping for grids in
     GridBucket.
 
@@ -128,7 +135,8 @@ def gb_coarse_fine_cell_mapping(gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e
         np.append(*gb.bounding_box()), np.append(*gb_ref.bounding_box())
     ), "Weakly check that GridBuckets refer to same domains"
 
-    # This method assumes a consistent node ordering between grids. At least assign one.
+    # This method assumes a consistent node ordering between grids.
+    # At least assign one.
     gb.assign_node_ordering(overwrite_existing=False)
     gb_ref.assign_node_ordering(overwrite_existing=False)
 
@@ -156,8 +164,8 @@ def coarse_fine_cell_mapping(
 
     Assuming a regular and a refined mesh, where the refinement is executed by
     splitting.
-    I.e. a cell in the refined grid is completely contained within a cell in the
-    coarse grid.
+    I.e. a cell in the refined grid is completely contained within a cell
+    in the coarse grid.
 
     Parameters
     ----------
@@ -174,34 +182,38 @@ def coarse_fine_cell_mapping(
         Column major sparse matrix mapping from coarse to fine cells.
 
 
-    This method creates a mapping from fine to coarse cells by creating a matrix 'M'
-    where the rows represent the fine cells while the columns represent the coarse
-    cells. In practice this means that for an array 'p', of known values on a coarse
-    grid, by applying the mapping
+    This method creates a mapping from fine to coarse cells by creating
+    a matrix 'M' where the rows represent the fine cells while the
+    columns represent the coarse cells. In practice this means that
+    for an array 'p', of known values on a coarse grid, by applying
+    the mapping
         q = M * p
-    each value in a coarse cell will now be transferred to all the fine cells contained
-    within the coarse cell.
+    each value in a coarse cell will now be transferred to all the
+    fine cells contained within the coarse cell.
 
     The procedure for creating this mapping relies on two main assumptions.
         1. Each fine cell is fully contained inside exactly one coarse cell.
         2. Each cell can be characterised as a simplex.
             - i.e. Every node except one defines every face of the object.
 
-    The first assumption implies that the problem of assessing if a fine cell is
-    contained within a coarse cell is reduced to assessing if the center of a fine cell
-    is contained within the coarse cell.
+    The first assumption implies that the problem of assessing if a fine
+    cell is contained within a coarse cell is reduced to assessing if
+    the center of a fine cell is contained within the coarse cell.
 
-    The second assumption implies that a cell in any dimension (1D, 2D, 3D) will be a
-    convex object. This way, we can use existing algorithms in PorePy to find if a point
-    is inside a polygon (2D) or polyhedron (3D). (The 1D case is trivial)
+    The second assumption implies that a cell in any dimension (1D, 2D, 3D)
+    will be a convex object. This way, we can use existing algorithms in
+    PorePy to find if a point is inside a polygon (2D) or polyhedron (3D).
+    (The 1D case is trivial)
 
-    The general algorithm is as follows (refer to start of for-loop in the code):
-    1. Make a list of (pointers to) untested cell centers called 'test_cells_ptr'.
+    The general algorithm is as follows (refer to start of for-loop in
+    the code):
+    1. Make a list of (pointers to) untested cell centers called
+        'test_cells_ptr'.
     2. Iterate through all coarse cells. Now, consider one of these:
-    3. For all untested cell centers (defined by 'test_cells_ptr'), check if they are
-        inside the coarse cell.
-    4. Those that pass (is inside the coarse cell) add to the mapping, then remove those
-        point from the list of untested cell centers.
+    3. For all untested cell centers (defined by 'test_cells_ptr'),
+        check if they are inside the coarse cell.
+    4. Those that pass (is inside the coarse cell) add to the mapping,
+        then remove those point from the list of untested cell centers.
     5. Assemble the mapping.
 
     """
@@ -209,13 +221,14 @@ def coarse_fine_cell_mapping(
     assert g.num_cells < g_ref.num_cells, "Wrong order of input grids"
     assert g.dim == g_ref.dim, "Grids must be of same dimension"
 
-    # 1. Step: Create a list of tuples pointing to the (start, end) index of the nodes
-    # of each cell on the coarse grid.
+    # 1. Step: Create a list of tuples pointing to the (start, end)
+    # index of the nodes of each cell on the coarse grid.
     cell_nodes = g.cell_nodes()
     # start/end row pointers for each column
     nodes_of_cell_ptr = zip(cell_nodes.indptr[:-1], cell_nodes.indptr[1:])
 
-    # 2. Step: Initialize a sps.csc_matrix mapping fine cells to coarse cells.
+    # 2. Step: Initialize a sps.csc_matrix mapping fine cells to
+    # coarse cells.
     indptr = np.array([0])
     indices = np.empty(0)
 
@@ -223,15 +236,16 @@ def coarse_fine_cell_mapping(
     test_cells_ptr = np.arange(g_ref.num_cells)  # Pointer to cell centers
     nodes = g.nodes.copy()
 
-    # 3. Step: If the grids are in 1D or 2D, we can simplify the calculation by rotating
-    # the coordinate system to local coordinates. For example, a 2D grid embedded in 3D
+    # 3. Step: If the grids are in 1D or 2D, we can simplify the
+    # calculation by rotating the coordinate system to local
+    # coordinates. For example, a 2D grid embedded in 3D
     # would be "rotated" so that each coordinate
     #           is of the form (x, y, 0).
     if g.dim == 1:
         # Rotate coarse nodes and fine cell centers to align with the x-axis
         tangent = pp.map_geometry.compute_tangent(nodes)
         reference = [1, 0, 0]
-        R = pp.map_geometry.project_line_matrix(nodes, tangent, reference=reference)
+        R = pp.map_geometry.project_line_matrix(nodes, tangent, reference=reference,)
         nodes = R.dot(nodes)[0, :]
         cells_ref = R.dot(cells_ref)[0, :]
 

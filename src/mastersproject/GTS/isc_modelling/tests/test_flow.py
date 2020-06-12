@@ -1,17 +1,21 @@
-from typing import Optional, List
 import logging
+from typing import List, Optional
+
+import numpy as np
 
 import porepy as pp
-import numpy as np
 from GTS import FlowISC
 from GTS.isc_modelling.ISCGrid import create_grid, optimize_mesh
-from GTS.isc_modelling.parameter import FlowParameters, nd_injection_cell_center, shearzone_injection_cell
+from GTS.isc_modelling.parameter import (
+    FlowParameters,
+    nd_injection_cell_center,
+    shearzone_injection_cell,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class TestFlow:
-
     def test_1_frac_unit_domain(self):
         """ Test that we a basic 1-fracture setup runs as
         expected with easy parameters.
@@ -88,11 +92,11 @@ class TestFlow:
 
 
 def _run_flow_models_helper(
-        sz: float,
-        incompressible: bool,
-        head: str,
-        shearzone_names: Optional[List[str]],
-        time_step: float = None,
+    sz: float,
+    incompressible: bool,
+    head: str,
+    shearzone_names: Optional[List[str]],
+    time_step: float = None,
 ) -> None:
     """ Helper method for the test_flow setups
 
@@ -130,10 +134,7 @@ def _run_flow_models_helper(
         injection_rate=1,
         frac_permeability=1,
         intact_permeability=1,
-        bounding_box={
-            'xmin': 0, 'ymin': 0, 'zmin': 0,
-            'xmax': 1, 'ymax': 1, 'zmax': 1
-        },
+        bounding_box={"xmin": 0, "ymin": 0, "zmin": 0, "xmax": 1, "ymax": 1, "zmax": 1},
     )
     setup = FlowISC(params)
     network = network_n_fractures(params.n_frac)
@@ -153,31 +154,23 @@ def network_n_fractures(n_frac: int) -> pp.FractureNetwork3d:
     """
     assert 0 <= n_frac <= 2, "Only implemented between 0 and 2 fractures"
 
-    bounding_box = {
-        'xmin': 0, 'ymin': 0, 'zmin': 0,
-        'xmax': 1, 'ymax': 1, 'zmax': 1
-    }
+    bounding_box = {"xmin": 0, "ymin": 0, "zmin": 0, "xmax": 1, "ymax": 1, "zmax": 1}
     network = pp.FractureNetwork3d(None, bounding_box)
 
     if n_frac >= 1:
         frac_pts1 = np.array(
-            [[0.15, 0.15, 0.8, 0.8],
-             [0, 0.9, 0.9, 0],
-             [0, 0, 0.9, 0.9]])
+            [[0.15, 0.15, 0.8, 0.8], [0, 0.9, 0.9, 0], [0, 0, 0.9, 0.9]]
+        )
         network.add(pp.Fracture(frac_pts1))
 
     if n_frac >= 2:
-        frac_pts2 = np.array(
-            [[1, 1, 0.15, 0.15],
-             [0, 1, 1, 0],
-             [0.15, 0.15, 1, 1]])
+        frac_pts2 = np.array([[1, 1, 0.15, 0.15], [0, 1, 1, 0], [0.15, 0.15, 1, 1]])
         network.add(pp.Fracture(frac_pts2))
 
     return network
 
 
 class TestFlowISC:
-
     def test_low_k_1_frac(self):
         """ Run FlowISC on a mesh with 1 fracture"""
         _sz = 4  # _sz = 2
@@ -186,15 +179,16 @@ class TestFlowISC:
 
         time_step = pp.MINUTE
         params = FlowParameters(
-            head=f"TestFlowISC/delete-me",  #test_low_k_1_frac/sz_{_sz}/kf_{intact_k}_ki_{frac_k}/1min",
+            # head=f"test_low_k_1_frac/sz_{_sz}/kf_{intact_k}_ki_{frac_k}/1min",
+            head="TestFlowISC/delete-me",
             time_step=time_step,
             end_time=time_step * 4,
             shearzone_names=["S1_2"],
             bounding_box=None,
             mesh_args={
                 "mesh_size_frac": _sz,
-                "mesh_size_min": _sz,#0.2 * _sz,
-                "mesh_size_bound": _sz,#3 * _sz,
+                "mesh_size_min": _sz,  # 0.2 * _sz,
+                "mesh_size_bound": _sz,  # 3 * _sz,
             },
             well_cells=shearzone_injection_cell,
             injection_rate=1 / 6,
@@ -219,13 +213,14 @@ class TestFlowISC:
 
     def test_low_k_optimized_mesh_1_frac(self):
         """ Run FlowISC on optimized mesh with 1 fracture"""
-        _sz = 4#2
+        _sz = 4  # 2
         intact_k = 1e-20
         frac_k = 1e-16
 
         time_step = pp.MINUTE
         params = FlowParameters(
-            head=f"TestFlowISC/test_low_k_optimized_mesh_1_frac/sz_{_sz}/kf_{intact_k}_ki_{frac_k}/1min",
+            head=f"TestFlowISC/test_low_k_optimized_mesh_1_frac/"
+            f"sz_{_sz}/kf_{intact_k}_ki_{frac_k}/1min",
             time_step=time_step,
             end_time=time_step * 4,
             shearzone_names=["S1_2"],
@@ -250,7 +245,8 @@ class TestFlowISC:
 
         time_step = pp.MINUTE
         params = FlowParameters(
-            head=f"TestFlowISC/test_low_k_optimized_mesh_5_frac/sz_{_sz}/kf_{intact_k}_ki_{frac_k}/1min",
+            head=f"TestFlowISC/test_low_k_optimized_mesh_5_frac/"
+            f"sz_{_sz}/kf_{intact_k}_ki_{frac_k}/1min",
             time_step=time_step,
             end_time=time_step * 4,
             mesh_args={
@@ -290,7 +286,9 @@ class TestFlowISC:
         _helper_run_flowisc_optimized_grid(params)
 
 
-def _helper_run_flowisc_optimized_grid(params: FlowParameters, optimize_method="Netgen"):
+def _helper_run_flowisc_optimized_grid(
+    params: FlowParameters, optimize_method="Netgen"
+):
     """ Run FlowISC on optimized meshes"""
 
     _gb, network = create_grid(
@@ -311,7 +309,11 @@ def _helper_run_flowisc_optimized_grid(params: FlowParameters, optimize_method="
     in_file = params.folder_name / "gmsh_frac_file.geo"
     out_file = params.folder_name / "gmsh_frac_file-optimized.msh"
     optimize_mesh(
-        in_file=in_file, out_file=out_file, method=optimize_method, force=True, dim_tags=[3]
+        in_file=in_file,
+        out_file=out_file,
+        method=optimize_method,
+        force=True,
+        dim_tags=[3],
     )
     gb: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
     logger.info(f"gb cells optimized: {gb.num_cells()}")

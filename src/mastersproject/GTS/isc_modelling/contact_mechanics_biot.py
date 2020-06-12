@@ -1,34 +1,11 @@
-import os
 import logging
-from typing import (  # noqa
-    Any,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+
+import numpy as np
 
 import porepy as pp
-import numpy as np
-import scipy.sparse as sps
-from porepy.models.contact_mechanics_biot_model import ContactMechanicsBiot
 from GTS.isc_modelling.mechanics import ContactMechanicsISC
-
-import GTS as gts
-
-# --- LOGGING UTIL ---
-try:
-    from src.mastersproject.util.logging_util import timer, trace
-except ImportError:
-    from util.logging_util import timer, trace
+from mastersproject.util.logging_util import timer, trace
+from porepy.models.contact_mechanics_biot_model import ContactMechanicsBiot
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +43,9 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                 source_scalar_borehole_shearzone : dict[str, str]
                     Which borehole and shear-zone intersection to do injection in.
                     Required keys: 'shearzone', 'borehole'
-                length_scale, scalar_scale : float : Optional (Default: 100, pp.GIGA, respectively)
+                length_scale, scalar_scale : float : Optional
                     Length scale and scalar variable scale.
+                    Default: 100, pp.GIGA, respectively.
         """
 
         logger.info(f"Initializing contact mechanics biot on ISC dataset")
@@ -123,9 +101,11 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
     def bc_type_mechanics(self, g) -> pp.BoundaryConditionVectorial:
         """
-        We set Neumann values on all but a few boundary faces. Fracture faces also set to Dirichlet.
+        We set Neumann values on all but a few boundary faces.
+        Fracture faces also set to Dirichlet.
 
-        Three boundary faces (see method faces_to_fix(self, g)) are set to 0 displacement (Dirichlet).
+        Three boundary faces (see method faces_to_fix(self, g))
+        are set to 0 displacement (Dirichlet).
         This ensures a unique solution to the problem.
         Furthermore, the fracture faces are set to 0 displacement (Dirichlet).
         """
@@ -220,7 +200,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                 ids, dsts = g.closest_cell(pts, return_distance=True)
                 # TODO: log distance in unscaled lengths
                 logger.info(
-                    f"Closest cell found has (unscaled) distance: {dsts[0]*self.length_scale:4f}"
+                    f"Closest cell found has (unscaled) distance: "
+                    f"{dsts[0]*self.length_scale:4f}"
                 )
 
                 # Tag the injection cell
@@ -243,7 +224,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
         # TODO: This is wrong: scalar contribution has (integrated) units [m3 / s]
         #   Perhaps this should just be zero (ref porepy-paper code)
-        # TODO: Q2: Is source flow rate on top of hydrostatic pressure or set absolutely?
+        # TODO: Q2: Is source flow rate on top of hydrostatic pressure or
+        #  set absolutely?
         # Hydrostatic contribution
         # if self._gravity_src_p:
         #     depth = self._depth(g.cell_centers)
@@ -519,7 +501,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                 g_h = gb.node_neighbors(g, only_higher=True)[0]
                 if g_h.dim == Nd:  # In a fracture
                     data_edge = gb.edge_props((g, g_h))
-                    # TODO: Should I instead export the fracture displacement in global coordinates?
+                    # TODO: Should I instead export the fracture displacement
+                    #  in global coordinates?
                     u_mortar_local = self.reconstruct_local_displacement_jump(
                         data_edge=data_edge, from_iterate=True
                     ).copy()
@@ -533,7 +516,9 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                         d[pp.STATE][self.u_exp] = u_mortar_local
                         d[pp.STATE][self.traction_exp] = traction * ss * ls ** 2
                     # TODO: Check when this statement is actually called
-                    else:  # Only called if solving a 2D problem (i.e. this is a 0D fracture intersection)
+                    else:
+                        # Only called if solving a 2D problem
+                        # (i.e. this is a 0D fracture intersection)
                         d[pp.STATE][self.u_exp] = np.vstack(
                             u_mortar_local, np.zeros(u_mortar_local.shape[1])
                         )
@@ -561,10 +546,13 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
     #     # TODO: Set hydrostatic initial condition
     #     for g, d in self.gb:
     #         depth = self._depth(g.cell_centers)
-    #         initial_scalar_value = self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
+    #         initial_scalar_value = (
+    #               self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
+    #         )
     #         d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
     #
-    #     # TODO What hydrostatic scalar initial condition should be set on the mortar grid? lower dim value?
+    #     # TODO What hydrostatic scalar initial condition should be set on
+    #     #      mortar grid? lower dim value?
     #     for _, d in self.gb.edges():
     #         mg = d["mortar_grid"]
     #         initial_value = np.zeros(mg.num_cells)
@@ -576,14 +564,18 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
     #         for g, d in self.gb:
     #             if g.dim == self.Nd:
     #                 initial_displacements = d["initial_cell_displacements"]
-    #                 pp.set_state(d, {self.displacement_variable: initial_displacements})
+    #                 pp.set_state(d, {
+    #                     self.displacement_variable: initial_displacements
+    #                 })
     #
     #         for e, d in self.gb.edges():
     #             if e[0].dim == self.Nd:
     #                 try:
     #                     initial_displacements = d["initial_cell_displacements"]
     #                 except KeyError:
-    #                     logger.warning("We got KeyError on d['initial_cell_displacements'].")
+    #                     logger.warning(
+    #                         "We got KeyError on d['initial_cell_displacements']."
+    #                     )
     #                     mg = d["mortar_grid"]
     #                     initial_displacements = np.zeros(mg.num_cells * self.Nd)
     #                 state = {
@@ -602,13 +594,14 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
            Update time-dependent parameters (captured by assembly).
         """
         self.set_parameters()
-        # The following is expensive, as it includes Biot. Consider making a custom  method
-        # discretizing only the term you need!
+        # The following is expensive, as it includes Biot. Consider
+        # making a custom  method discretizing only the term you need!
 
         # TODO: Discretize only the terms you need.
         # The LHS of mechanics equation has no time-dependent terms (3D)
         # The LHS of flow equation has no time-dependent terms (3D)
-        # We don't update fracture aperture, so flow on the fracture is also not time-dependent (LHS) (2D)
+        # We don't update fracture aperture, so flow on the fracture
+        # is also not time-dependent (LHS) (2D)
         # self.discretize()
 
     @trace(logger, timeit=False)
@@ -637,7 +630,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         """
         Set time parameters for the preparation phase
 
-        First, we run no flow for 6 hours to observe deformation due to mechanics itself.
+        First, we run no flow for 6 hours to observe
+        deformation due to mechanics itself.
         Then, [from Grimsel Experiment Description]:
         flow period is 40 minutes, followed by a shut-in period of 40 minutes.
         """
@@ -818,7 +812,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
         # Contact traction error
         # TODO: Unsure about units of contact traction
-        contact_norm = np.sum(contact_now ** 2)
+        # contact_norm = np.sum(contact_now ** 2)
         difference_in_iterates_contact = np.sum((contact_now - contact_prev) ** 2)
         difference_from_init_contact = np.sum((contact_now - contact_init) ** 2)
 
@@ -826,7 +820,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         logger.info(f"diff init contact = {difference_from_init_contact:.6e}")
 
         # Pressure scalar error
-        scalar_norm = np.sum(p_scalar_now ** 2)
+        # scalar_norm = np.sum(p_scalar_now ** 2)
         difference_in_iterates_scalar = np.sum((p_scalar_now - p_scalar_prev) ** 2)
         difference_from_init_scalar = np.sum((p_scalar_now - p_scalar_init) ** 2)
         logger.info(f"diff iter scalar = {difference_in_iterates_scalar:.6e}")

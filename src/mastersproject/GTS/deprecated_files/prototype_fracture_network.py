@@ -35,7 +35,7 @@ class PrototypeNetwork:
         """
 
     def __init__(self):
-        self.name = 'prototype'
+        self.name = "prototype"
 
     @staticmethod
     def read_data(path=None):
@@ -49,13 +49,14 @@ class PrototypeNetwork:
                 columns = different coordinates
             """
         if path is None:
-            path = Path.cwd() / 'GTS/ISC_SZ_manual_picking.txt'
+            path = Path.cwd() / "GTS/ISC_SZ_manual_picking.txt"
         skip = lambda x: x in range(13)
-        df = pd.read_csv(path, sep='\s+', skiprows=skip)
+        df = pd.read_csv(path, sep="\s+", skiprows=skip)
 
-        keys = np.unique(df[['Shearzone']].values)
+        keys = np.unique(df[["Shearzone"]].values)
         data = {
-            key: df[df['Shearzone'] == key][['x', 'y', 'z']].to_numpy().T for key in keys
+            key: df[df["Shearzone"] == key][["x", "y", "z"]].to_numpy().T
+            for key in keys
         }
         return data
 
@@ -75,7 +76,9 @@ class PrototypeNetwork:
         return sz_vertices
 
     @staticmethod
-    def fracture_network(fracs: dict, name: str = None, export: bool = False, **network_kwargs):
+    def fracture_network(
+        fracs: dict, name: str = None, export: bool = False, **network_kwargs
+    ):
         """ Export fracture network for visualization
 
         Parameters:
@@ -86,15 +89,15 @@ class PrototypeNetwork:
         fractures = [pp.Fracture(fracs[key]) for key in list(fracs.keys())]
         network = pp.FractureNetwork3d(fractures)
 
-        domain = network_kwargs.get('domain', None)
+        domain = network_kwargs.get("domain", None)
         if domain is not None:
             network.impose_external_boundary(domain=domain)
 
         if export:
             if name is None:
-                name = 'fracture_network.vtu'
-            if name[-4:] != '.vtu':
-                name = name + '.vtu'
+                name = "fracture_network.vtu"
+            if name[-4:] != ".vtu":
+                name = name + ".vtu"
             network.to_vtk(name)
 
         return network
@@ -128,13 +131,16 @@ class PrototypeNetwork:
             mesh_args = {'mesh_size_frac': 10, 'mesh_size_min':10}
             gb = PrototypeNetwork.make_mesh(mesh_args, domain)
         """
-        root = Path(r'C:\Users\Haakon\OneDrive\Dokumenter\FORSKNING\mastersproject\src\mastersproject\GTS')
-        path = root / 'ISC_SZ_manual_picking.txt'
+        root = Path(
+            r"C:\Users\Haakon\OneDrive\Dokumenter\FORSKNING\mastersproject\src\mastersproject\GTS"
+        )
+        path = root / "ISC_SZ_manual_picking.txt"
         network = cls.make_network(domain, path=path)
-        root_gmsh = Path('C:\\Users\\Haakon\\OneDrive\\Dokumenter\\FORSKNING\\mastersproject\\src\\mastersproject\\')
-        gmsh_path = str(root_gmsh / 'gmsh_frac_file')  # TEMPORARY: Resolve python "bug".
+        root_gmsh = Path(
+            "C:\\Users\\Haakon\\OneDrive\\Dokumenter\\FORSKNING\\mastersproject\\src\\mastersproject\\"
+        )
+        gmsh_path = str(
+            root_gmsh / "gmsh_frac_file"
+        )  # TEMPORARY: Resolve python "bug".
         gb = network.mesh(mesh_args, file_name=gmsh_path, **mesh_kwargs)
         return gb
-
-
-

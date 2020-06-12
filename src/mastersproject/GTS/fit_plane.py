@@ -23,6 +23,7 @@ import logging
 
 import numpy as np
 from scipy.spatial import ConvexHull
+
 import porepy as pp
 
 

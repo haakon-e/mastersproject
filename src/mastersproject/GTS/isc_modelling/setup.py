@@ -1,36 +1,22 @@
-import os
 import logging
-from typing import (
-    Callable,
-    List,
-    Mapping,
-    Tuple,
-    Type,
-    Union,
-    Dict,
-)
+import os
 from pathlib import Path
-from pprint import pformat
+from typing import Callable, Dict, List, Mapping, Type, Union
 
-from pydantic import BaseModel
-import pendulum
-import porepy as pp
 import numpy as np
-from porepy.models.contact_mechanics_model import ContactMechanics
+import pendulum
+from pydantic import BaseModel
 
-# GTS methods
 import GTS as gts
+import porepy as pp
+from mastersproject.util.logging_util import trace
+from porepy.models.contact_mechanics_model import ContactMechanics
 
 # # Refinement
 # from refinement import gb_coarse_fine_cell_mapping
 # from refinement.grid_convergence import grid_error
 # from refinement import refine_mesh_by_splitting
 
-# --- LOGGING UTIL ---
-try:
-    from src.mastersproject.util.logging_util import timer, trace, __setup_logging
-except ImportError:
-    from util.logging_util import timer, trace, __setup_logging
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +40,9 @@ def run_biot_model(
         ----------
         viz_folder_name : str
             Absolute path to folder where grid and results will be stored
-            Default: /home/haakon/mastersproject/src/mastersproject/GTS/isc_modelling/results/default
+            Default:
+            /home/haakon/mastersproject/src/mastersproject/
+                GTS/isc_modelling/results/default
         mesh_args : Mapping[str, int]
             Arguments for meshing of domain.
             Required keys: 'mesh_size_frac', 'mesh_size_min, 'mesh_size_bound'
@@ -119,7 +107,9 @@ def run_mechanics_model(
     ----------
     viz_folder_name : str
         Absolute path to folder where grid and results will be stored
-        Default: /home/haakon/mastersproject/src/mastersproject/GTS/isc_modelling/results/default
+        Default:
+            /home/haakon/mastersproject/src/mastersproject/
+                GTS/isc_modelling/results/default
     mesh_args : Mapping[str, int]
         Arguments for meshing of domain.
         Required keys: 'mesh_size_frac', 'mesh_size_min, 'mesh_size_bound'
@@ -159,7 +149,8 @@ def gts_biot_model(setup, params):
     # Initialization phase
     pp.run_time_dependent_model(setup=setup, params=params)
     logger.info(
-        f"Initial simulation complete. Exporting solution. Time: {pendulum.now().to_atom_string()}"
+        f"Initial simulation complete. Exporting solution. "
+        f"Time: {pendulum.now().to_atom_string()}"
     )
     # Stimulation phase
     logger.info(
@@ -219,7 +210,8 @@ def run_abstract_model(
     run_model_method(setup=setup, params=default_options)
 
     logger.info(
-        f"Simulation complete. Exporting solution. Time: {pendulum.now().to_atom_string()}"
+        f"Simulation complete. Exporting solution. "
+        f"Time: {pendulum.now().to_atom_string()}"
     )
 
     return setup
@@ -233,7 +225,8 @@ def prepare_directories(head, date=True, root=None, **kwargs):
     # --- DEFAULT FOLDER AND FILE RELATED PARAMETERS ---
     # --------------------------------------------------
 
-    # root of modelling results: i.e. ~/mastersproject/src/mastersproject/GTS/isc_modelling/results
+    # root of modelling results: i.e.
+    # ~/mastersproject/src/mastersproject/GTS/isc_modelling/results
     _root = Path(os.path.abspath(__file__)).parent / "results"
     root = root if root else Path(_root)
     # today's date

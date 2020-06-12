@@ -3,6 +3,7 @@ import scipy.linalg
 
 from GTS.deprecated_files.geological_model_visualization import GeologicalModel
 
+
 def get_shearzone_planes():
     """ Get the intersection points for all shearzones in
         the geological model.
@@ -15,9 +16,9 @@ def get_shearzone_planes():
 
     for plane in planes:
         fp = FitPlane(pts[plane])
-        shearzones[plane]['proj'] = fp.proj
+        shearzones[plane]["proj"] = fp.proj
 
-        shearzones[plane]['n'] = fp.n
+        shearzones[plane]["n"] = fp.n
 
     return shearzones
 
@@ -35,7 +36,7 @@ class FitPlane:
         """
         p (np.ndarray): Array of points (3 x n).
         """
-        assert(p.shape[0] == 3)
+        assert p.shape[0] == 3
         self.p = p
         self.Np = p.shape[1]
 

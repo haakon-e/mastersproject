@@ -1,22 +1,17 @@
+import logging
 import time
 from typing import Dict, Optional
 
-import porepy as pp
-from porepy.models.abstract_model import AbstractModel
-from porepy.params.data import add_nonpresent_dictionary
-from porepy.utils.derived_discretizations import (
-    implicit_euler as IE_discretizations,  # noqa
-)
 import numpy as np
 import scipy.sparse.linalg as spla
 
+import porepy as pp
 from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.parameter import BaseParameters, FlowParameters
-
-# --- LOGGING UTIL ---
+from porepy.models.abstract_model import AbstractModel
+from porepy.params.data import add_nonpresent_dictionary
+from porepy.utils.derived_discretizations import implicit_euler
 from util.logging_util import timer, trace
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +61,8 @@ class Flow(AbstractModel):
 
         The method assigns the following attributes to self:
             gb (pp.GridBucket): The produced grid bucket.
-            bounding_box (dict): The bounding box of the domain, defined through minimum and
-                maximum values in each dimension.
+            bounding_box (dict): The bounding box of the domain, defined
+                through minimum and maximum values in each dimension.
             Nd (int): The dimension of the matrix, i.e., the highest dimension in the
                 grid bucket.
 
@@ -270,8 +265,8 @@ class Flow(AbstractModel):
         discr_key, coupling_discr_key = pp.DISCRETIZATION, pp.COUPLING_DISCRETIZATION
 
         # Scalar discretizations (all dimensions)
-        diff_disc_s = IE_discretizations.ImplicitMpfa(key_s)
-        mass_disc_s = IE_discretizations.ImplicitMassMatrix(key_s, var_s)
+        diff_disc_s = implicit_euler.ImplicitMpfa(key_s)
+        mass_disc_s = implicit_euler.ImplicitMassMatrix(key_s, var_s)
         source_disc_s = pp.ScalarSource(key_s)
 
         # Assign node discretizations
@@ -674,11 +669,12 @@ class FlowISC(Flow):
 
         The method assigns the following attributes to self:
             gb (pp.GridBucket): The produced grid bucket.
-            bounding_box (dict): The SCALED bounding box of the domain, defined through minimum and
-                maximum values in each dimension.
+            bounding_box (dict): The SCALED bounding box of the domain,
+                defined through minimum and maximum values in each dimension.
             Nd (int): The dimension of the matrix, i.e., the highest dimension in the
                 grid bucket.
-            network (pp.FractureNetwork3d): The fracture network associated to the domain.
+            network (pp.FractureNetwork3d): The fracture network associated to
+                the domain.
 
         After self.gb is set, the method should also call
 
@@ -730,7 +726,8 @@ class FlowISC(Flow):
             assert (
                 len(fracture_grids) == self.params.n_frac
             ), "There should be equal number of Nd-1 fractures as shearzone names"
-            # We assume that order of fractures on grid creation (self.create_grid) is preserved.
+            # We assume that order of fractures on grid creation (self.create_grid)
+            # is preserved.
             for i, sz_name in enumerate(self.params.shearzone_names):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
@@ -880,7 +877,8 @@ class FlowISC(Flow):
             summary_p = (
                 f"{summary_p_common}"
                 f"all negative indices: p<0: count:{neg_ind.size}, indices: {neg_ind}\n"
-                f"very negative indices: p<-1e-10: count: {negneg_ind.size}, indices: {negneg_ind}\n"
+                f"very negative indices: p<-1e-10: count: {negneg_ind.size}, "
+                f"indices: {negneg_ind}\n"
                 f"neg pressure range: [{p_neg.min():.2e}, {p_neg.max():.2e}]\n"
             )
         else:
@@ -903,7 +901,8 @@ class FlowISC(Flow):
             f"\nSummary of relevant parameters:\n"
             f"length scale: {self.params.length_scale:.2e}\n"
             f"scalar scale: {self.params.scalar_scale:.2e}\n"
-            f"3d permeability: {self.initial_permeability[self.params.intact_name]:.2e}\n"
+            f"3d permeability: "
+            f"{self.initial_permeability[self.params.intact_name]:.2e}\n"
             f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
             f"3d cells: {g.num_cells}\n"
             f"pp condition number: {pp_cond:.2e}\n"

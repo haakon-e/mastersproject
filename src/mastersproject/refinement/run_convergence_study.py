@@ -1,34 +1,30 @@
 import logging
-from typing import (
-    Callable,
-    Generator,
-    List,
-    Tuple,
-    Type,
-    Union,
-)
-from pathlib import Path
-
 from datetime import datetime
-import porepy as pp
+from pathlib import Path
+from typing import Callable, Generator, List, Tuple, Type, Union
 
+import porepy as pp
 from GTS.isc_modelling.flow import Flow
 from GTS.isc_modelling.parameter import GeometryParameters
 from porepy.models.contact_mechanics_model import ContactMechanics
-from refinement.grid_refinement import gb_coarse_fine_cell_mapping, refine_mesh_by_splitting
 from refinement.grid_convergence import grid_error
+from refinement.grid_refinement import (
+    gb_coarse_fine_cell_mapping,
+    refine_mesh_by_splitting,
+)
 
 logger = logging.getLogger(__name__)
 
 
 def gb_refinements(
-        network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
-        gmsh_folder_path: Union[str, Path],
-        mesh_args: dict,
+    network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
+    gmsh_folder_path: Union[str, Path],
+    mesh_args: dict,
 ) -> Generator[pp.GridBucket, None, None]:
     """ Create n refinements of a fracture network.
 
-    This method is used if you have a pp.FractureNetwork, but not a .geo file describing the mesh.
+    This method is used if you have a pp.FractureNetwork,
+    but not a .geo file describing the mesh.
     If you have the .geo file as well, use refine_mesh_by_splitting directly.
 
     Parameters
@@ -58,31 +54,30 @@ def gb_refinements(
         raise ValueError("Unknown input network")
 
     gmsh_file_name = str(gmsh_folder_path / "gmsh_frac_file")
-    in_file = f'{gmsh_file_name}.geo'
+    in_file = f"{gmsh_file_name}.geo"
     out_file = f"{gmsh_file_name}.msh"
 
-    # Impose various parameters on the network. See method definition for details / issues.
+    # Impose various parameters on the network.
+    # See method definition for details / issues.
     network = _impose_network_parameters(network, mesh_args)
 
     # Dump the network description to gmsh .geo format
     network.to_gmsh(in_file, in_3d=True)
 
     yield from refine_mesh_by_splitting(
-        in_file=in_file,
-        out_file=out_file,
-        dim=dim,
+        in_file=in_file, out_file=out_file, dim=dim,
     )
 
 
 def run_model_for_convergence_study(
-        model: Union[Type[Flow], Type[ContactMechanics]],
-        run_model_method: Callable,
-        network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
-        params: GeometryParameters,
-        n_refinements: int = 1,
-        newton_params: dict = None,
-        variable: List[str] = None,  # This is really required for the moment
-        variable_dof: List[int] = None,
+    model: Union[Type[Flow], Type[ContactMechanics]],
+    run_model_method: Callable,
+    network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
+    params: GeometryParameters,
+    n_refinements: int = 1,
+    newton_params: dict = None,
+    variable: List[str] = None,  # This is really required for the moment
+    variable_dof: List[int] = None,
 ) -> Tuple[List[pp.GridBucket], List[dict]]:
     """ Run a model on a grid, refined n times.
 
@@ -134,7 +129,9 @@ def run_model_for_convergence_study(
     # 4. a. Step: Map the solution to the fine grid, and compute error.
     # 5. Step: Compute order of convergence, etc.
 
-    logger.info(f"Preparing setup for convergence study on {datetime.now().isoformat()}")
+    logger.info(
+        f"Preparing setup for convergence study " f"on {datetime.now().isoformat()}"
+    )
 
     # 1. Step: Create n grids by uniform refinement.
     gb_generator = gb_refinements(
@@ -152,7 +149,8 @@ def run_model_for_convergence_study(
 
     for gb in gb_list:
         setup = model(params=params)
-        # Critical to this step is that setup.prepare_simulation() (specifically setup.create_grid())
+        # Critical to this step is that setup.prepare_simulation()
+        # (specifically setup.create_grid())
         # doesn't overwrite that we manually set a grid bucket to the model.
         setup.gb = gb
         pp.contact_conditions.set_projections(setup.gb)
@@ -171,10 +169,7 @@ def run_model_for_convergence_study(
         gb_coarse_fine_cell_mapping(gb=gb_i, gb_ref=gb_ref)
 
         _error = grid_error(
-            gb=gb_i,
-            gb_ref=gb_ref,
-            variable=variable,
-            variable_dof=variable_dof,
+            gb=gb_i, gb_ref=gb_ref, variable=variable, variable_dof=variable_dof,
         )
         errors.append(_error)
 
@@ -182,10 +177,13 @@ def run_model_for_convergence_study(
 
 
 def _impose_network_parameters(network: pp.FractureNetwork3d, mesh_args: dict):
-    """ TODO: Consider separating the start FractureNetwork3d.mesh, to avoid us copying its contents here
+    """ TODO: Consider separating the start FractureNetwork3d.mesh,
+            to avoid us copying its contents here
     We need to generate a .geo file for refine_mesh_by_splitting.
-    refine_mesh_by_splitting will mesh the coarsest grid for us (in addition to all refinements),
-    so we don't need to call network.mesh(...). Instead, we emulate its behaviour except for meshing itself.
+    refine_mesh_by_splitting will mesh the coarsest grid for us
+    (in addition to all refinements),
+    so we don't need to call network.mesh(...). Instead, we emulate
+    its behaviour except for meshing itself.
     -- Start of FractureNetwork3d.mesh(...) below:
     """
     if not network.bounding_box_imposed:
@@ -207,7 +205,8 @@ def _impose_network_parameters(network: pp.FractureNetwork3d, mesh_args: dict):
     mesh_size_bound = mesh_args.get("mesh_size_bound", None)
     network._insert_auxiliary_points(mesh_size_frac, mesh_size_min, mesh_size_bound)
 
-    # Process intersections to get a description of the geometry in non-intersecting lines and polygons
+    # Process intersections to get a description of the
+    # geometry in non-intersecting lines and polygons
     network.split_intersections()
 
     return network
