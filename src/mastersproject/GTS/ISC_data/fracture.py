@@ -71,7 +71,7 @@ def convex_plane(shearzone_names, coord_system="gts", path=None) -> pd.DataFrame
 
 
 def fracture_network(
-        shearzone_names, export_vtk: bool = False, path=None, **network_kwargs
+    shearzone_names, export_vtk: bool = False, path=None, **network_kwargs
 ) -> pp.FractureNetwork3d:
     """ Make a fracture network from a selection of shear-zones.
 
@@ -110,8 +110,8 @@ def fracture_network(
         convex = convex_plane(shearzone_names, coord_system="gts", path=data_path)
 
         # Domain scaling
-        length_scale = network_kwargs.get('length_scale', 1)
-        convex.loc[:, ('x_proj', 'y_proj', 'z_proj')] /= length_scale
+        length_scale = network_kwargs.get("length_scale", 1)
+        convex.loc[:, ("x_proj", "y_proj", "z_proj")] /= length_scale
 
         # Create each fracture
         # Saved to list of same order as the input list shearzone_names (ensures correct naming of shearzones later on)

@@ -31,9 +31,11 @@ logger = logging.getLogger(__name__)
 
 @trace(logger)
 def refine_mesh(
-        in_file: str, out_file: str, dim: int,
-        network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
-        num_refinements: int = 1,
+    in_file: str,
+    out_file: str,
+    dim: int,
+    network: Union[pp.FractureNetwork3d, pp.FractureNetwork2d],
+    num_refinements: int = 1,
 ) -> List[pp.GridBucket]:
     """ Refine a mesh by splitting, using gmsh
 
@@ -95,9 +97,7 @@ def refine_mesh(
 
 
 @trace(logger)
-def gb_coarse_fine_cell_mapping(
-        gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e-8
-):
+def gb_coarse_fine_cell_mapping(gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e-8):
     """ Wrapper for coarse_fine_cell_mapping to construct mapping for grids in GridBucket.
 
     Adds a node_prop to each grid in gb. The key is 'coarse_fine_cell_mapping',
@@ -118,9 +118,12 @@ def gb_coarse_fine_cell_mapping(
     grids = gb.get_grids()
     grids_ref = gb_ref.get_grids()
 
-    assert len(grids) == len(grids_ref), "Weakly check that GridBuckets refer to same domains"
-    assert np.allclose(np.append(*gb.bounding_box()), np.append(*gb_ref.bounding_box())), \
-        "Weakly check that GridBuckets refer to same domains"
+    assert len(grids) == len(
+        grids_ref
+    ), "Weakly check that GridBuckets refer to same domains"
+    assert np.allclose(
+        np.append(*gb.bounding_box()), np.append(*gb_ref.bounding_box())
+    ), "Weakly check that GridBuckets refer to same domains"
 
     # This method assumes a consistent node ordering between grids. At least assign one.
     gb.assign_node_ordering(overwrite_existing=False)
@@ -128,14 +131,17 @@ def gb_coarse_fine_cell_mapping(
 
     n_grids = len(grids)
     # mappings = [None]*n_grids
-    mappings = {'gb': gb, 'gb_ref': gb_ref}
+    mappings = {"gb": gb, "gb_ref": gb_ref}
 
     # Add node prop on the coarse grid to map from coarse to fine cells.
     gb.add_node_props(keys="coarse_fine_cell_mapping")
 
     for i in np.arange(n_grids):
         g, g_ref = grids[i], grids_ref[i]
-        node_num, node_num_ref = gb._nodes[g]['node_number'], gb_ref._nodes[g_ref]['node_number']
+        node_num, node_num_ref = (
+            gb._nodes[g]["node_number"],
+            gb_ref._nodes[g_ref]["node_number"],
+        )
         assert node_num == node_num_ref, "Weakly check that grids refer to same domain."
 
         mapping = coarse_fine_cell_mapping(g, g_ref, tol=tol)
@@ -143,11 +149,7 @@ def gb_coarse_fine_cell_mapping(
 
 
 @trace(logger)
-def coarse_fine_cell_mapping(
-        g: pp.Grid,
-        g_ref: pp.Grid,
-        tol=1e-8,
-) -> sps.csc_matrix:
+def coarse_fine_cell_mapping(g: pp.Grid, g_ref: pp.Grid, tol=1e-8,) -> sps.csc_matrix:
     """ Construct a mapping between cells of a grid and its refined version
 
     Assuming a regular and a refined mesh, where the refinement is executed by splitting.
@@ -173,7 +175,9 @@ def coarse_fine_cell_mapping(
     assert g.dim == g_ref.dim, "Grids must be of same dimension"
 
     cell_nodes = g.cell_nodes()
-    slices = zip(cell_nodes.indptr[:-1], cell_nodes.indptr[1:])  # start/end row pointers for each column
+    slices = zip(
+        cell_nodes.indptr[:-1], cell_nodes.indptr[1:]
+    )  # start/end row pointers for each column
 
     # Create sps.csc_matrix mapping coarse cells to fine cell centers
     indptr = np.array([0])
@@ -187,7 +191,9 @@ def coarse_fine_cell_mapping(
         nodes = nodes.copy()
         tangent = pp.map_geometry.compute_tangent(nodes)
         reference = [1, 0, 0]
-        R = pp.map_geometry.project_line_matrix(nodes, tangent, tol=tol, reference=reference)
+        R = pp.map_geometry.project_line_matrix(
+            nodes, tangent, tol=tol, reference=reference
+        )
         nodes = R.dot(nodes)[0, :]
         cells_ref = R.dot(cells_ref)[0, :]
 
@@ -204,28 +210,31 @@ def coarse_fine_cell_mapping(
         num_nodes = nodes_idx.size
 
         if g.dim == 1:
-            assert (num_nodes == 2)
+            assert num_nodes == 2
             line = np.sort(nodes[nodes_idx])
             test_points = cells_ref[test_cells_ptr]
-            in_poly = np.searchsorted(line, test_points, side='left') == 1
+            in_poly = np.searchsorted(line, test_points, side="left") == 1
 
         elif g.dim == 2:
-            assert (num_nodes == 3), "We assume simplexes in 2D (i.e. 3 nodes)"
+            assert num_nodes == 3, "We assume simplexes in 2D (i.e. 3 nodes)"
             polygon = nodes[:, nodes_idx]
             test_points = cells_ref[:, test_cells_ptr]
             in_poly = pp.geometry_property_checks.point_in_polygon(
-                polygon, test_points, tol=tol)
+                polygon, test_points, tol=tol
+            )
 
         elif g.dim == 3:
             # Make polyhedron from node coordinates
             # Polyhedron defined as a list of nodes defining its (convex) faces.
             # Assumes simplexes: Every node except one defines every face.
-            assert (num_nodes == 4), "We assume simplexes in 3D (i.e. 4 nodes)"
+            assert num_nodes == 4, "We assume simplexes in 3D (i.e. 4 nodes)"
             node_coords = nodes[:, nodes_idx]
 
             ids = np.arange(num_nodes)
             polyhedron = [node_coords[:, ids != i] for i in np.arange(num_nodes)]
-            test_points = cells_ref[:, test_cells_ptr]  # Test only points not inside another polyhedron.
+            test_points = cells_ref[
+                :, test_cells_ptr
+            ]  # Test only points not inside another polyhedron.
             in_poly = pp.geometry_property_checks.point_in_polyhedron(
                 polyhedron=polyhedron, test_points=test_points, tol=tol
             )
@@ -236,7 +245,9 @@ def coarse_fine_cell_mapping(
 
         # Update pointer to which cell centers to use as test points
         in_poly_ids = test_cells_ptr[in_poly]  # id of cells inside this polyhedron
-        test_cells_ptr = test_cells_ptr[~in_poly]  # Keep only cells not inside this polyhedron
+        test_cells_ptr = test_cells_ptr[
+            ~in_poly
+        ]  # Keep only cells not inside this polyhedron
 
         # Update mapping
         indices = np.append(indices, in_poly_ids)
@@ -246,5 +257,7 @@ def coarse_fine_cell_mapping(
 
     coarse_fine = sps.csc_matrix((data, indices, indptr))
 
-    assert (indices.size == g_ref.num_cells), "Every fine cell should be inside exactly one coarse cell"
+    assert (
+        indices.size == g_ref.num_cells
+    ), "Every fine cell should be inside exactly one coarse cell"
     return coarse_fine

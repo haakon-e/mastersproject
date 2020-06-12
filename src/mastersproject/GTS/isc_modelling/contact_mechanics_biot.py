@@ -73,12 +73,14 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         logger.info(f"Initializing contact mechanics biot on ISC dataset")
 
         # --- BOUNDARY, INITIAL, SOURCE CONDITIONS ---
-        self.source_scalar_borehole_shearzone = params.get('source_scalar_borehole_shearzone')
+        self.source_scalar_borehole_shearzone = params.get(
+            "source_scalar_borehole_shearzone"
+        )
 
         super().__init__(params=params)
 
         # Set file name of the pre-run first.
-        self.file_name = 'initialize_run'
+        self.file_name = "initialize_run"
 
         # Time
         self.prepare_initial_run()
@@ -95,18 +97,18 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         mean_frac_permeability = 4.9e-16 * pp.METER ** 2
         mean_intact_permeability = 2e-20 * pp.METER ** 2
         self.initial_permeability = {  # Unscaled
-            'S1_1': mean_frac_permeability,
-            'S1_2': mean_frac_permeability,
-            'S1_3': mean_frac_permeability,
-            'S3_1': mean_frac_permeability,
-            'S3_2': mean_frac_permeability,
+            "S1_1": mean_frac_permeability,
+            "S1_2": mean_frac_permeability,
+            "S1_3": mean_frac_permeability,
+            "S3_1": mean_frac_permeability,
+            "S3_2": mean_frac_permeability,
             None: mean_intact_permeability,  # 3D matrix
         }
 
         # Use cubic law to compute initial apertures in fractures.
         # k = a^2 / 12 => a=sqrt(12k)
         self.initial_aperture = {
-            sz: np.sqrt(12*k) for sz, k in self.initial_permeability.items()
+            sz: np.sqrt(12 * k) for sz, k in self.initial_permeability.items()
         }
         self.initial_aperture[None] = 1  # Set 3D matrix aperture to 1.
 
@@ -149,7 +151,9 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         # Hydrostatic
         if self._gravity_bc_p:
             depth = self._depth(g.face_centers[:, all_bf])
-            bc_values[all_bf] += self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
+            bc_values[all_bf] += (
+                self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
+            )
         return bc_values
 
     def bc_type_scalar(self, g) -> pp.BoundaryCondition:
@@ -186,7 +190,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         bh_sz = self.source_scalar_borehole_shearzone
 
         _mask = (df.shearzone == bh_sz["shearzone"]) & (
-                df.borehole == bh_sz["borehole"]
+            df.borehole == bh_sz["borehole"]
         )
 
         # Get the intersection coordinates of the borehole and the shearzone. (unscaled)
@@ -209,13 +213,15 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
             grid_name = self.gb.node_props(g, "name")
 
             # We only tag cells in the desired fracture
-            if grid_name == bh_sz['shearzone']:
+            if grid_name == bh_sz["shearzone"]:
                 logger.info(f"Tagging grid of name: {grid_name}, and dimension {g.dim}")
                 logger.info(f"Setting non-zero source value for pressure")
 
                 ids, dsts = g.closest_cell(pts, return_distance=True)
                 # TODO: log distance in unscaled lengths
-                logger.info(f"Closest cell found has (unscaled) distance: {dsts[0]*self.length_scale:4f}")
+                logger.info(
+                    f"Closest cell found has (unscaled) distance: {dsts[0]*self.length_scale:4f}"
+                )
 
                 # Tag the injection cell
                 tags[ids] = 1
@@ -261,10 +267,13 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         param_key = self.scalar_parameter_key
         for g, d in gb:
             # get the shearzone
-            shearzone = self.gb.node_props(g, 'name')
+            shearzone = self.gb.node_props(g, "name")
 
             # permeability [m2] (scaled)
-            k = self.initial_permeability[shearzone] * (pp.METER / self.length_scale) ** 2
+            k = (
+                self.initial_permeability[shearzone]
+                * (pp.METER / self.length_scale) ** 2
+            )
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -290,12 +299,13 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
             # Get diffusivity from lower-dimensional neighbour
             data_l = gb.node_props(g_l)
-            diffusivity = data_l[pp.PARAMETERS][param_key]["second_order_tensor"].values[0, 0]
+            diffusivity = data_l[pp.PARAMETERS][param_key][
+                "second_order_tensor"
+            ].values[0, 0]
 
             # Division through half the aperture represents taking the (normal) gradient
-            normal_diffusivity = (
-                mg.slave_to_mortar_int()
-                * np.divide(diffusivity, aperture_l / 2)
+            normal_diffusivity = mg.slave_to_mortar_int() * np.divide(
+                diffusivity, aperture_l / 2
             )
             # The interface flux is to match fluxes across faces of g_h,
             # and therefore need to be weighted by the corresponding
@@ -304,10 +314,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
             # Set the data
             pp.initialize_data(
-                mg,
-                data_edge,
-                param_key,
-                {"normal_diffusivity": normal_diffusivity},
+                mg, data_edge, param_key, {"normal_diffusivity": normal_diffusivity},
             )
 
     def aperture(self, g: pp.Grid, scaled=False) -> np.ndarray:
@@ -319,11 +326,11 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         """
         aperture = np.ones(g.num_cells)
         # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
-        shearzone = self.gb.node_props(g, 'name')
+        shearzone = self.gb.node_props(g, "name")
         aperture *= self.initial_aperture[shearzone]
 
         if scaled:
-            aperture *= (pp.METER / self.length_scale)
+            aperture *= pp.METER / self.length_scale
 
         return aperture
 
@@ -407,7 +414,9 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         """
         gb = self.gb
 
-        compressibility = self.fluid.COMPRESSIBILITY * (self.scalar_scale / pp.PASCAL)  # scaled. [1/Pa]
+        compressibility = self.fluid.COMPRESSIBILITY * (
+            self.scalar_scale / pp.PASCAL
+        )  # scaled. [1/Pa]
         porosity = self.rock.POROSITY
         for g, d in gb:
             # specific volume
@@ -430,10 +439,11 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                     "bc": bc,
                     "bc_values": bc_values,
                     "mass_weight": (  # TODO: Simplified version off mass_weight?
-                            compressibility
-                            * porosity
-                            * specific_volume
-                            * np.ones(g.num_cells)),
+                        compressibility
+                        * porosity
+                        * specific_volume
+                        * np.ones(g.num_cells)
+                    ),
                     "biot_alpha": alpha,
                     "source": source_values,
                     "time_step": self.time_step,
@@ -445,15 +455,17 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
     def set_viz(self):
         """ Set exporter for visualization """
-        self.viz = pp.Exporter(self.gb, file_name=self.file_name, folder_name=self.viz_folder_name)
+        self.viz = pp.Exporter(
+            self.gb, file_name=self.file_name, folder_name=self.viz_folder_name
+        )
         # list of time steps to export with visualization.
         self.export_times = []
 
-        self.u_exp = 'u_exp'
-        self.p_exp = 'p_exp'
-        self.traction_exp = 'traction_exp'
-        self.normal_frac_u = 'normal_frac_u'
-        self.tangential_frac_u = 'tangential_frac_u'
+        self.u_exp = "u_exp"
+        self.p_exp = "p_exp"
+        self.traction_exp = "traction_exp"
+        self.normal_frac_u = "normal_frac_u"
+        self.tangential_frac_u = "tangential_frac_u"
 
         self.export_fields = [
             self.u_exp,
@@ -488,7 +500,12 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                 d[pp.STATE][self.tangential_frac_u] = np.zeros(g.num_cells)
 
             if g.dim == Nd:  # On matrix
-                u = d[pp.STATE][self.displacement_variable].reshape((Nd, -1), order='F').copy() * ls
+                u = (
+                    d[pp.STATE][self.displacement_variable]
+                    .reshape((Nd, -1), order="F")
+                    .copy()
+                    * ls
+                )
 
                 if g.dim != 3:  # Only called if solving a 2D problem
                     u = np.vstack(u, np.zeros(u.shape[1]))
@@ -498,26 +515,35 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                 d[pp.STATE][self.traction_exp] = np.zeros(d[pp.STATE][self.u_exp].shape)
 
             else:  # In fractures or intersection of fractures (etc.)
-                g_h = gb.node_neighbors(g, only_higher=True)[0]  # Get the higher-dimensional neighbor
+                g_h = gb.node_neighbors(g, only_higher=True)[
+                    0
+                ]  # Get the higher-dimensional neighbor
                 if g_h.dim == Nd:  # In a fracture
                     data_edge = gb.edge_props((g, g_h))
                     # TODO: Should I instead export the fracture displacement in global coordinates?
                     u_mortar_local = self.reconstruct_local_displacement_jump(
-                        data_edge=data_edge, from_iterate=True).copy()
+                        data_edge=data_edge, from_iterate=True
+                    ).copy()
                     u_mortar_local = u_mortar_local * ls
 
-                    traction = d[pp.STATE][self.contact_traction_variable].reshape((Nd, -1), order="F")
+                    traction = d[pp.STATE][self.contact_traction_variable].reshape(
+                        (Nd, -1), order="F"
+                    )
 
                     if g.dim == 2:
                         d[pp.STATE][self.u_exp] = u_mortar_local
                         d[pp.STATE][self.traction_exp] = traction * ss * ls ** 2
                     # TODO: Check when this statement is actually called
                     else:  # Only called if solving a 2D problem (i.e. this is a 0D fracture intersection)
-                        d[pp.STATE][self.u_exp] = np.vstack(u_mortar_local, np.zeros(u_mortar_local.shape[1]))
+                        d[pp.STATE][self.u_exp] = np.vstack(
+                            u_mortar_local, np.zeros(u_mortar_local.shape[1])
+                        )
                 else:  # In a fracture intersection
                     d[pp.STATE][self.u_exp] = np.zeros((Nd, g.num_cells))
                     d[pp.STATE][self.traction_exp] = np.zeros((Nd, g.num_cells))
-        self.viz.write_vtk(data=self.export_fields, time_step=self.time)  # Write visualization
+        self.viz.write_vtk(
+            data=self.export_fields, time_step=self.time
+        )  # Write visualization
         self.export_times.append(self.time)
 
     def export_pvd(self):
@@ -636,7 +662,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         """
 
         # New file name for this run
-        self.file_name = 'main_run'
+        self.file_name = "main_run"
         self.set_viz()
 
         # We use the following time parameters
@@ -702,10 +728,12 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         #     25,     # Phase 4
         #     0,      # Phase 5
         # ]
-        next_phase = np.searchsorted(time_intervals, self.time, side='right')
+        next_phase = np.searchsorted(time_intervals, self.time, side="right")
         if next_phase > self.current_phase:
-            logger.info(f"A new phase has started: Phase {next_phase}. "
-                        f"Injection set to {injection_amount[next_phase]} l/min")
+            logger.info(
+                f"A new phase has started: Phase {next_phase}. "
+                f"Injection set to {injection_amount[next_phase]} l/min"
+            )
 
         # Current phase number:
         self.current_phase = next_phase
@@ -768,8 +796,12 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
         # TODO: Check if scaling of contact variable
         contact_now = solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
-        contact_prev = prev_solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
-        contact_init = init_solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
+        contact_prev = (
+            prev_solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
+        )
+        contact_init = (
+            init_solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
+        )
 
         # Pressure solution
         p_scalar_now = solution[scalar_dof] * self.scalar_scale
@@ -822,8 +854,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         else:
             # Check relative convergence criterion
             if (
-                    difference_in_iterates_mech
-                    < tol_convergence * difference_from_init_mech
+                difference_in_iterates_mech
+                < tol_convergence * difference_from_init_mech
             ):
                 # converged = True
                 converged_u = True
@@ -837,7 +869,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
             logger.info(f"contact variable converged absolutely")
         else:
             error_contact = (
-                    difference_in_iterates_contact / difference_from_init_contact
+                difference_in_iterates_contact / difference_from_init_contact
             )
 
         # -- Scalar solution --
@@ -848,12 +880,15 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
             logger.info(f"pressure converged absolutely")
         else:
             # Relative convergence criterion:
-            if difference_in_iterates_scalar < tol_convergence * difference_from_init_scalar:
+            if (
+                difference_in_iterates_scalar
+                < tol_convergence * difference_from_init_scalar
+            ):
                 # converged = True
                 converged_p = True
                 logger.info(f"pressure converged relatively")
 
-            error_scalar = (difference_in_iterates_scalar / difference_from_init_scalar)
+            error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
 
         logger.info(f"Error in contact force is {error_contact:.6e}")
         logger.info(f"Error in matrix displacement is {error_mech:.6e}")

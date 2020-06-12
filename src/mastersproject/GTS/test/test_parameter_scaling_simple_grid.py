@@ -27,4 +27,3 @@ from .test_create_grid import test_create_grid
 
 from util.logging_util import __setup_logging
 import src.mastersproject.GTS.test.util as test_util
-

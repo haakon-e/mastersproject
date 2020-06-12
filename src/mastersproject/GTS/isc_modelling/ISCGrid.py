@@ -6,11 +6,11 @@ from GTS.ISC_data.fracture import fracture_network
 
 
 def create_grid(
-        mesh_args: Dict[str, float],
-        length_scale: float,
-        box: Dict[str, float],
-        shearzone_names: List[str],
-        viz_folder_name: str,
+    mesh_args: Dict[str, float],
+    length_scale: float,
+    box: Dict[str, float],
+    shearzone_names: List[str],
+    viz_folder_name: str,
 ):
     """ Create a GridBucket of a 3D domain with fractures defined by the ISC data set.
 
@@ -63,7 +63,9 @@ def create_grid(
     # The 3D grid is tagged by 'None'
     # 2D fractures are tagged by their shearzone name (S1_1, S1_2, etc.)
     # 1D (and 0D) fracture intersections are tagged by 'None'.
-    gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids. (value is 'None' by default)
+    gb.add_node_props(
+        keys=["name"]
+    )  # Add 'name' as node prop to all grids. (value is 'None' by default)
     fracture_grids = gb.get_grids(lambda _g: _g.dim == gb.dim_max() - 1)
 
     # Set node property 'name' to each fracture with value being name of the shear zone.
@@ -73,4 +75,3 @@ def create_grid(
             # Note: Use self.gb.node_props(g, 'name') to get value.
 
     return gb, box, network
-

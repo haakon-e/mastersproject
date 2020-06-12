@@ -77,13 +77,15 @@ def test_compare_run_mech_and_run_mech_by_filter_term():
     params2 = test_util.prepare_params(
         path_head=f"{_folder_root}/test_biot_reduce_to_mech",
         params=params,
-        setup_loggers=False
+        setup_loggers=False,
     )
     setup_biot = BiotReduceToMechanics(params=params2)
 
     # Recreate the same mesh as for the above setup
     path_to_gb_msh = f"{setup_mech.viz_folder_name}/gmsh_frac_file.msh"
-    gb2 = pp.fracture_importer.dfm_from_gmsh(path_to_gb_msh, dim=3, network=setup_mech._network)
+    gb2 = pp.fracture_importer.dfm_from_gmsh(
+        path_to_gb_msh, dim=3, network=setup_mech._network
+    )
     setup_biot.set_grid(gb2)
 
     # 3. --- Run simulations ---
@@ -100,13 +102,15 @@ def test_compare_run_mech_and_run_mech_by_filter_term():
         gb = _setup.gb
         g = gb.grids_of_dimension(3)[0]
         d = gb.node_props(g)
-        u = d['state']['u'].reshape((3, -1), order='F')
+        u = d["state"]["u"].reshape((3, -1), order="F")
         return u
 
     u_mech = get_u(setup_mech)
     u_biot = get_u(setup_biot)
-    assert np.isclose(np.sum(np.abs(u_mech - u_biot)), 0.0), "Running mechanics or biot (only discretize mechanics " \
-                                                             "term should return same result."
+    assert np.isclose(np.sum(np.abs(u_mech - u_biot)), 0.0), (
+        "Running mechanics or biot (only discretize mechanics "
+        "term should return same result."
+    )
     return setup_mech, setup_biot
 
 
@@ -139,7 +143,9 @@ def test_run_mechanics_term_by_filter():
 
     #
     # 2. Setup and run test
-    params = test_util.prepare_params(path_head=_folder_root, params=params, setup_loggers=True)
+    params = test_util.prepare_params(
+        path_head=_folder_root, params=params, setup_loggers=True
+    )
     setup = BiotReduceToMechanics(params=params)
 
     nl_params = {}  # Default Newton Iteration parameters
@@ -182,14 +188,18 @@ def test_run_flow_term_by_filter():
 
     #
     # 2. Setup and run test
-    params = test_util.prepare_params(path_head=_folder_root, params=params, setup_loggers=True)
+    params = test_util.prepare_params(
+        path_head=_folder_root, params=params, setup_loggers=True
+    )
     setup = BiotReduceToFlow(params=params)
 
     nl_params = {}  # Default Newton Iteration parameters
     pp.run_time_dependent_model(setup, params=nl_params)
 
     # Stimulation phase
-    logger.info(f"Starting stimulation phase at time: {pendulum.now().to_atom_string()}")
+    logger.info(
+        f"Starting stimulation phase at time: {pendulum.now().to_atom_string()}"
+    )
     setup.prepare_main_run()
     logger.info("Setup complete. Starting time-dependent simulation")
     pp.run_time_dependent_model(setup=setup, params=params)
@@ -231,7 +241,9 @@ def test_run_biot_term_by_term(test_name: str):
 
     #
     # 2. Setup and run test
-    params = test_util.prepare_params(path_head=_folder_root, params=params, setup_loggers=True)
+    params = test_util.prepare_params(
+        path_head=_folder_root, params=params, setup_loggers=True
+    )
     setup = BiotReduceToMechanics(params=params)
 
     nl_params = {}  # Default Newton Iteration parameters
@@ -249,10 +261,14 @@ class BiotReduceToMechanics(ContactMechanicsBiotISC):
         """ Discretize the mechanics stress term
         """
         if not hasattr(self, "assembler"):
-            self.assembler = pp.Assembler(self.gb, active_variables=[self.displacement_variable])
+            self.assembler = pp.Assembler(
+                self.gb, active_variables=[self.displacement_variable]
+            )
 
         g_max = self.gb.grids_of_dimension(self.Nd)[0]
-        self.assembler.discretize(grid=g_max, variable_filter=self.displacement_variable)
+        self.assembler.discretize(
+            grid=g_max, variable_filter=self.displacement_variable
+        )
 
 
 class BiotReduceToFlow(ContactMechanicsBiotISC):
@@ -262,7 +278,8 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
         if not hasattr(self, "assembler"):
             self.assembler = pp.Assembler(
                 self.gb,
-                active_variables=[self.scalar_variable, self.mortar_scalar_variable])
+                active_variables=[self.scalar_variable, self.mortar_scalar_variable],
+            )
 
         self.assembler.discretize()
 
@@ -318,12 +335,15 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
             logger.info(f"pressure converged absolutely")
         else:
             # Relative convergence criterion:
-            if difference_in_iterates_scalar < tol_convergence * difference_from_init_scalar:
+            if (
+                difference_in_iterates_scalar
+                < tol_convergence * difference_from_init_scalar
+            ):
                 # converged = True
                 converged_p = True
                 logger.info(f"pressure converged relatively")
 
-            error_scalar = (difference_in_iterates_scalar / difference_from_init_scalar)
+            error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
 
         logger.info(f"Error in pressure is {error_scalar:.6e}.")
 
@@ -339,7 +359,10 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
         subtract the fracture pressure contribution for the contact traction. This
         should not be done if the scalar variable is temperature.
         """
-        from porepy.utils.derived_discretizations import implicit_euler as IE_discretizations
+        from porepy.utils.derived_discretizations import (
+            implicit_euler as IE_discretizations,
+        )
+
         # Shorthand
         key_s = self.scalar_parameter_key
         var_s = self.scalar_variable
@@ -377,8 +400,10 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
     # -- Sanity checks --
     def bc_type_mechanics(self, g) -> pp.BoundaryConditionVectorial:
         pass
+
     def bc_values_mechanics(self, g) -> np.array:
         pass
+
     def bc_values_scalar(self, g) -> np.array:
         # DIRICHLET
         all_bf, *_ = self.domain_boundary_sides(g)
@@ -386,7 +411,9 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
 
         # TEMPORARY: Add a BC/source for testing
         if g.dim == 3:
-            all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(g)
+            all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(
+                g
+            )
             # point = np.array(
             #     [
             #         [self.box["xmin"]],
@@ -399,18 +426,24 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
             value = 100 * pp.MEGA * (pp.PASCAL / self.scalar_scale)
             bc_values[west] = value  # BC Pressure
         return bc_values
+
     def bc_type_scalar(self, g) -> pp.BoundaryCondition:
         all_bf, *_ = self.domain_boundary_sides(g)
         return pp.BoundaryCondition(g, all_bf, ["dir"] * all_bf.size)
+
     def source_scalar(self, g: pp.Grid) -> np.array:
         return np.zeros(g.num_cells)
+
     def source_mechanics(self, g) -> np.array:
         pass
+
     def set_mechanics_parameters(self) -> None:
         pass
+
     def set_viz(self):
         super().set_viz()
         self.export_fields = [self.p_exp]
+
     def export_step(self):
         gb = self.gb
         Nd = self.Nd
@@ -420,11 +453,15 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
                 d[pp.STATE][self.p_exp] = d[pp.STATE][self.scalar_variable].copy() * ss
             else:
                 d[pp.STATE][self.p_exp] = np.zeros((Nd, g.num_cells))
-        self.viz.write_vtk(data=self.export_fields, time_step=self.time)  # Write visualization
+        self.viz.write_vtk(
+            data=self.export_fields, time_step=self.time
+        )  # Write visualization
         self.export_times.append(self.time)
+
     def after_newton_convergence(self, solution, errors, iteration_counter):
         self.assembler.distribute_variable(solution)
         self.export_step()
+
     def initial_condition(self) -> None:
         for g, d in self.gb:
             # Initial value for the scalar variable.
@@ -438,7 +475,6 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
             # d[pp.STATE][self.mortar_scalar_variable] = initial_value
 
 
-
 class BiotReduceDiscretization(ContactMechanicsBiotISC):
     def __init__(self, params):
         super().__init__(params)
@@ -447,7 +483,6 @@ class BiotReduceDiscretization(ContactMechanicsBiotISC):
         # Discretize only a subset of terms or variables
         self._term_filter = params.get("_term_filter", None)
         self._variable_filter = params.get("_variable_filter", None)
-
 
     @trace(logger)
     def discretize(self):

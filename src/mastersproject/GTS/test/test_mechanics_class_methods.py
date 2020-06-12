@@ -41,7 +41,7 @@ def test_mechanical_boundary_conditions():
     now_as_YYMMDD = pendulum.now().format("YYMMDD")
 
     # Create setup with no fractures
-    params = {'shearzone_names': None}
+    params = {"shearzone_names": None}
     setup = test_util.prepare_setup(
         model=gts.ContactMechanicsISC,
         path_head=f"{this_method}/{now_as_YYMMDD}/test_1",
@@ -54,8 +54,8 @@ def test_mechanical_boundary_conditions():
 
     mech_params: dict = data[pp.PARAMETERS][setup.mechanics_parameter_key]
     # Get the mechanical bc values
-    mech_bc = mech_params['bc_values'].reshape((3, -1), order='F')
-    mech_bc_type: pp.BoundaryConditionVectorial = mech_params['bc']
+    mech_bc = mech_params["bc_values"].reshape((3, -1), order="F")
+    mech_bc_type: pp.BoundaryConditionVectorial = mech_params["bc"]
 
     all_bf, east, west, north, south, top, bottom = setup.domain_boundary_sides(g)
     # --- TESTS ---
@@ -96,7 +96,7 @@ def test_mechanical_boundary_conditions():
 
 
 @trace(logger)
-def test_decomposition_of_stress(setup='normal_shear'):
+def test_decomposition_of_stress(setup="normal_shear"):
     """ Test the solutions acquired when decomposing stress to
     purely compressive and purely rotational components.
 
@@ -118,19 +118,19 @@ def test_decomposition_of_stress(setup='normal_shear'):
     # Import stress tensor
     stress = gts.isc_modelling.stress_tensor()
 
-    if setup == 'normal_shear':
+    if setup == "normal_shear":
         # Get normal and shear stresses
         normal_stress = np.diag(np.diag(stress).copy())
         shear_stress = stress - normal_stress
-        fname_n = 'normal_stress'
-        fname_s = 'shear_stress'
-    elif setup == 'hydrostatic':
+        fname_n = "normal_stress"
+        fname_s = "shear_stress"
+    elif setup == "hydrostatic":
         # Get hydrostatic and deviatoric stresses
         hydrostatic = np.mean(np.diag(stress)) * np.ones(stress.shape[0])
         normal_stress = np.diag(hydrostatic)
         shear_stress = stress - normal_stress
-        fname_n = 'hydrostatic_stress'
-        fname_s = 'deviatoric_stress'
+        fname_n = "hydrostatic_stress"
+        fname_s = "deviatoric_stress"
     else:
         raise ValueError(f"Did not recognise input setup={setup}")
 
@@ -160,11 +160,15 @@ def test_decomposition_of_stress(setup='normal_shear'):
     # Get the grid_bucket .msh path
     path_to_gb_msh = f"{setup.viz_folder_name}/gmsh_frac_file.msh"
     # Re-create the grid buckets
-    gb_n = pp.fracture_importer.dfm_from_gmsh(path_to_gb_msh, dim=3, network=setup._network)
-    gb_s = pp.fracture_importer.dfm_from_gmsh(path_to_gb_msh, dim=3, network=setup._network)
+    gb_n = pp.fracture_importer.dfm_from_gmsh(
+        path_to_gb_msh, dim=3, network=setup._network
+    )
+    gb_s = pp.fracture_importer.dfm_from_gmsh(
+        path_to_gb_msh, dim=3, network=setup._network
+    )
 
     # 1. Pure normal stress / hydrostatic stress
-    params_n = params.update({'stress': normal_stress})
+    params_n = params.update({"stress": normal_stress})
     setup_n = test_util.prepare_setup(
         model=gts.ContactMechanicsISC,
         path_head=f"{_folder_root}/{fname_n}",
@@ -202,11 +206,7 @@ def test_decomposition_of_stress(setup='normal_shear'):
         gb = _setup.gb
         g = gb.grids_of_dimension(3)[0]
         d = gb.node_props(g)
-        u = d['state']['u'].reshape((3, -1), order='F')
+        u = d["state"]["u"].reshape((3, -1), order="F")
         return u
+
     return get_u(setup), get_u(setup_n), get_u(setup_s), [setup, setup_n, setup_s]
-
-
-
-
-

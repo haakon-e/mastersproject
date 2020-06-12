@@ -22,19 +22,23 @@ def setup(tail_folders):
     network = pp.FractureNetwork3d([f_1], domain=domain)
     # mesh_args = {"mesh_size_bound": 1, "mesh_size_frac": 2, "mesh_size_min": 0.1}
     mesh_args = {"mesh_size_bound": 10, "mesh_size_frac": 10, "mesh_size_min": 10}
-    file_name = str(root / 'test')
+    file_name = str(root / "test")
     gb = network.mesh(mesh_args=mesh_args, file_name=file_name)
     return network, file_name, gb
 
 
 # Test script
 def test_refine():
-    network, file_name, gb = setup(tail_folders='test_refine')
+    network, file_name, gb = setup(tail_folders="test_refine")
 
     # Refine the mesh
     gb_list = refine_mesh(
-        in_file=f'{file_name}.geo', out_file=f"{file_name}.msh",
-        dim=3, network=network, num_refinements=1)
+        in_file=f"{file_name}.geo",
+        out_file=f"{file_name}.msh",
+        dim=3,
+        network=network,
+        num_refinements=1,
+    )
 
     gb_ref = gb_list[-1]
 
@@ -43,13 +47,17 @@ def test_refine():
 
 def test_refine_n_times():
     """ Test that a given grid is refined n times"""
-    network, file_name, gb = setup(tail_folders='test_refine_n_times')
+    network, file_name, gb = setup(tail_folders="test_refine_n_times")
 
     n = 3
 
     # Refine the mesh
     gb_list = refine_mesh(
-        in_file=f'{file_name}.geo', out_file=f"{file_name}.msh",
-        dim=3, network=network, num_refinements=n)
+        in_file=f"{file_name}.geo",
+        out_file=f"{file_name}.msh",
+        dim=3,
+        network=network,
+        num_refinements=n,
+    )
 
-    assert(len(gb_list) == 1 + n), "We should have the original grid, and 3 refinements."
+    assert len(gb_list) == 1 + n, "We should have the original grid, and 3 refinements."

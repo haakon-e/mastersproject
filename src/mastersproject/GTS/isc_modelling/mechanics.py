@@ -73,24 +73,26 @@ class ContactMechanicsISC(ContactMechanics):
                     turn gravity effects in mechanical source on/off
         """
 
-        logger.info(f"Initializing contact mechanics on ISC dataset at {pendulum.now().to_atom_string()}")
+        logger.info(
+            f"Initializing contact mechanics on ISC dataset at {pendulum.now().to_atom_string()}"
+        )
         # Root name of solution files
-        self.file_name = 'main_run'
+        self.file_name = "main_run"
 
         # --- FRACTURES ---
-        self.shearzone_names = params.get('shearzone_names')
+        self.shearzone_names = params.get("shearzone_names")
         self.n_frac = len(self.shearzone_names) if self.shearzone_names else 0
         # Initialize data storage for normal and tangential jumps
         self.u_jumps_tangential = np.empty((1, self.n_frac))
         self.u_jumps_normal = np.empty((1, self.n_frac))
 
         # --- PHYSICAL PARAMETERS ---
-        self.stress = params.get('stress')
+        self.stress = params.get("stress")
         self.set_rock()
 
         # --- COMPUTATIONAL MESH ---
-        self.mesh_args = params.get('mesh_args')
-        self.box = params.get('bounding_box')
+        self.mesh_args = params.get("mesh_args")
+        self.box = params.get("bounding_box")
         self.gb = None
         self.Nd = None
         self._network = None
@@ -102,8 +104,8 @@ class ContactMechanicsISC(ContactMechanics):
         super().__init__(params=params)
 
         # Scaling coefficients (set after __init__ call because ContactMechanicsISC overwrites the values.
-        self.scalar_scale = params.get('scalar_scale')
-        self.length_scale = params.get('length_scale')
+        self.scalar_scale = params.get("scalar_scale")
+        self.length_scale = params.get("length_scale")
 
         #
         # --- ADJUST CERTAIN PARAMETERS FOR TESTING ---
@@ -147,7 +149,9 @@ class ContactMechanicsISC(ContactMechanics):
         if (self.gb is None) or overwrite_grid:
 
             # Scale mesh args by length_scale:
-            self.mesh_args = {k: v / self.length_scale for k, v in self.mesh_args.items()}
+            self.mesh_args = {
+                k: v / self.length_scale for k, v in self.mesh_args.items()
+            }
             # Scale bounding box by length_scale:
             self.box = {k: v / self.length_scale for k, v in self.box.items()}
 
@@ -173,9 +177,13 @@ class ContactMechanicsISC(ContactMechanics):
             # The 3D grid is tagged by 'None'
             # 2D fractures are tagged by their shearzone name (S1_1, S1_2, etc.)
             # 1D (and 0D) fracture intersections are tagged by 'None'.
-            self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids. (value is 'None' by default)
+            self.gb.add_node_props(
+                keys=["name"]
+            )  # Add 'name' as node prop to all grids. (value is 'None' by default)
             fracture_grids = self.gb.get_grids(lambda _g: _g.dim == self.Nd - 1)
-            assert fracture_grids.size == self.n_frac, "We expect all shear zones to be meshed"
+            assert (
+                fracture_grids.size == self.n_frac
+            ), "We expect all shear zones to be meshed"
 
             # Set node property 'name' to each fracture with value being name of the shear zone.
             if self.n_frac > 0:
@@ -185,15 +193,17 @@ class ContactMechanicsISC(ContactMechanics):
 
         # If a grid is already set, do some sanity checks.
         else:
-            assert (self.Nd is not None) and (self.n_frac is not None), \
-                "Attributes Nd and n_frac must be set in an existing grid."
+            assert (self.Nd is not None) and (
+                self.n_frac is not None
+            ), "Attributes Nd and n_frac must be set in an existing grid."
 
             if self.n_frac > 0:
                 # We require that fracture grids have a name.
                 g = self.gb.get_grids(lambda _g: _g.dim == self.Nd - 1)
                 for i, sz in enumerate(self.shearzone_names):
-                    assert (self.gb.node_props(g[i], "name") is not None), \
-                        "All 2D grids must have a name."
+                    assert (
+                        self.gb.node_props(g[i], "name") is not None
+                    ), "All 2D grids must have a name."
 
     def set_grid(self, gb: pp.GridBucket):
         """ Set a new grid
@@ -210,7 +220,7 @@ class ContactMechanicsISC(ContactMechanics):
             for i, sz_name in enumerate(self.shearzone_names):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
-    def grids_by_name(self, name, key='name') -> np.ndarray:
+    def grids_by_name(self, name, key="name") -> np.ndarray:
         """ Get grid by grid bucket node property 'name'
 
         """
@@ -236,9 +246,11 @@ class ContactMechanicsISC(ContactMechanics):
             ]
         )
         distances = pp.distances.point_pointset(point, g.face_centers[:, all_bf])
-        indexes = np.argpartition(distances, self.Nd)[:self.Nd]
+        indexes = np.argpartition(distances, self.Nd)[: self.Nd]
         old_indexes = np.argsort(distances)
-        assert np.allclose(np.sort(indexes), np.sort(old_indexes[:self.Nd]))  # Temporary: test new argpartition method
+        assert np.allclose(
+            np.sort(indexes), np.sort(old_indexes[: self.Nd])
+        )  # Temporary: test new argpartition method
         faces = all_bf[indexes[: self.Nd]]
         return faces
 
@@ -311,7 +323,7 @@ class ContactMechanicsISC(ContactMechanics):
         """
         # TODO: Only do computations over 'all_bf'.
         # TODO: Test this method
-        true_stress_depth = self.box['zmax'] * self.length_scale
+        true_stress_depth = self.box["zmax"] * self.length_scale
 
         # We assume the relative sizes of all stress components scale with sigma_zz.
         # Except if sigma_zz = 0, then we don't scale.
@@ -404,13 +416,15 @@ class ContactMechanicsISC(ContactMechanics):
 
     def set_viz(self):
         """ Set exporter for visualization """
-        self.viz = pp.Exporter(self.gb, file_name=self.file_name, folder_name=self.viz_folder_name)
+        self.viz = pp.Exporter(
+            self.gb, file_name=self.file_name, folder_name=self.viz_folder_name
+        )
         # list of time steps to export with visualization.
 
-        self.u_exp = 'u_exp'
-        self.traction_exp = 'traction_exp'
-        self.normal_frac_u = 'normal_frac_u'
-        self.tangential_frac_u = 'tangential_frac_u'
+        self.u_exp = "u_exp"
+        self.traction_exp = "traction_exp"
+        self.normal_frac_u = "normal_frac_u"
+        self.tangential_frac_u = "tangential_frac_u"
 
         self.export_fields = [
             self.u_exp,
@@ -453,7 +467,12 @@ class ContactMechanicsISC(ContactMechanics):
                 d[pp.STATE][self.tangential_frac_u] = np.zeros(g.num_cells)
 
             if g.dim == Nd:  # On matrix
-                u = d[pp.STATE][self.displacement_variable].reshape((Nd, -1), order='F').copy() * self.length_scale
+                u = (
+                    d[pp.STATE][self.displacement_variable]
+                    .reshape((Nd, -1), order="F")
+                    .copy()
+                    * self.length_scale
+                )
 
                 if g.dim != 3:  # Only called if solving a 2D problem
                     u = np.vstack(u, np.zeros(u.shape[1]))
@@ -463,25 +482,34 @@ class ContactMechanicsISC(ContactMechanics):
                 d[pp.STATE][self.traction_exp] = np.zeros(d[pp.STATE][self.u_exp].shape)
 
             else:  # In fractures or intersection of fractures (etc.)
-                g_h = gb.node_neighbors(g, only_higher=True)[0]  # Get the higher-dimensional neighbor
+                g_h = gb.node_neighbors(g, only_higher=True)[
+                    0
+                ]  # Get the higher-dimensional neighbor
                 if g_h.dim == Nd:  # In a fracture
                     data_edge = gb.edge_props((g, g_h))
                     u_mortar_local = self.reconstruct_local_displacement_jump(
-                        data_edge=data_edge, from_iterate=True).copy()
+                        data_edge=data_edge, from_iterate=True
+                    ).copy()
                     u_mortar_local = u_mortar_local * self.length_scale
 
-                    traction = d[pp.STATE][self.contact_traction_variable].reshape((Nd, -1), order="F")
+                    traction = d[pp.STATE][self.contact_traction_variable].reshape(
+                        (Nd, -1), order="F"
+                    )
 
                     if g.dim == 2:
                         d[pp.STATE][self.u_exp] = u_mortar_local
                         d[pp.STATE][self.traction_exp] = traction
                     # TODO: Check when this statement is actually called
                     else:  # Only called if solving a 2D problem (i.e. this is a 0D fracture intersection)
-                        d[pp.STATE][self.u_exp] = np.vstack(u_mortar_local, np.zeros(u_mortar_local.shape[1]))
+                        d[pp.STATE][self.u_exp] = np.vstack(
+                            u_mortar_local, np.zeros(u_mortar_local.shape[1])
+                        )
                 else:  # In a fracture intersection
                     d[pp.STATE][self.u_exp] = np.zeros((Nd, g.num_cells))
                     d[pp.STATE][self.traction_exp] = np.zeros((Nd, g.num_cells))
-        self.viz.write_vtk(data=self.export_fields, time_dependent=False)  # Write visualization
+        self.viz.write_vtk(
+            data=self.export_fields, time_dependent=False
+        )  # Write visualization
 
     def save_frac_jump_data(self):
         """ Save normal and tangential jumps to a class attribute
@@ -496,19 +524,29 @@ class ContactMechanicsISC(ContactMechanics):
             normal_u_jumps = np.zeros((1, n))
 
             for frac_num, frac_name in enumerate(self.shearzone_names):
-                g_lst = gb.get_grids(lambda _g: gb.node_props(_g)['name'] == frac_name)
-                assert len(g_lst) == 1  # Currently assume each fracture is uniquely named.
+                g_lst = gb.get_grids(lambda _g: gb.node_props(_g)["name"] == frac_name)
+                assert (
+                    len(g_lst) == 1
+                )  # Currently assume each fracture is uniquely named.
 
                 g = g_lst[0]
-                g_h = gb.node_neighbors(g, only_higher=True)[0]  # Get higher-dimensional neighbor
+                g_h = gb.node_neighbors(g, only_higher=True)[
+                    0
+                ]  # Get higher-dimensional neighbor
                 assert g_h.dim == Nd  # We only operate on fractures of dim Nd-1.
 
                 data_edge = gb.edge_props((g, g_h))
-                u_mortar_local = self.reconstruct_local_displacement_jump(
-                    data_edge=data_edge, from_iterate=True).copy() * self.length_scale
+                u_mortar_local = (
+                    self.reconstruct_local_displacement_jump(
+                        data_edge=data_edge, from_iterate=True
+                    ).copy()
+                    * self.length_scale
+                )
 
                 # Jump distances in each cell
-                tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)  # * self.length_scale inside norm.
+                tangential_jump = np.linalg.norm(
+                    u_mortar_local[:-1, :], axis=0
+                )  # * self.length_scale inside norm.
                 normal_jump = np.abs(u_mortar_local[-1, :])  # * self.length_scale
 
                 # Save jumps to state
@@ -519,13 +557,19 @@ class ContactMechanicsISC(ContactMechanics):
                 # TODO: "Un-scale" these quantities
                 # Ad-hoc average normal and tangential jump "estimates"
                 # TODO: Find a proper way to express the "total" displacement of a fracture
-                avg_tangential_jump = np.sum(tangential_jump * g.cell_volumes) / np.sum(g.cell_volumes)
-                avg_normal_jump = np.sum(normal_jump * g.cell_volumes) / np.sum(g.cell_volumes)
+                avg_tangential_jump = np.sum(tangential_jump * g.cell_volumes) / np.sum(
+                    g.cell_volumes
+                )
+                avg_normal_jump = np.sum(normal_jump * g.cell_volumes) / np.sum(
+                    g.cell_volumes
+                )
 
                 tangential_u_jumps[0, frac_num] = avg_tangential_jump
                 normal_u_jumps[0, frac_num] = avg_normal_jump
 
-            self.u_jumps_tangential = np.concatenate((self.u_jumps_tangential, tangential_u_jumps))
+            self.u_jumps_tangential = np.concatenate(
+                (self.u_jumps_tangential, tangential_u_jumps)
+            )
             self.u_jumps_normal = np.concatenate((self.u_jumps_normal, normal_u_jumps))
 
     def after_newton_iteration(self, solution_vector):
@@ -588,8 +632,12 @@ class GrimselGranodiorite(pp.UnitRock):
         self.DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
 
         # Lamé parameters
-        self.YOUNG_MODULUS = 49 * pp.GIGA * pp.PASCAL  # Krietsch et al 2018 (Data Descriptor) - Dynamic E
-        self.POISSON_RATIO = 0.32  # Krietsch et al 2018 (Data Descriptor) - Dynamic Poisson
+        self.YOUNG_MODULUS = (
+            49 * pp.GIGA * pp.PASCAL
+        )  # Krietsch et al 2018 (Data Descriptor) - Dynamic E
+        self.POISSON_RATIO = (
+            0.32  # Krietsch et al 2018 (Data Descriptor) - Dynamic Poisson
+        )
         self.LAMBDA, self.MU = pp_rock.lame_from_young_poisson(
             self.YOUNG_MODULUS, self.POISSON_RATIO
         )

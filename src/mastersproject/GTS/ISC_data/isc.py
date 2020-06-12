@@ -19,6 +19,7 @@ from GTS.fit_plane import fit_normal_to_points
 
 logger = logging.getLogger(__name__)
 
+
 class ISCData:
     def __init__(self, path=None):
         """ Initialize the class managing data from the ISC project

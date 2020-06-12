@@ -9,7 +9,6 @@ class FullBiotSetup(ContactMechanicsBiot):
 
 
 class SingleFracSetupBiot(ContactMechanicsBiot):
-
     def __init__(self, time_step=1):
         """ Fix a 'bug' where 'time_step' is not assigned to self."""
         super().__init__()
@@ -38,14 +37,14 @@ class SingleFracSetupBiot(ContactMechanicsBiot):
         is called after gb is set:
          pp.contact_conditions.set_projections(self.gb)
         """
-        domain = {'xmin': -2, 'xmax': 3, 'ymin': -2, 'ymax': 3, 'zmin': -3, 'zmax': 3}
+        domain = {"xmin": -2, "xmax": 3, "ymin": -2, "ymax": 3, "zmin": -3, "zmax": 3}
         self.box = domain
 
         # Fractures denoted by vertices
         f_1 = pp.Fracture(np.array([[0, 1, 2, 0], [0, 0, 1, 1], [0, 0, 1, 1]]))
 
         network = pp.FractureNetwork3d([f_1], domain=domain)
-        mesh_args = {'mesh_size_frac': 0.2, 'mesh_size_min': 0.2, 'mesh_size_bound': 1}
+        mesh_args = {"mesh_size_frac": 0.2, "mesh_size_min": 0.2, "mesh_size_bound": 1}
         gb = network.mesh(mesh_args, ensure_matching_face_cell=False)
         self.gb = gb
         self.Nd = self.gb.dim_max
@@ -82,11 +81,13 @@ class SingleFracSetupBiot(ContactMechanicsBiot):
         """
         if (self.viz is None) or overwrite:
             # g3 = self.gb.grids_of_dimension(self.gb.dim_max())[0]
-            self.viz = pp.Exporter(self.gb, name="test_biot", folder=self.viz_folder_name)
+            self.viz = pp.Exporter(
+                self.gb, name="test_biot", folder=self.viz_folder_name
+            )
 
     def export_step(self):
         """ Implementation of export step"""
-        export_fields = [self.displacement_variable + '_']  # self.scalar_variable
+        export_fields = [self.displacement_variable + "_"]  # self.scalar_variable
         # Test out: Export a single grid.
         # g3 = self.gb.grids_of_dimension(self.gb.dim_max())[0]
         # data = self.gb.node_props(g3)
@@ -117,7 +118,7 @@ def run_model():
     g2_list = model.gb.grids_of_dimension(2)
     for g in g2_list:
         data = model.gb.node_props(g)
-        data[pp.STATE]['u_'] = np.zeros((3, g.num_cells))
+        data[pp.STATE]["u_"] = np.zeros((3, g.num_cells))
 
     # Get the 3D data.
     g3 = model.gb.grids_of_dimension(3)[0]
@@ -131,8 +132,8 @@ def run_model():
 
         # Get the state, transform it, and save to another state variable
         sol3 = d3[pp.STATE][model.displacement_variable]
-        trsol3 = np.reshape(np.copy(sol3), newshape=(g3.dim, g3.num_cells), order='F')
-        d3[pp.STATE][model.displacement_variable + '_'] = trsol3
+        trsol3 = np.reshape(np.copy(sol3), newshape=(g3.dim, g3.num_cells), order="F")
+        d3[pp.STATE][model.displacement_variable + "_"] = trsol3
 
         # breakpoint()
 

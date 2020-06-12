@@ -6,7 +6,6 @@ import numpy as np
 
 
 class GeologicalModel:
-
     def __init__(self):
         """ Define the global constants for the geological dataset.
 
@@ -17,10 +16,10 @@ class GeologicalModel:
         """
         # Get correct path (we guess):
         wd = Path.cwd()
-        if (wd / '01BasicInputData').is_dir():
-            self.data_path = wd / '01BasicInputData'
+        if (wd / "01BasicInputData").is_dir():
+            self.data_path = wd / "01BasicInputData"
         else:
-            self.data_path = wd / 'GTS/01BasicInputData'
+            self.data_path = wd / "GTS/01BasicInputData"
 
         self.GTS_coordinates = np.array((667400, 158800, 1700))
 
@@ -31,7 +30,7 @@ class GeologicalModel:
         # Import all boreholes in order to use their coordinates for further calculations.
 
         # Name of boreholes.
-        self.BH_import = ['FBS', 'SBH', 'INJ', 'PRP', 'GEO']
+        self.BH_import = ["FBS", "SBH", "INJ", "PRP", "GEO"]
 
         # Import Borehole Data
         self.BH_coordinates = self.drill_boreholes()
@@ -70,12 +69,16 @@ class GeologicalModel:
         bh_coordinates = {}
         path = self.data_path / "02_Boreholes"
         for bh in self.BH_import:
-            name = path / (bh + '.txt')
+            name = path / (bh + ".txt")
             bh_coordinates[bh] = np.genfromtxt(name)  # Default delimiter is spaces.
             if np.all(np.isnan(bh_coordinates[bh])):  # If delimiter isn't spaces ...
-                bh_coordinates[bh] = np.genfromtxt(name, delimiter=',')  # ... then it is commas.
+                bh_coordinates[bh] = np.genfromtxt(
+                    name, delimiter=","
+                )  # ... then it is commas.
 
-            bh_coordinates[bh][:, :3] = np.subtract(bh_coordinates[bh][:, :3], self.GTS_coordinates)
+            bh_coordinates[bh][:, :3] = np.subtract(
+                bh_coordinates[bh][:, :3], self.GTS_coordinates
+            )
 
         return bh_coordinates
 
@@ -88,11 +91,12 @@ class GeologicalModel:
         """
 
         path = self.data_path / "03_GeologicalMapping/02_BoreholeIntersections"
-        name = path / (bh + '_structures.txt')
-        dtype = [float, float, float, float, 'U24']
-        names = ['Depth', 'Azimuth', 'Dip', 'Aperture', 'Type']
-        structures = np.genfromtxt(name, dtype=dtype, names=names,
-                                   delimiter='\t', skip_header=2)
+        name = path / (bh + "_structures.txt")
+        dtype = [float, float, float, float, "U24"]
+        names = ["Depth", "Azimuth", "Dip", "Aperture", "Type"]
+        structures = np.genfromtxt(
+            name, dtype=dtype, names=names, delimiter="\t", skip_header=2
+        )
         return structures
 
     def import_optv_structures(self):
@@ -101,11 +105,25 @@ class GeologicalModel:
         Mirrors 'importOPTVstructures.m' in the matlab script.
 
         """
-        boreholenames = ['FBS1', 'FBS2', 'FBS3', 'SBH1', 'SBH3', 'SBH4',
-                         'INJ1', 'INJ2', 'PRP1', 'PRP2', 'PRP3',
-                         'GEO1', 'GEO2', 'GEO3', 'GEO4']
+        boreholenames = [
+            "FBS1",
+            "FBS2",
+            "FBS3",
+            "SBH1",
+            "SBH3",
+            "SBH4",
+            "INJ1",
+            "INJ2",
+            "PRP1",
+            "PRP2",
+            "PRP3",
+            "GEO1",
+            "GEO2",
+            "GEO3",
+            "GEO4",
+        ]
         optv_logs = {}
-        structure_types = ['Fracture', 'S1 Shear-zone', 'S3 Shear-zone']
+        structure_types = ["Fracture", "S1 Shear-zone", "S3 Shear-zone"]
 
         for bh in boreholenames:
             structures = self.import_optv_log(bh)
@@ -127,11 +145,13 @@ class GeologicalModel:
         Mirrors 'Tunnel_intersections.m' in the matlab script.
 
         """
-        rel_path = "03_GeologicalMapping/01_TunnelIntersections/Tunnel_intersections.txt"
+        rel_path = (
+            "03_GeologicalMapping/01_TunnelIntersections/Tunnel_intersections.txt"
+        )
         path = self.data_path / rel_path
-        delimiter = '\t'
-        dtype = [float, float, float, float, float, 'O', int]
-        names = ['x', 'y', 'z', 'dip-direction', 'dip', 'tunnel', 'shear zone set']
+        delimiter = "\t"
+        dtype = [float, float, float, float, float, "O", int]
+        names = ["x", "y", "z", "dip-direction", "dip", "tunnel", "shear zone set"]
         structures = np.genfromtxt(path, dtype=dtype, names=names, delimiter=delimiter)
 
         # Convert to local coordinates
@@ -151,7 +171,7 @@ class GeologicalModel:
 
         """
         path = self.data_path / "06_ShearzoneInterpolation"
-        shear_zones = ['S1_1', 'S1_2', 'S1_3', 'S3_1', 'S3_2']  # 'S3_1', 'S3_2'
+        shear_zones = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]  # 'S3_1', 'S3_2'
 
         sz = {}  # Dictionary for shear zone coordinates.
         """ When done, sz will have the following structure:
@@ -167,44 +187,46 @@ class GeologicalModel:
         }
         """
 
-        delimiter = '\t'
-        dtype = ['U4', float]
+        delimiter = "\t"
+        dtype = ["U4", float]
         for shear_zone in shear_zones:
-            fname = path / (shear_zone + '.txt')
+            fname = path / (shear_zone + ".txt")
             _result = np.genfromtxt(fname, dtype=dtype, delimiter=delimiter, names=True)
 
             # Get Borehole names and depth (in borehole) the shear zone 'file'.
             _bh = np.array([r[0] for r in _result])
             _dp = np.array([r[1] for r in _result])
-            sz[shear_zone] = {'Borehole': _bh, 'Depth': _dp}
+            sz[shear_zone] = {"Borehole": _bh, "Depth": _dp}
 
             # Aliases
             bh_coords = self.BH_coordinates
 
             # Initialize coordinates
-            xyz = ['x', 'y', 'z']
+            xyz = ["x", "y", "z"]
             for d in xyz:
                 sz[shear_zone][d] = np.zeros(len(_bh))
 
             # Calculate absolute coordinates for borehole-shearzone intersections.
-            for bh_idx, bh in enumerate(sz[shear_zone]['Borehole']):
+            for bh_idx, bh in enumerate(sz[shear_zone]["Borehole"]):
 
                 # If bh doesn't intersect with the shear zone, set coords to np.nan.
-                if np.isnan(sz[shear_zone]['Depth'][bh_idx]):
-                    for d_i, d in enumerate(xyz):  # Assumes 'x, y, z' are first 3 (ordered) entries.
+                if np.isnan(sz[shear_zone]["Depth"][bh_idx]):
+                    for d_i, d in enumerate(
+                        xyz
+                    ):  # Assumes 'x, y, z' are first 3 (ordered) entries.
                         sz[shear_zone][d][bh_idx] = np.nan
                     continue
 
                 # Otherwise, compute the global coordinate of the shear zone.
                 bh_name = bh[:3]  # Get the 3 letters from e.g. 'INJ1'
-                num = int(bh[-1])   # Get the 1-digit number from e.g. 'INJ1'
+                num = int(bh[-1])  # Get the 1-digit number from e.g. 'INJ1'
 
                 # Fetch the borehole coordinates (and more) for a given borehole
                 _idx = num - 1  # - 1 because of 0-indexing.
                 # TODO: Fix Hard coded case for SBH3 and SBH4, whose well number
                 #   doesn't correspond with borehole index in 02_Boreholes > SBH.txt.
                 # ==============================
-                if bh == 'SBH3' or bh == 'SBH4':
+                if bh == "SBH3" or bh == "SBH4":
                     _idx = _idx - 1
                 # ==============================
                 borehole = bh_coords[bh_name][_idx]
@@ -214,22 +236,27 @@ class GeologicalModel:
                 # (e.g.: borehole[0] for x-coordinate of e.g. INJ1.
                 # Columns in borehole:
                 # x | y | z | length | diameter | azimuth | upward gradient
-                for d_i, d in enumerate(xyz):  # Assumes 'x, y, z' are first 3 (ordered) entries.
-                    sz[shear_zone][d][bh_idx] = borehole[d_i] + \
-                                            np.sin(borehole[5]*rad) * np.cos(borehole[6]*rad)
+                for d_i, d in enumerate(
+                    xyz
+                ):  # Assumes 'x, y, z' are first 3 (ordered) entries.
+                    sz[shear_zone][d][bh_idx] = borehole[d_i] + np.sin(
+                        borehole[5] * rad
+                    ) * np.cos(borehole[6] * rad)
 
         # Assign tunnel intersections to Shear zones
         # Columns in sz_tunnel:
         # 'x', 'y', 'z', 'dip-direction', 'dip', 'tunnel', 'shear zone set'
         for j, tunnel in enumerate(self.sz_tunnel):
             sz_type = str(tunnel[6])[0]  # Get first integer in e.g. 12
-            sz_num = str(tunnel[6])[1]   # Get second integer in e.g. 12
+            sz_num = str(tunnel[6])[1]  # Get second integer in e.g. 12
             sz_id = f"S{sz_type}_{sz_num}"  # e.g. 'S1_2'
 
-            sz[sz_id]['Borehole'] = np.append(sz[sz_id]['Borehole'], tunnel[5])  # Tunnel name
-            sz[sz_id]['Depth'] = np.append(sz[sz_id]['Depth'], np.nan)  # Tunnel name
+            sz[sz_id]["Borehole"] = np.append(
+                sz[sz_id]["Borehole"], tunnel[5]
+            )  # Tunnel name
+            sz[sz_id]["Depth"] = np.append(sz[sz_id]["Depth"], np.nan)  # Tunnel name
 
-            xyz = ['x', 'y', 'z']
+            xyz = ["x", "y", "z"]
             for d_i, d in enumerate(xyz):
                 sz[sz_id][d] = np.append(sz[sz_id][d], tunnel[d_i])
 
@@ -241,23 +268,13 @@ class GeologicalModel:
         intxs = {}
 
         for key in list(sz.keys()):
-            x = np.vstack((sz[key]['x'], sz[key]['y'], sz[key]['z']))
+            x = np.vstack((sz[key]["x"], sz[key]["y"], sz[key]["z"]))
 
             # Assert that one coordinate dimension is nan exactly when all dimensions are.
             cond = np.isnan(x)
-            assert(np.all(np.equal(np.all(cond, 0), np.any(cond, 0))))
+            assert np.all(np.equal(np.all(cond, 0), np.any(cond, 0)))
 
             x = x[:, np.logical_not(cond[0])]  # fetch not nan points.
             intxs[key] = np.copy(x)
 
         return intxs
-
-
-
-
-
-
-
-
-
-

@@ -29,15 +29,16 @@ from src.mastersproject.util.logging_util import (
     timer,
     trace,
 )
+
 logger = logging.getLogger(__name__)
 
 
 def prepare_setup(
-        model: Type[ContactMechanicsISC],
-        path_head: str,
-        params: dict = None,
-        prepare_simulation: bool = True,
-        setup_loggers: bool = True,
+    model: Type[ContactMechanicsISC],
+    path_head: str,
+    params: dict = None,
+    prepare_simulation: bool = True,
+    setup_loggers: bool = True,
 ) -> ContactMechanicsISC:
     """ Helper method to create grids, etc. for test methods
 
@@ -64,9 +65,7 @@ def prepare_setup(
     """
 
     in_params = prepare_params(
-        path_head=path_head,
-        params=params,
-        setup_loggers=setup_loggers,
+        path_head=path_head, params=params, setup_loggers=setup_loggers,
     )
 
     setup = model(in_params)
@@ -75,12 +74,8 @@ def prepare_setup(
     return setup
 
 
-@trace(logger, timeit=False, level='DEBUG')
-def prepare_params(
-        path_head: str,
-        params: dict,
-        setup_loggers: bool,
-) -> dict:
+@trace(logger, timeit=False, level="DEBUG")
+def prepare_params(path_head: str, params: dict, setup_loggers: bool,) -> dict:
     """
     Method to prepare default set of parameters for model runs.
 
@@ -115,24 +110,29 @@ def prepare_params(
 
     # --- DOMAIN ARGUMENTS ---
     in_params = {
-        'mesh_args':
-            {'mesh_size_frac': 10, 'mesh_size_min': .1 * 10, 'mesh_size_bound': 6 * 10},
-        'bounding_box':
-            {'xmin': -20, 'xmax': 80, 'ymin': 50, 'ymax': 150, 'zmin': -25, 'zmax': 75},
-        'shearzone_names':
-            ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],
-        'folder_name':
-            _results_path,
-        'solver':
-            'direct',
-        'source_scalar_borehole_shearzone':  # Only relevant for biot
-            {"shearzone": "S1_2", "borehole": "INJ1"},
-        'stress':
-            gts.isc_modelling.stress_tensor(),
-        'length_scale':
-            1,
-        'scalar_scale':
-            1,
+        "mesh_args": {
+            "mesh_size_frac": 10,
+            "mesh_size_min": 0.1 * 10,
+            "mesh_size_bound": 6 * 10,
+        },
+        "bounding_box": {
+            "xmin": -20,
+            "xmax": 80,
+            "ymin": 50,
+            "ymax": 150,
+            "zmin": -25,
+            "zmax": 75,
+        },
+        "shearzone_names": ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],
+        "folder_name": _results_path,
+        "solver": "direct",
+        "source_scalar_borehole_shearzone": {  # Only relevant for biot
+            "shearzone": "S1_2",
+            "borehole": "INJ1",
+        },
+        "stress": gts.isc_modelling.stress_tensor(),
+        "length_scale": 1,
+        "scalar_scale": 1,
     }
     in_params.update(params)
 

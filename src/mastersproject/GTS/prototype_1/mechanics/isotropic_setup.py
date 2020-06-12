@@ -26,8 +26,15 @@ class IsotropicSetup(ContactMechanics):
         Suggested values for mesh_args:
         mesh_args = {'mesh_size_frac': 10, 'mesh_size_min': 10}
         """
-        mesh_args = {'mesh_size_frac': 10, 'mesh_size_min': 10}
-        domain = {'xmin': -6, 'xmax': 80, 'ymin': 55, 'ymax': 150, 'zmin': 0, 'zmax': 50}
+        mesh_args = {"mesh_size_frac": 10, "mesh_size_min": 10}
+        domain = {
+            "xmin": -6,
+            "xmax": 80,
+            "ymin": 55,
+            "ymax": 150,
+            "zmin": 0,
+            "zmax": 50,
+        }
         gb = PrototypeNetwork.make_mesh(mesh_args, domain)
         pp.contact_conditions.set_projections(gb)
 
@@ -167,21 +174,22 @@ class IsotropicSetup(ContactMechanics):
         """
         if (self.viz is None) or overwrite:
             # g3 = self.gb.grids_of_dimension(self.gb.dim_max())[0]
-            self.viz = pp.Exporter(self.gb, name="mechanics", folder=self.viz_folder_name)
-    
+            self.viz = pp.Exporter(
+                self.gb, name="mechanics", folder=self.viz_folder_name
+            )
+
     def export_step(self):
         """ Implementation of export step"""
-        export_fields = [self.displacement_variable + '_']  # self.scalar_variable
-        self.viz.write_vtk(export_fields)#, time_step=1)
+        export_fields = [self.displacement_variable + "_"]  # self.scalar_variable
+        self.viz.write_vtk(export_fields)  # , time_step=1)
         # self.viz.write_pvd([1])
-
 
 
 def run_model():
     """
     Set up and run isotropic setup model.    
     """
-    params = {'folder_name': 'GTS/prototype_1/isotropic_setup_viz'}
+    params = {"folder_name": "GTS/prototype_1/isotropic_setup_viz"}
     model = IsotropicSetup(params=params)
     model.prepare_simulation()
     model.init_viz()
@@ -194,7 +202,7 @@ def run_model():
         g_list = model.gb.grids_of_dimension(i)
         for g in g_list:
             data = model.gb.node_props(g)
-            data[pp.STATE]['u_'] = np.zeros((3, g.num_cells))
+            data[pp.STATE]["u_"] = np.zeros((3, g.num_cells))
 
     # Get the 3D data.
     g3 = model.gb.grids_of_dimension(3)[0]
@@ -205,8 +213,8 @@ def run_model():
 
     # Get the state, transform it, and save to another state variable
     sol3 = d3[pp.STATE][model.displacement_variable]
-    trsol3 = np.reshape(np.copy(sol3), newshape=(g3.dim, g3.num_cells), order='F')
-    d3[pp.STATE][model.displacement_variable + '_'] = trsol3
+    trsol3 = np.reshape(np.copy(sol3), newshape=(g3.dim, g3.num_cells), order="F")
+    d3[pp.STATE][model.displacement_variable + "_"] = trsol3
 
     # Export solution
     model.export_step()

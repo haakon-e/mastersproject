@@ -1,4 +1,3 @@
-
 # Refinement methods
 from refinement.refinement import (
     refine_mesh,

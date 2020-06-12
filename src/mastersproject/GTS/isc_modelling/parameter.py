@@ -4,6 +4,7 @@ import porepy as pp
 from pydantic import BaseModel
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -51,7 +52,7 @@ def stress_tensor() -> np.ndarray:
     """
 
     # Note: Negative side due to compressive stresses
-    stress_value = - np.array([13.1, 9.2, 8.7]) * pp.MEGA * pp.PASCAL
+    stress_value = -np.array([13.1, 9.2, 8.7]) * pp.MEGA * pp.PASCAL
     dip_direction = np.array([104.48, 259.05, 3.72])
     dip = np.array([39.21, 47.90, 12.89])
 
@@ -60,7 +61,7 @@ def stress_tensor() -> np.ndarray:
         rad = np.pi / 180
         x = np.cos(th * rad) * np.sin(gm * rad)
         y = np.cos(th * rad) * np.cos(gm * rad)
-        z = - np.sin(th * rad)
+        z = -np.sin(th * rad)
         return np.array([x, y, z])
 
     rot = r(th=dip, gm=dip_direction)
@@ -74,6 +75,3 @@ def stress_tensor() -> np.ndarray:
     # Stress tensor in euclidean coordinate system
     stress_eucl: np.ndarray = np.dot(np.dot(rot, stress), rot.T)
     return stress_eucl
-
-
-
