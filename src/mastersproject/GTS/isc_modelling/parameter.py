@@ -134,7 +134,7 @@ class GeometryParameters(BaseParameters):
     }
 
     _sz = 20
-    mesh_args: Dict[str, float] = {
+    mesh_args: Optional[Dict[str, float]] = {
         "mesh_size_frac": _sz,
         "mesh_size_min": 0.2 * _sz,
         "mesh_size_bound": 3 * _sz,
