@@ -5,7 +5,7 @@ import porepy as pp
 import numpy as np
 from GTS import FlowISC
 from GTS.isc_modelling.ISCGrid import create_grid, optimize_mesh
-from GTS.isc_modelling.parameter import FlowParameters, nd_injection_cell_center
+from GTS.isc_modelling.parameter import FlowParameters, nd_injection_cell_center, shearzone_injection_cell
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +178,93 @@ def network_n_fractures(n_frac: int) -> pp.FractureNetwork3d:
 
 class TestFlowISC:
 
+    def test_low_k_1_frac(self):
+        """ Run FlowISC on a mesh with 1 fracture"""
+        _sz = 4  # _sz = 2
+        intact_k = 1e-13
+        frac_k = 1e-9
+
+        time_step = pp.MINUTE
+        params = FlowParameters(
+            head=f"TestFlowISC/delete-me",  #test_low_k_1_frac/sz_{_sz}/kf_{intact_k}_ki_{frac_k}/1min",
+            time_step=time_step,
+            end_time=time_step * 4,
+            shearzone_names=["S1_2"],
+            bounding_box=None,
+            mesh_args={
+                "mesh_size_frac": _sz,
+                "mesh_size_min": _sz,#0.2 * _sz,
+                "mesh_size_bound": _sz,#3 * _sz,
+            },
+            well_cells=shearzone_injection_cell,
+            injection_rate=1 / 6,
+            frac_permeability=frac_k,
+            intact_permeability=intact_k,
+        )
+        setup = FlowISC(params)
+        _gb, network = create_grid(
+            **params.dict(
+                include={
+                    "mesh_args",
+                    "length_scale",
+                    "bounding_box",
+                    "shearzone_names",
+                    "folder_name",
+                }
+            )
+        )
+        pp.run_time_dependent_model(setup, {})
+
+        assert setup.neg_ind.size == 0
+
+    def test_low_k_optimized_mesh_1_frac(self):
+        """ Run FlowISC on optimized mesh with 1 fracture"""
+        _sz = 4#2
+        intact_k = 1e-20
+        frac_k = 1e-16
+
+        time_step = pp.MINUTE
+        params = FlowParameters(
+            head=f"TestFlowISC/test_low_k_optimized_mesh_1_frac/sz_{_sz}/kf_{intact_k}_ki_{frac_k}/1min",
+            time_step=time_step,
+            end_time=time_step * 4,
+            shearzone_names=["S1_2"],
+            bounding_box=None,
+            mesh_args={
+                "mesh_size_frac": _sz,
+                "mesh_size_min": 0.2 * _sz,
+                "mesh_size_bound": 3 * _sz,
+            },
+            well_cells=shearzone_injection_cell,
+            injection_rate=1 / 6,
+            frac_permeability=frac_k,
+            intact_permeability=intact_k,
+        )
+        _helper_run_flowisc_optimized_grid(params)
+
+    def test_low_k_optimized_mesh_5_frac(self):
+        """ Run FlowISC on optimized mesh with 5 fractures"""
+        _sz = 20  # 10
+        intact_k = 1e-20
+        frac_k = 1e-16
+
+        time_step = pp.MINUTE
+        params = FlowParameters(
+            head=f"TestFlowISC/test_low_k_optimized_mesh_5_frac/sz_{_sz}/kf_{intact_k}_ki_{frac_k}/1min",
+            time_step=time_step,
+            end_time=time_step * 4,
+            mesh_args={
+                "mesh_size_frac": _sz,
+                "mesh_size_min": 0.2 * _sz,
+                "mesh_size_bound": 3 * _sz,
+            },
+            well_cells=shearzone_injection_cell,
+            injection_rate=1 / 6,
+            frac_permeability=frac_k,
+            intact_permeability=intact_k,
+        )
+        _helper_run_flowisc_optimized_grid(params)
+
     def test_low_k_optimized_mesh(self):
         """ Run FlowISC on optimized meshes"""
         _sz = 10
@@ -200,34 +287,39 @@ class TestFlowISC:
             frac_permeability=0,
             intact_permeability=intact_k,
         )
+        _helper_run_flowisc_optimized_grid(params)
 
-        _gb, network = create_grid(
-            **params.dict(
-                include={
-                    "mesh_args",
-                    "length_scale",
-                    "bounding_box",
-                    "shearzone_names",
-                    "folder_name",
-                }
-            )
+
+def _helper_run_flowisc_optimized_grid(params: FlowParameters, optimize_method="Netgen"):
+    """ Run FlowISC on optimized meshes"""
+
+    _gb, network = create_grid(
+        **params.dict(
+            include={
+                "mesh_args",
+                "length_scale",
+                "bounding_box",
+                "shearzone_names",
+                "folder_name",
+            }
         )
+    )
 
-        logger.info(f"gb cells non-optimized: {_gb.num_cells()}")
+    logger.info(f"gb cells non-optimized: {_gb.num_cells()}")
 
-        # Optimize the mesh
-        in_file = params.folder_name / "gmsh_frac_file.geo"
-        out_file = params.folder_name / "gmsh_frac_file-optimized.msh"
-        optimize_mesh(
-            in_file=in_file, out_file=out_file, method="Netgen",
-        )
-        gb: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
-        logger.info(f"gb cells optimized: {gb.num_cells()}")
-        assert _gb.num_cells() < gb.num_cells()
+    # Optimize the mesh
+    in_file = params.folder_name / "gmsh_frac_file.geo"
+    out_file = params.folder_name / "gmsh_frac_file-optimized.msh"
+    optimize_mesh(
+        in_file=in_file, out_file=out_file, method=optimize_method, force=True, dim_tags=[3]
+    )
+    gb: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
+    logger.info(f"gb cells optimized: {gb.num_cells()}")
+    assert _gb.num_cells() < gb.num_cells()
 
-        # Run FlowISC
-        setup = FlowISC(params)
-        setup.gb = gb
-        pp.run_time_dependent_model(setup, {})
+    # Run FlowISC
+    setup = FlowISC(params)
+    setup.gb = gb
+    pp.run_time_dependent_model(setup, {})
 
-        assert setup.neg_ind.size == 0
+    assert setup.neg_ind.size == 0

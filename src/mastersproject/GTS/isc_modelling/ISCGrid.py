@@ -9,6 +9,7 @@ from GTS.ISC_data.fracture import fracture_network
 
 logger = logging.getLogger(__name__)
 
+
 def create_grid(
     mesh_args: Dict[str, float],
     length_scale: float,
@@ -46,7 +47,8 @@ def create_grid(
     # Scale mesh args by length_scale:
     mesh_args = {k: v / length_scale for k, v in mesh_args.items()}
     # Scale bounding box by length_scale:
-    bounding_box = {k: v / length_scale for k, v in bounding_box.items()}
+    if bounding_box:
+        bounding_box = {k: v / length_scale for k, v in bounding_box.items()}
 
     network = fracture_network(
         shearzone_names=shearzone_names,
@@ -164,7 +166,7 @@ def optimize_mesh(in_file, out_file=None, method="", force=False, dim_tags=[], d
     gmsh.initialize()
 
     # Mesh Statistics
-    # gmsh.option.setNumber("General.Terminal", 1)
+    gmsh.option.setNumber("General.Terminal", 1)
     # gmsh.option.setNumber("Print.PostGamma", 1)
     # gmsh.option.setNumber("Print.PostEta", 1)
     # gmsh.option.setNumber("Print.PostSICN", 1)
