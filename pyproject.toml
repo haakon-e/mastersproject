@@ -8,7 +8,7 @@ authors = ["haakon-e <haakonervik@hotmail.com>"]
 python = "^3.7"
 meshio = "=2.3.8"
 networkx = "=2.3"
-numpy = "=1.16.3"
+numpy = "=1.18.5"
 scipy = "=1.2.1"
 sympy = "=1.4"
 matplotlib = "=3.0.3"
