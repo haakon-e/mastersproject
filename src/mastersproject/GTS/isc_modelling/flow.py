@@ -7,6 +7,7 @@ import scipy.sparse.linalg as spla
 
 import porepy as pp
 from GTS.isc_modelling.ISCGrid import create_grid
+from GTS.isc_modelling.general_model import ModelHelperMethods
 from GTS.isc_modelling.parameter import BaseParameters, FlowParameters
 from porepy.models.abstract_model import AbstractModel
 from porepy.params.data import add_nonpresent_dictionary
@@ -16,7 +17,7 @@ from util.logging_util import timer, trace
 logger = logging.getLogger(__name__)
 
 
-class Flow(AbstractModel):
+class Flow(AbstractModel, ModelHelperMethods):
     """ General flow model for time-dependent Darcy Flow for fractured porous media"""
 
     def __init__(self, params: BaseParameters):
@@ -26,6 +27,7 @@ class Flow(AbstractModel):
         ----------
         params : BaseParameters
         """
+        super().__init__()
         self.params = params
 
         # Time (must be kept for compatibility with pp.run_time_dependent_model)
@@ -38,16 +40,6 @@ class Flow(AbstractModel):
         self.mortar_scalar_variable = "mortar_" + self.scalar_variable
         self.scalar_coupling_term = "robin_" + self.scalar_variable
         self.scalar_parameter_key = "flow"
-
-        # Grid
-        self.gb: Optional[pp.GridBucket] = None
-        self.Nd: Optional[int] = None
-        self.bounding_box: Optional[
-            Dict[str, float]
-        ] = None  # Keep this as it will change due to scaling
-
-        # Initialize assembler
-        self.assembler = None
 
     # --- Grid methods ---
 
@@ -227,7 +219,7 @@ class Flow(AbstractModel):
 
     # --- Primary variables and discretizations ---
 
-    def assign_variables(self) -> None:
+    def assign_scalar_variables(self) -> None:
         """
         Assign primary variables to the nodes and edges of the grid bucket.
         """
@@ -239,7 +231,7 @@ class Flow(AbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.scalar_variable: {"cells": 1},}  # noqa
+                {self.scalar_variable: {"cells": 1},}  # noqa: E231
             )
 
         # Then for the edges
@@ -247,10 +239,10 @@ class Flow(AbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.mortar_scalar_variable: {"cells": 1},}  # noqa
+                {self.mortar_scalar_variable: {"cells": 1},}  # noqa: E231
             )
 
-    def assign_discretizations(self) -> None:
+    def assign_scalar_discretizations(self) -> None:
         """
         Assign discretizations to the nodes and edges of the grid bucket.
 
@@ -270,36 +262,32 @@ class Flow(AbstractModel):
         source_disc_s = pp.ScalarSource(key_s)
 
         # Assign node discretizations
-        for g, d in gb:
+        for _, d in gb:
             add_nonpresent_dictionary(d, discr_key)
 
-            d[discr_key].update(
-                {
-                    var_s: {
-                        "diffusion": diff_disc_s,
-                        "mass": mass_disc_s,
-                        "source": source_disc_s,
-                    },
-                }
-            )
+            d[discr_key].update({
+                var_s: {
+                    "diffusion": diff_disc_s,
+                    "mass": mass_disc_s,
+                    "source": source_disc_s,
+                },
+            })
 
         # Assign edge discretizations
         for e, d in gb.edges():
             g_l, g_h = gb.nodes_of_edge(e)
             add_nonpresent_dictionary(d, coupling_discr_key)
 
-            d[coupling_discr_key].update(
-                {
-                    self.scalar_coupling_term: {
-                        g_h: (var_s, "diffusion"),
-                        g_l: (var_s, "diffusion"),
-                        e: (
-                            self.mortar_scalar_variable,
-                            pp.RobinCoupling(key_s, diff_disc_s),
-                        ),
-                    },
-                }
-            )
+            d[coupling_discr_key].update({
+                self.scalar_coupling_term: {
+                    g_h: (var_s, "diffusion"),
+                    g_l: (var_s, "diffusion"),
+                    e: (
+                        self.mortar_scalar_variable,
+                        pp.RobinCoupling(key_s, diff_disc_s),
+                    ),
+                },
+            })
 
     @timer(logger, level="INFO")
     def discretize(self) -> None:
@@ -312,7 +300,7 @@ class Flow(AbstractModel):
 
     # --- Initial condition ---
 
-    def initial_condition(self) -> None:
+    def initial_scalar_condition(self) -> None:
         """
         Initial guess for Newton iteration, scalar variable and bc_values (for time
         discretization).
@@ -342,9 +330,9 @@ class Flow(AbstractModel):
 
         self.Nd = self.gb.dim_max()
         self.set_scalar_parameters()
-        self.assign_variables()
-        self.assign_discretizations()
-        self.initial_condition()
+        self.assign_scalar_variables()
+        self.assign_scalar_discretizations()
+        self.initial_scalar_condition()
         self.discretize()
         self.initialize_linear_solver()
 
@@ -449,6 +437,7 @@ class Flow(AbstractModel):
         else:
             raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
 
+    @timer(logger, level="INFO")
     def assemble_and_solve_linear_system(self, tol):
         """ Assemble a solve the linear system"""
 
@@ -520,31 +509,6 @@ class Flow(AbstractModel):
 
     # --- Helper methods ---
 
-    def domain_boundary_sides(self, g):
-        """
-        Obtain indices of the faces of a grid that lie on each side of the domain
-        boundaries.
-        """
-        tol = 1e-10
-        box = self.bounding_box
-        east = g.face_centers[0] > box["xmax"] - tol
-        west = g.face_centers[0] < box["xmin"] + tol
-        north = g.face_centers[1] > box["ymax"] - tol
-        south = g.face_centers[1] < box["ymin"] + tol
-        if self.Nd == 2:
-            top = np.zeros(g.num_faces, dtype=bool)
-            bottom = top.copy()
-        else:
-            top = g.face_centers[2] > box["zmax"] - tol
-            bottom = g.face_centers[2] < box["zmin"] + tol
-        all_bf = g.get_boundary_faces()
-        return all_bf, east, west, north, south, top, bottom
-
-    def _nd_grid(self) -> pp.Grid:
-        """ Get the grid of the highest dimension. Assumes self.gb is set.
-        """
-        return self.gb.grids_of_dimension(self.Nd)[0]
-
     def get_state_vector(self):
         """ Get a vector of the current state of the variables; with the same ordering
             as in the assembler.
@@ -575,19 +539,20 @@ class Flow(AbstractModel):
 
     def set_viz(self):
         """ Set exporter for visualization """
-        self.viz = pp.Exporter(  # noqa
-            self.gb,
-            file_name=self.params.viz_file_name,
-            folder_name=self.params.folder_name,
-        )
+        if not self.viz:
+            self.viz = pp.Exporter(
+                self.gb,
+                file_name=self.params.viz_file_name,
+                folder_name=self.params.folder_name,
+            )
         # list of time steps to export with visualization.
         self.export_times = []  # noqa
 
         self.p_exp = "p_exp"  # noqa
 
-        self.export_fields = [  # noqa
-            self.p_exp,
-        ]
+        self.export_fields.extend(
+            [self.p_exp]
+        )
 
     def export_step(self, write_vtk=True):
         """ Export a step with pressures """
