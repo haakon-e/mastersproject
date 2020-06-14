@@ -48,6 +48,41 @@ def stress_tensor() -> np.ndarray:
     return stress_eucl
 
 
+# Define the rock type at Grimsel Test Site
+class GrimselGranodiorite(pp.UnitRock):
+    def __init__(self):
+        super().__init__()
+        from porepy.params import rock as pp_rock
+
+        self.PERMEABILITY = 1
+        self.THERMAL_EXPANSION = 1
+        self.DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
+
+        # Lamé parameters
+        self.YOUNG_MODULUS = (
+            49 * pp.GIGA * pp.PASCAL
+        )  # Krietsch et al 2018 (Data Descriptor) - Dynamic E
+        self.POISSON_RATIO = (
+            0.32  # Krietsch et al 2018 (Data Descriptor) - Dynamic Poisson
+        )
+        self.LAMBDA, self.MU = pp_rock.lame_from_young_poisson(
+            self.YOUNG_MODULUS, self.POISSON_RATIO
+        )
+
+        self.FRICTION_COEFFICIENT = 0.8  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
+        self.POROSITY = 0.7 / 100
+
+    def lithostatic_pressure(self, depth):
+        """ Lithostatic pressure.
+
+        NOTE: Returns positive values for positive depths.
+        Use the negative value when working with compressive
+        boundary conditions.
+        """
+        rho = self.DENSITY
+        return rho * depth * pp.GRAVITY_ACCELERATION
+
+
 # --- Models ---
 
 
@@ -86,6 +121,9 @@ class BaseParameters(BaseModel):
 
     # Fluid and temperature. Default is ISC temp (11 C).
     fluid: pp.UnitFluid = pp.Water(theta_ref=11)
+
+    # Rock parameters
+    rock: pp.UnitRock = pp.Granite(theta_ref=11)
 
     # --- Validators ---
 

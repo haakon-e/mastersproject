@@ -1,25 +1,22 @@
 import logging
-import time
 from typing import Dict, Tuple
 
-import scipy.sparse.linalg as spla
 import numpy as np
 import pendulum
 
 import GTS as gts
 import porepy as pp
 from GTS.isc_modelling.ISCGrid import create_grid
-from GTS.isc_modelling.general_model import ModelHelperMethods
-from GTS.isc_modelling.parameter import BaseParameters
+from GTS.isc_modelling.general_model import CommonAbstractModel
+from GTS.isc_modelling.parameter import BaseParameters, GrimselGranodiorite
 from mastersproject.util.logging_util import timer, trace
-from porepy.models.abstract_model import AbstractModel
 from porepy.models.contact_mechanics_model import ContactMechanics
 from porepy.params.data import add_nonpresent_dictionary
 
 logger = logging.getLogger(__name__)
 
 
-class Mechanics(AbstractModel, ModelHelperMethods):
+class Mechanics(CommonAbstractModel):
     def __init__(self, params: BaseParameters):
         """ General mechanics model for static contact mechanics
 
@@ -27,8 +24,7 @@ class Mechanics(AbstractModel, ModelHelperMethods):
         ----------
         params : BaseParameters
         """
-        super().__init__()
-        self.params = params
+        super().__init__(params)
 
         # Variables
         self.displacement_variable = "u"
@@ -95,12 +91,6 @@ class Mechanics(AbstractModel, ModelHelperMethods):
 
     # --- Set parameters ---
 
-    def set_rock(self) -> None:
-        """ Set rock properties of unit rock.
-        """
-
-        self.rock = pp.UnitRock(theta_ref=11)
-
     def rock_friction_coefficient(self, g: pp.Grid) -> np.ndarray:  # noqa
         """ The friction coefficient is uniform, and equal to 1.
 
@@ -118,12 +108,12 @@ class Mechanics(AbstractModel, ModelHelperMethods):
             if g.dim == self.Nd:
                 # Rock parameters
                 lam = (
-                    self.rock.LAMBDA
+                    self.params.rock.LAMBDA
                     * (pp.PASCAL / self.params.scalar_scale)
                     * np.ones(g.num_cells)
                 )
                 mu = (
-                    self.rock.MU
+                    self.params.rock.MU
                     * (pp.PASCAL / self.params.scalar_scale)
                     * np.ones(g.num_cells)
                 )
@@ -197,7 +187,7 @@ class Mechanics(AbstractModel, ModelHelperMethods):
         Assign discretizations to the nodes and edges of the grid bucket.
         """
         gb = self.gb
-        Nd = self.Nd
+        nd = self.Nd
         # Shorthand
         key_m, var_m = self.mechanics_parameter_key, self.displacement_variable
         var_contact = self.contact_traction_variable
@@ -209,30 +199,30 @@ class Mechanics(AbstractModel, ModelHelperMethods):
 
         # We need a void discretization for the contact traction variable defined on
         # the fractures.
-        empty_discr = pp.VoidDiscretization(key_m, ndof_cell=Nd)
+        empty_discr = pp.VoidDiscretization(key_m, ndof_cell=nd)
 
         # Assign node discretizations
         for g, d in gb:
             add_nonpresent_dictionary(d, discr_key)
 
-            if g.dim == Nd:
+            if g.dim == nd:
                 d[discr_key].update({
                     var_m: {"mpsa": mpsa},
                 })
 
-            elif g.dim == Nd - 1:
+            elif g.dim == nd - 1:
                 d[discr_key].update({
                     var_contact: {"empty": empty_discr},
                 })
 
         # Define the contact condition on the mortar grid
-        coloumb = pp.ColoumbContact(key_m, Nd, mpsa)
+        coloumb = pp.ColoumbContact(key_m, nd, mpsa)
         contact = pp.PrimalContactCoupling(key_m, mpsa, coloumb)
 
         for e, d in gb.edges():
             g_l, g_h = gb.nodes_of_edge(e)
             add_nonpresent_dictionary(d, coupling_discr_key)
-            if g_h.dim == Nd:
+            if g_h.dim == nd:
                 d[coupling_discr_key].update({
                     self.friction_coupling_term: {
                         g_h: (var_m, "mpsa"),
@@ -313,7 +303,6 @@ class Mechanics(AbstractModel, ModelHelperMethods):
         """
         self._prepare_grid()
 
-        self.Nd = self.gb.dim_max()
         self.set_mechanics_parameters()
         self.assign_mechanics_variables()
         self.assign_mechanics_discretizations()
@@ -356,40 +345,6 @@ class Mechanics(AbstractModel, ModelHelperMethods):
         else:
             raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
 
-    @timer(logger, level="INFO")
-    def assemble_and_solve_linear_system(self, tol: float) -> np.ndarray:
-        """ Assemble a solve the linear system"""
-
-        A, b = self.assembler.assemble_matrix_rhs()  # noqa
-
-        # Estimate condition number
-        logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")
-        logger.info(
-            f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and "
-            f"min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum."
-        )
-
-        # UMFPACK Estimate of condition number
-        sum_diag_abs_A = np.abs(A.diagonal())
-        logger.info(
-            f"UMFPACK Condition number estimate: "
-            f"{np.min(sum_diag_abs_A) / np.max(sum_diag_abs_A) :.2e}"
-        )
-
-        if self.params.linear_solver == "direct":
-            tic = time.time()
-            logger.info("Solve Ax=b using scipy")
-            sol = spla.spsolve(A, b)
-            logger.info(f"Done. Elapsed time {time.time() - tic}")
-            logger.info(f"||b-Ax|| = {np.linalg.norm(b - A * sol)}")
-            logger.info(
-                f"||b-Ax|| / ||b|| = {np.linalg.norm(b - A * sol) / np.linalg.norm(b)}"
-            )
-            return sol
-
-        else:
-            raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
-
     def _check_convergence_mechanics(self, solution, prev_solution, init_solution, nl_params):
         """ Check convergence and compute error of matrix displacement variable"""
         var_m = self.displacement_variable
@@ -426,7 +381,7 @@ class Mechanics(AbstractModel, ModelHelperMethods):
                 converged = True
             error_mech = difference_in_iterates_mech / difference_from_init_mech
 
-        logger.info(f"Error in matrix displacement is {error_mech}"
+        logger.info(f"Error in matrix displacement is {error_mech:.6e}"
                     f"Matrix displacement {'converged' if converged else 'did not converge'}. ")
 
         return error_mech, converged, diverged
@@ -473,7 +428,7 @@ class Mechanics(AbstractModel, ModelHelperMethods):
                     difference_in_iterates_contact / difference_from_init_contact
             )
 
-        logger.info(f"Error in contact force is {error_contact}.\n"
+        logger.info(f"Error in contact force is {error_contact:.6e}.\n"
                     f"Contact force {'converged' if converged else 'did not converge'}.")
 
         return error_contact, converged, diverged
@@ -486,14 +441,13 @@ class Mechanics(AbstractModel, ModelHelperMethods):
             nl_params: Dict,
     ) -> Tuple[np.ndarray, bool, bool]:
 
+        # Convergence check for linear problems
         if not self._is_nonlinear_problem():
-            # At least for the default direct solver, scipy.sparse.linalg.spsolve, no
-            # error (but a warning) is raised for singular matrices, but a nan solution
-            # is returned. We check for this.
-            diverged = np.any(np.isnan(solution))
-            converged = not diverged
-            error = np.nan if diverged else 0
-            return error, converged, diverged
+            return super().check_convergence(
+                solution, prev_solution, init_solution, nl_params
+            )
+
+        # -- Calculate mechanics error for non-linear simulations --
 
         error_mech, converged_mech, diverged_mech = self._check_convergence_mechanics(
             solution, prev_solution, init_solution, nl_params,
@@ -520,33 +474,6 @@ class Mechanics(AbstractModel, ModelHelperMethods):
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
         self.assembler.discretize(term_filter=[self.friction_coupling_term])
-
-    def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
-        """ Actions after each Newton iteration
-
-        For instance; update_state updates the non-linear terms.
-
-        Parameters:
-            solution_vector : np.ndarray
-                solution vector for the current iterate.
-
-        Returns:
-            (np.array): displacement solution vector for the Nd grid.
-
-        """
-        self.update_state(solution_vector)
-
-    def after_newton_convergence(self, solution, errors, iteration_counter) -> None:
-        """ On Newton convergence, update STATE for all variables."""
-        self.assembler.distribute_variable(solution)
-        self.export_step()
-
-    def after_newton_failure(self, solution, errors, iteration_counter) -> None:
-        """ Raise ValueError for failed Newton iteration"""
-        non_linear_error = "Newton iterations did not converge"
-        linear_error = "Tried solving singular matrix for the linear problem."
-        error_type = non_linear_error if self._is_nonlinear_problem() else linear_error
-        raise ValueError(error_type)
 
     def update_state(self, solution_vector: np.ndarray) -> None:
         """ Update variables for the current Newton iteration.
@@ -667,7 +594,7 @@ class Mechanics(AbstractModel, ModelHelperMethods):
 
         """
         var_mortar = self.mortar_displacement_variable
-        Nd = self.Nd
+        nd = self.Nd
 
         mg: pp.MortarGrid = data_edge["mortar_grid"]
         if from_iterate:
@@ -676,8 +603,8 @@ class Mechanics(AbstractModel, ModelHelperMethods):
             mortar_u = data_edge[pp.STATE][var_mortar]
 
         displacement_jump_global_coord = (
-            mg.mortar_to_slave_avg(nd=Nd)
-            * mg.sign_of_mortar_sides(nd=Nd)
+            mg.mortar_to_slave_avg(nd=nd)
+            * mg.sign_of_mortar_sides(nd=nd)
             * mortar_u
         )
         projection: pp.TangentialNormalProjection = data_edge["tangential_normal_projection"]
@@ -685,40 +612,13 @@ class Mechanics(AbstractModel, ModelHelperMethods):
         # Rotated displacement jumps. these are in the local coordinates, on the fracture.
         project_to_local = projection.project_tangential_normal(int(mg.num_cells / 2))
         u_mortar_local = project_to_local * displacement_jump_global_coord
-        return u_mortar_local.reshape((Nd, -1), order="F")
-
-    def get_state_vector(self) -> np.ndarray:
-        """ Get a vector of the current state of the variables; with the same ordering
-            as in the assembler.
-
-        Returns:
-            np.array: The current state, as stored in the GridBucket.
-
-        """
-        size = self.assembler.num_dof()
-        state = np.zeros(size)
-        for g, var in self.assembler.block_dof.keys():
-            # Index of
-            ind = self.assembler.dof_ind(g, var)
-
-            if isinstance(g, tuple):
-                values = self.gb.edge_props(g)[pp.STATE][var]
-            else:
-                values = self.gb.node_props(g)[pp.STATE][var]
-            state[ind] = values
-
-        return state
+        return u_mortar_local.reshape((nd, -1), order="F")
 
     # --- Exporting and visualization ---
 
     def set_viz(self) -> None:
         """ Set exporter for visualization """
-        if not self.viz:
-            self.viz = pp.Exporter(
-                self.gb,
-                file_name=self.params.viz_file_name,
-                folder_name=self.params.folder_name,
-            )
+        super().set_viz()
 
         self.u_exp = "u_exp"  # noqa
         self.traction_exp = "traction_exp"  # noqa
@@ -788,6 +688,7 @@ class Mechanics(AbstractModel, ModelHelperMethods):
 
     def export_step(self, write_vtk: bool = True) -> None:
         """ Export a visualization step"""
+        super().export_step(write_vtk=False)
         self.save_frac_jump_data()
         self.save_matrix_displacements()
         self.save_contact_traction()
@@ -932,14 +833,11 @@ class ContactMechanicsISC(ContactMechanics):
         self.box = scaled_box
         self.network = network
 
-        self.Nd = self.gb.dim_max()
-
     def set_grid(self, gb: pp.GridBucket):
         """ Set a new grid
         """
         self.gb = gb
         pp.contact_conditions.set_projections(self.gb)
-        self.Nd = gb.dim_max()
         self.n_frac = gb.get_grids(lambda _g: _g.dim == self.Nd - 1).size
         self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids.
 
@@ -1338,38 +1236,3 @@ class ContactMechanicsISC(ContactMechanics):
         (See Krietsch et al, 2018a)
         """
         return 480.0 * pp.METER - self.length_scale * coords[2]
-
-
-# Define the rock type at Grimsel Test Site
-class GrimselGranodiorite(pp.UnitRock):
-    def __init__(self):
-        super().__init__()
-        from porepy.params import rock as pp_rock
-
-        self.PERMEABILITY = 1
-        self.THERMAL_EXPANSION = 1
-        self.DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
-
-        # Lamé parameters
-        self.YOUNG_MODULUS = (
-            49 * pp.GIGA * pp.PASCAL
-        )  # Krietsch et al 2018 (Data Descriptor) - Dynamic E
-        self.POISSON_RATIO = (
-            0.32  # Krietsch et al 2018 (Data Descriptor) - Dynamic Poisson
-        )
-        self.LAMBDA, self.MU = pp_rock.lame_from_young_poisson(
-            self.YOUNG_MODULUS, self.POISSON_RATIO
-        )
-
-        self.FRICTION_COEFFICIENT = 0.8  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
-        self.POROSITY = 0.7 / 100
-
-    def lithostatic_pressure(self, depth):
-        """ Lithostatic pressure.
-
-        NOTE: Returns positive values for positive depths.
-        Use the negative value when working with compressive
-        boundary conditions.
-        """
-        rho = self.DENSITY
-        return rho * depth * pp.GRAVITY_ACCELERATION

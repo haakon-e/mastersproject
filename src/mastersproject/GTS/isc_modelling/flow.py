@@ -3,13 +3,11 @@ import time
 from typing import Dict, Optional
 
 import numpy as np
-import scipy.sparse.linalg as spla
 
 import porepy as pp
 from GTS.isc_modelling.ISCGrid import create_grid
-from GTS.isc_modelling.general_model import ModelHelperMethods
+from GTS.isc_modelling.general_model import CommonAbstractModel
 from GTS.isc_modelling.parameter import BaseParameters, FlowParameters
-from porepy.models.abstract_model import AbstractModel
 from porepy.params.data import add_nonpresent_dictionary
 from porepy.utils.derived_discretizations import implicit_euler
 from util.logging_util import timer, trace
@@ -17,7 +15,7 @@ from util.logging_util import timer, trace
 logger = logging.getLogger(__name__)
 
 
-class Flow(AbstractModel, ModelHelperMethods):
+class Flow(CommonAbstractModel):
     """ General flow model for time-dependent Darcy Flow for fractured porous media"""
 
     def __init__(self, params: BaseParameters):
@@ -27,8 +25,7 @@ class Flow(AbstractModel, ModelHelperMethods):
         ----------
         params : BaseParameters
         """
-        super().__init__()
-        self.params = params
+        super().__init__(params)
 
         # Time (must be kept for compatibility with pp.run_time_dependent_model)
         self.time = self.params.time
@@ -55,8 +52,6 @@ class Flow(AbstractModel, ModelHelperMethods):
             gb (pp.GridBucket): The produced grid bucket.
             bounding_box (dict): The bounding box of the domain, defined
                 through minimum and maximum values in each dimension.
-            Nd (int): The dimension of the matrix, i.e., the highest dimension in the
-                grid bucket.
 
         After self.gb is set, the method should also call
 
@@ -117,22 +112,22 @@ class Flow(AbstractModel, ModelHelperMethods):
         gb = self.gb
 
         # Set to 0 for steady state
-        compressibility = self.params.fluid.COMPRESSIBILITY * (
+        compressibility: np.ndarray = self.params.fluid.COMPRESSIBILITY * (
             self.params.scalar_scale / pp.PASCAL
         )  # scaled. [1/Pa]
         for g, d in gb:
-            porosity = self.porosity(g)  # Default: 1 [-]
+            porosity: np.ndarray = self.porosity(g)  # Default: 1 [-]
             # specific volume
-            specific_volume = self.specific_volume(g, scaled=True)
+            specific_volume: np.ndarray = self.specific_volume(g, scaled=True)
 
             # Boundary and source conditions
-            bc = self.bc_type_scalar(g)
-            bc_values = self.bc_values_scalar(g)  # Already scaled
-            source_values = self.source_scalar(g)  # Already scaled
+            bc: pp.BoundaryCondition = self.bc_type_scalar(g)
+            bc_values: np.ndarray = self.bc_values_scalar(g)  # Already scaled
+            source_values: np.ndarray = self.source_scalar(g)  # Already scaled
 
             # Mass weight  # TODO: Simplified version of mass_weight?
             mass_weight = (
-                compressibility * porosity * specific_volume * np.ones(g.num_cells)
+                compressibility * porosity * specific_volume
             )
 
             # Initialize data
@@ -152,11 +147,11 @@ class Flow(AbstractModel, ModelHelperMethods):
         # Set permeability on grid, fracture and mortar grids.
         self.set_permeability_from_aperture()
 
-    def permeability(self, g):
-        return 1
+    def permeability(self, g) -> np.ndarray:
+        return np.ones(g.num_cells)
 
-    def porosity(self, g):
-        return 1
+    def porosity(self, g) -> np.ndarray:
+        return np.ones(g.num_cells)
 
     def set_permeability_from_aperture(self) -> None:
         """ Set permeability by cubic law in fractures.
@@ -172,8 +167,11 @@ class Flow(AbstractModel, ModelHelperMethods):
         )
         for g, d in gb:
             # permeability [m2] (scaled)
-            k = self.permeability(g) * (pp.METER / self.params.length_scale) ** 2
-            logger.info(f"Scaled permeability in dim {g.dim} set to {k:.3e}")
+            k: np.ndarray = self.permeability(g) * (pp.METER / self.params.length_scale) ** 2
+            logger.info(f"Scaled permeability in dim {g.dim} has "
+                        f"min value {k.min():.3e}; "
+                        f"mean value {k.mean():.3e}; "
+                        f"max value {k.max():.3e}")
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -238,9 +236,9 @@ class Flow(AbstractModel, ModelHelperMethods):
         for _, d in gb.edges():
             add_nonpresent_dictionary(d, primary_vars)
 
-            d[primary_vars].update(
-                {self.mortar_scalar_variable: {"cells": 1},}  # noqa: E231
-            )
+            d[primary_vars].update({
+                self.mortar_scalar_variable: {"cells": 1},
+            })
 
     def assign_scalar_discretizations(self) -> None:
         """
@@ -328,7 +326,6 @@ class Flow(AbstractModel, ModelHelperMethods):
         """
         self._prepare_grid()
 
-        self.Nd = self.gb.dim_max()
         self.set_scalar_parameters()
         self.assign_scalar_variables()
         self.assign_scalar_discretizations()
@@ -347,20 +344,19 @@ class Flow(AbstractModel, ModelHelperMethods):
         solution: np.ndarray,
         prev_solution: np.ndarray,
         init_solution: np.ndarray,
-        nl_params: Dict = None,
+        nl_params: Dict,
     ):
-
+        # Convergence check for linear problems
         if not self._is_nonlinear_problem():
-            # At least for the default direct solver, scipy.sparse.linalg.spsolve, no
-            # error (but a warning) is raised for singular matrices, but a nan solution
-            # is returned. We check for this.
-            diverged = np.any(np.isnan(solution))
-            converged = not diverged
-            error = np.nan if diverged else 0
-            return error, converged, diverged
+            return super().check_convergence(
+                solution, prev_solution, init_solution, nl_params
+            )
 
         # -- Calculate the scalar error for non-linear simulations --
         # This code will only be executed if called in a coupled problem.
+
+        var_s = self.scalar_variable
+        ss = self.params.scalar_scale
 
         # Extract convergence tolerance
         tol_convergence = nl_params.get("nl_convergence_tol")
@@ -372,13 +368,13 @@ class Flow(AbstractModel, ModelHelperMethods):
         scalar_dof = np.array([], dtype=np.int)
         for g, _ in self.gb:
             scalar_dof = np.hstack(
-                (scalar_dof, self.assembler.dof_ind(g, self.scalar_variable))
+                (scalar_dof, self.assembler.dof_ind(g, var_s))
             )
 
         # Unscaled pressure solutions
-        scalar_now = solution[scalar_dof] * self.params.scalar_scale
-        scalar_prev = prev_solution[scalar_dof] * self.params.scalar_scale
-        scalar_init = init_solution[scalar_dof] * self.params.scalar_scale
+        scalar_now = solution[scalar_dof] * ss
+        scalar_prev = prev_solution[scalar_dof] * ss
+        scalar_init = init_solution[scalar_dof] * ss
 
         # Calculate norms
         # scalar_norm = np.sum(scalar_now ** 2)
@@ -392,7 +388,7 @@ class Flow(AbstractModel, ModelHelperMethods):
         ):  # and scalar_norm < tol_convergence
             converged = True
             error_scalar = difference_in_iterates_scalar
-            logger.info(f"pressure converged absolutely")
+            logger.info(f"Pressure converged absolutely")
         else:
             # Relative convergence criterion:
             if (
@@ -400,11 +396,13 @@ class Flow(AbstractModel, ModelHelperMethods):
                 < tol_convergence * difference_from_init_scalar
             ):
                 converged = True
-                logger.info(f"pressure converged relatively")
+                logger.info(f"Pressure converged relatively")
 
             error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
 
         logger.info(f"Error in pressure is {error_scalar:.6e}.")
+        if not converged:
+            logger.info(f"Scalar pressure did not converge.")
 
         return error_scalar, converged, diverged
 
@@ -437,39 +435,6 @@ class Flow(AbstractModel, ModelHelperMethods):
         else:
             raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
 
-    @timer(logger, level="INFO")
-    def assemble_and_solve_linear_system(self, tol):
-        """ Assemble a solve the linear system"""
-
-        A, b = self.assembler.assemble_matrix_rhs()  # noqa
-
-        # Estimate condition number
-        logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")
-        logger.info(
-            f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and "
-            f"min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum."
-        )
-
-        # UMFPACK Estimate of condition number
-        logger.info(
-            f"UMFPACK Condition number estimate: "
-            f"{np.min(np.abs(A.diagonal())) / np.max(np.abs(A.diagonal())) :.2e}"
-        )
-
-        if self.params.linear_solver == "direct":
-            tic = time.time()
-            logger.info("Solve Ax=b using scipy")
-            sol = spla.spsolve(A, b)
-            logger.info(f"Done. Elapsed time {time.time() - tic}")
-            logger.info(f"||b-Ax|| = {np.linalg.norm(b - A * sol)}")
-            logger.info(
-                f"||b-Ax|| / ||b|| = {np.linalg.norm(b - A * sol) / np.linalg.norm(b)}"
-            )
-            return sol
-
-        else:
-            raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
-
     # --- Newton iterations ---
 
     def before_newton_loop(self):
@@ -480,71 +445,17 @@ class Flow(AbstractModel, ModelHelperMethods):
         """
         self.set_scalar_parameters()
 
-    def before_newton_iteration(self) -> None:
-        # Re-discretize the nonlinear term
-        # (flow is linear)
-        pass
-
-    def after_newton_iteration(self, solution: np.ndarray) -> None:
-        pass
-
-    def after_newton_convergence(self, solution, errors, iteration_counter):
-        """ Overwrite from parent to export solution steps."""
-        self.assembler.distribute_variable(solution)
-        self.export_step()
-
     def after_simulation(self):
         """ Called after a time-dependent problem
         """
         self.export_pvd()
         logger.info(f"Solution exported to folder \n {self.params.folder_name}")
 
-    def after_newton_failure(self, solution, errors, iteration_counter):
-        """ Instead of raising error on failure, save and return available data.
-        """
-        if self._is_nonlinear_problem():
-            raise ValueError("Newton iterations did not converge")
-        else:
-            raise ValueError("Tried solving singular matrix for the linear problem.")
-
-    # --- Helper methods ---
-
-    def get_state_vector(self):
-        """ Get a vector of the current state of the variables; with the same ordering
-            as in the assembler.
-
-        Returns:
-            np.array: The current state, as stored in the GridBucket.
-
-        """
-        size = self.assembler.num_dof()
-        state = np.zeros(size)
-        for g, var in self.assembler.block_dof.keys():
-            # Index of
-            ind = self.assembler.dof_ind(g, var)
-
-            if isinstance(g, tuple):
-                values = self.gb.edge_props(g)[pp.STATE][var]
-            else:
-                values = self.gb.node_props(g)[pp.STATE][var]
-            state[ind] = values
-
-        return state
-
-    def _is_nonlinear_problem(self):  # noqa
-        """ flow problems are linear even with fractures """
-        return False
-
     # --- Exporting and visualization ---
 
     def set_viz(self):
         """ Set exporter for visualization """
-        if not self.viz:
-            self.viz = pp.Exporter(
-                self.gb,
-                file_name=self.params.viz_file_name,
-                folder_name=self.params.folder_name,
-            )
+        super().set_viz()
         # list of time steps to export with visualization.
         self.export_times = []  # noqa
 
@@ -556,6 +467,7 @@ class Flow(AbstractModel, ModelHelperMethods):
 
     def export_step(self, write_vtk=True):
         """ Export a step with pressures """
+        super().export_step(write_vtk=False)
         for g, d in self.gb:
             # Export pressure variable
             if self.scalar_variable in d[pp.STATE]:
@@ -615,7 +527,6 @@ class FlowISC(Flow):
 
         # --- COMPUTATIONAL MESH ---
         self._gb: Optional[pp.GridBucket] = None
-        self.Nd: Optional[int] = None
         self.network = None
 
         # ADJUST TIME STEP WITH PERMEABILITY
@@ -661,7 +572,6 @@ class FlowISC(Flow):
         )
         self.gb = gb
         self.bounding_box = gb.bounding_box(as_dict=True)
-        self.Nd = self.gb.dim_max()
         self.network = network
 
     @property
@@ -676,7 +586,6 @@ class FlowISC(Flow):
         if gb is None:
             return
         pp.contact_conditions.set_projections(self.gb)
-        self.Nd = gb.dim_max()
         self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids.
 
         # Set the bounding box

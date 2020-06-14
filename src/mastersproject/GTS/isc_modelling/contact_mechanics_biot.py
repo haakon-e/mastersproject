@@ -1,4 +1,5 @@
 import logging
+from typing import Dict, Tuple
 
 import numpy as np
 
@@ -35,18 +36,19 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         key_s = self.scalar_parameter_key
 
         for g, d in self.gb:
-            mech_params = d[pp.PARAMETERS][key_m]
-            scalar_params = d[pp.PARAMETERS][key_s]
+            params: pp.Parameters = d[pp.PARAMETERS]
+
             alpha = self.biot_alpha(g)
-
-            mech_params.update({
+            mech_params = {
                 "biot_alpha": alpha,
-                "time_step": self.time_step,
-            })
+                "time_step": self.time_step,  # TODO: Is this needed?
+            }
+            scalar_params = {"biot_alpha": alpha}
 
-            scalar_params.update({
-                "biot_alpha": alpha,
-            })
+            params.update_dictionaries(
+                [key_m, key_s],
+                [mech_params, scalar_params],
+            )
 
     # --- Primary variables and discretizations ---
 
@@ -74,7 +76,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
             mechanics_keyword=key_m,
             flow_keyword=key_s,
             variable=var_m,
-            mortar_variable=self.mortar_displacement_variable,
+            mortar_variable=var_mortar,
         )
         # Nd
         grad_p_disc = pp.GradP(keyword=key_m)
@@ -140,13 +142,13 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
                             g_h: (var_s, "mass"),
                             g_l: (var_s, "mass"),
                             e: (
-                                self.mortar_displacement_variable,
+                                var_mortar,
                                 fracture_scalar_to_force_balance,  # noqa
                             ),
                         }
                     })
 
-    def discretize_biot(self) -> None:
+    def _discretize_biot(self) -> None:
         """
         To save computational time, the full Biot equation (without contact mechanics)
         is discretized once. This is to avoid computing the same terms multiple times.
@@ -175,7 +177,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         # Discretization is a bit cumbersome, as the Biot discetization removes the
         # one-to-one correspondence between discretization objects and blocks in the matrix.
         # First, Discretize with the biot class
-        self.discretize_biot()
+        self._discretize_biot()
 
         # Next, discretize term on the matrix grid not covered by the Biot discretization,
         # i.e. the source term
@@ -189,14 +191,116 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
                 # No need to discretize edges here, this was done above.
                 self.assembler.discretize(grid=g, edges=False)
 
-    # --- Simulation and solvers ---
+    # --- Initial condition ---
 
     def initial_biot_condition(self) -> None:
         """ Set initial guess for the variables"""
         self.initial_scalar_condition()
         self.initial_mechanics_condition()
 
+        # Set initial guess for mechanical bc values
+        for g, d in self.gb:
+            if g.dim == self.Nd:
+                bc_values = d[pp.PARAMETERS][self.mechanics_parameter_key]["bc_values"]
+                mech_dict = {"bc_values": bc_values}
+                d[pp.STATE].update({self.mechanics_parameter_key: mech_dict})
 
+    # --- Simulation and solvers ---
+
+    @timer(logger)
+    def prepare_simulation(self):
+        """ Is run prior to a time-stepping scheme. Use this to initialize
+        discretizations, linear solvers etc.
+        """
+        self._prepare_grid()
+
+        self.set_biot_parameters()
+        self.assign_biot_variables()
+        self.assign_biot_discretizations()
+        self.initial_biot_condition()
+        self.discretize()
+        self.initialize_linear_solver()
+
+        self.set_viz()
+
+    def check_convergence(
+            self,
+            solution: np.ndarray,
+            prev_solution: np.ndarray,
+            init_solution: np.ndarray,
+            nl_params: Dict,
+    ) -> Tuple[np.ndarray, bool, bool]:
+        error_s, converged_s, diverged_s = super(ContactMechanicsBiotBase, self).check_convergence(
+            solution, prev_solution, init_solution, nl_params,
+        )
+        error_m, converged_m, diverged_m = super(Flow, self).check_convergence(
+            solution, prev_solution, init_solution, nl_params,
+        )
+
+        converged = converged_m and converged_s
+        diverged = diverged_m or diverged_s
+
+        # Return matrix displacement error only
+        return error_m, converged, diverged
+
+    # --- Newton iterations ---
+
+    def before_newton_loop(self) -> None:
+        """ Will be run before entering a Newton loop.
+        E.g.
+           Discretize time-dependent quantities etc.
+           Update time-dependent parameters (captured by assembly).
+        """
+        self.set_scalar_parameters()
+        self.set_mechanics_parameters()
+
+    def before_newton_iteration(self) -> None:
+        # Re-discretize the nonlinear term
+        self.assembler.discretize(term_filter=[self.friction_coupling_term])
+
+    def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
+        """ Actions after each Newton iteration
+
+        For instance; update_state updates the non-linear terms.
+
+        Parameters:
+            solution_vector : np.ndarray
+                solution vector for the current iterate.
+
+        Returns:
+            (np.array): displacement solution vector for the Nd grid.
+
+        """
+        self.update_state(solution_vector)
+
+    def after_newton_convergence(self, solution, errors, iteration_counter) -> None:
+        super().after_newton_convergence(solution, errors, iteration_counter)
+        self.save_mechanical_bc_values()
+
+    def save_mechanical_bc_values(self) -> None:
+        """
+        The div_u term uses the mechanical bc values for both current and previous time
+        step. In the case of time dependent bc values, these must be updated. As this
+        is very easy to overlook, we do it by default.
+        """
+        key = self.mechanics_parameter_key
+        g = self.gb.grids_of_dimension(self.Nd)[0]
+        d = self.gb.node_props(g)
+        d[pp.STATE][key]["bc_values"] = d[pp.PARAMETERS][key]["bc_values"].copy()
+
+    # --- Exporting and visualization ---
+
+    def set_viz(self):
+        pass
+
+    def export_step(self, write_vtk=True):
+        super().export_step(write_vtk=False)
+
+        if write_vtk:
+            self.viz.write_vtk(
+                data=self.export_fields, time_step=self.time
+            )  # Write visualization
+            self.export_times.append(self.time)
 
     # --- Helper methods ---
 
