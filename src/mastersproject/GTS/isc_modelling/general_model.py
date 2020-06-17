@@ -164,10 +164,13 @@ class CommonAbstractModel(AbstractModel):
             logger.info("Solve Ax=b using scipy")
             sol = spla.spsolve(A, b)
             logger.info(f"Done. Elapsed time {time.time() - tic}")
-            logger.info(f"||b-Ax|| = {np.linalg.norm(b - A * sol)}")
-            logger.info(
-                f"||b-Ax|| / ||b|| = {np.linalg.norm(b - A * sol) / np.linalg.norm(b)}"
-            )
+            norm = np.linalg.norm(b - A * sol)
+            logger.info(f"||b-Ax|| = {norm}")
+
+            rhs_norm = np.linalg.norm(b)
+            identical_zero = np.isclose(rhs_norm, 0) and np.isclose(norm, 0)
+            rel_norm = norm / rhs_norm if not identical_zero else norm
+            logger.info(f"||b-Ax|| / ||b|| = {rel_norm}")
             return sol
 
         else:

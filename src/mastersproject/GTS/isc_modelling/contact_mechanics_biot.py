@@ -290,9 +290,6 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
 
     # --- Exporting and visualization ---
 
-    def set_viz(self):
-        pass
-
     def export_step(self, write_vtk=True):
         super().export_step(write_vtk=False)
 

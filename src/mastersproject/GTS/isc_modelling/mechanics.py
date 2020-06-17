@@ -481,8 +481,9 @@ class Mechanics(CommonAbstractModel):
         Extract parts of the solution for current iterate.
 
         The iterate solutions in d[pp.STATE]["previous_iterate"]
-        are updated for the mortar displacements and contact
-        traction are updated.
+        are updated for
+            - mortar displacements
+            - contact traction
         Method is a tailored copy from assembler.distribute_variable.
 
         Parameters:
@@ -541,6 +542,10 @@ class Mechanics(CommonAbstractModel):
                 Default: False.
 
         """
+        # TODO: Currently 'reconstruct_stress' does not work if 'previous_iterate = True'
+        #  since the displacement variable on Nd-grid is not stored in "previous_iterate".
+        if previous_iterate is True:
+            raise ValueError("Not yet implemented.")
         g = self._nd_grid()
         d = self.gb.node_props(g)
         key_m = self.mechanics_parameter_key
@@ -565,7 +570,7 @@ class Mechanics(CommonAbstractModel):
         stress += bound_stress_discr * global_bc_val
 
         # Contributions from the mortar displacement variables
-        for e, d_e in self.gb:
+        for e, d_e in self.gb.edges():
             # Only contributions from interfaces to the highest dimensional grid
             mg: pp.MortarGrid = d_e["mortar_grid"]
             if mg.dim == self.Nd - 1:
@@ -624,13 +629,34 @@ class Mechanics(CommonAbstractModel):
         self.traction_exp = "traction_exp"  # noqa
         self.normal_frac_u = "normal_frac_u"  # noqa
         self.tangential_frac_u = "tangential_frac_u"  # noqa
+        self.stress_exp = "stress_exp"  # noqa
 
-        self.export_fields.extend(
-            [self.u_exp, self.traction_exp, self.normal_frac_u, self.tangential_frac_u]
-        )
+        self.export_fields.extend([
+            self.u_exp,
+            self.traction_exp,
+            self.normal_frac_u,
+            self.tangential_frac_u,
+            # Cannot save variables that are defined on faces:
+            # self.stress_exp,
+        ])
 
-    def save_frac_jump_data(self, from_iterate: bool = True) -> None:
-        """ Save normal and tangential jumps to a class attribute
+    def save_matrix_stress(self, from_iterate: bool = False) -> None:
+        """ Save upscaled matrix stress state to a class attribute """
+        self.reconstruct_stress(from_iterate)
+        gb = self.gb
+        nd = self.Nd
+        ss = self.params.scalar_scale
+
+        for g, d in gb:
+            state = d[pp.STATE]  # type: Dict[str, np.ndarray]
+            if g.dim == nd:
+                stress_exp = state["stress"].reshape((nd, -1), order="F").copy() * ss
+            else:
+                stress_exp = np.zeros((nd, g.num_faces))
+            state[self.stress_exp] = stress_exp
+
+    def save_frac_jump_data(self, from_iterate: bool = False) -> None:
+        """ Save upscaled normal and tangential jumps to a class attribute
         Inspired by Keilegavlen 2019 (code)
         """
         gb = self.gb
@@ -660,7 +686,7 @@ class Mechanics(CommonAbstractModel):
             d[pp.STATE][self.tangential_frac_u] = tangential_jump
 
     def save_matrix_displacements(self) -> None:
-        """ Save 3d matrix displacements"""
+        """ Save upscaled matrix displacements"""
         gb = self.gb
         nd = self.Nd
         var_m = self.displacement_variable
@@ -670,10 +696,12 @@ class Mechanics(CommonAbstractModel):
             state = d[pp.STATE]  # type: Dict[str, np.ndarray]
             if g.dim == nd:
                 u_exp = state[var_m].reshape((nd, -1), order="F").copy() * ls
-                state[self.u_exp] = u_exp
+            else:
+                u_exp = np.zeros((nd, g.num_cells))
+            state[self.u_exp] = u_exp
 
     def save_contact_traction(self) -> None:
-        """ Save fracture contact traction"""
+        """ Save upscaled fracture contact traction"""
         gb = self.gb
         var_contact = self.contact_traction_variable
         ls = self.params.length_scale
@@ -684,7 +712,9 @@ class Mechanics(CommonAbstractModel):
             if g.dim == self.Nd - 1:
                 traction = state[var_contact].reshape((self.Nd, -1), order="F")
                 traction_exp = traction * ss * (ls ** 2)
-                state[self.traction_exp] = traction_exp
+            else:
+                traction_exp = np.zeros((self.Nd, g.num_cells))
+            state[self.traction_exp] = traction_exp
 
     def export_step(self, write_vtk: bool = True) -> None:
         """ Export a visualization step"""
@@ -692,6 +722,7 @@ class Mechanics(CommonAbstractModel):
         self.save_frac_jump_data()
         self.save_matrix_displacements()
         self.save_contact_traction()
+        self.save_matrix_stress()
 
         if write_vtk:
             self.viz.write_vtk(data=self.export_fields, time_dependent=False)
