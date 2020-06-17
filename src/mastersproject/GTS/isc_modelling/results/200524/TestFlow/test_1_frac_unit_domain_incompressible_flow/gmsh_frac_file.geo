@@ -131,4 +131,4 @@ Physical Point("DOMAIN_BOUNDARY_POINT_8") = {p11};
 Physical Point("FRACTURE_BOUNDARY_POINT_0") = {p0};
 Physical Point("FRACTURE_BOUNDARY_POINT_1") = {p2};
 // End of physical point specification
-
+Recombine3D;
