@@ -159,6 +159,7 @@ class BaseParameters(BaseModel):
 class GeometryParameters(BaseParameters):
     """ Parameters for geometry"""
 
+    # Define identifying names for shear zones and the intact 3d matrix.
     shearzone_names: Optional[List[str]] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
     intact_name: str = "intact"
 
@@ -232,6 +233,11 @@ class FlowParameters(GeometryParameters):
             assert "borehole" in v
             assert v["shearzone"] in values["shearzone_names"]
         return v
+
+
+class BiotParameters(FlowParameters, MechanicsParameters):
+    """ Parameters for the Biot problem with contact mechanics"""
+    alpha: float = 1
 
 
 # --- Flow injection cell taggers ---
