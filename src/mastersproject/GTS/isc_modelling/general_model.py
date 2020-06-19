@@ -142,6 +142,7 @@ class CommonAbstractModel(AbstractModel):
     @timer(logger, level="INFO")
     def assemble_and_solve_linear_system(self, tol: float) -> np.ndarray:
         """ Assemble a solve the linear system"""
+        from pypardiso import spsolve
 
         A, b = self.assembler.assemble_matrix_rhs()  # noqa
 
@@ -162,7 +163,8 @@ class CommonAbstractModel(AbstractModel):
         if self.params.linear_solver == "direct":
             tic = time.time()
             logger.info("Solve Ax=b using scipy")
-            sol = spla.spsolve(A, b)
+            # sol = spla.spsolve(A, b)
+            sol = spsolve(A, b)  # pypardiso
             logger.info(f"Done. Elapsed time {time.time() - tic}")
             norm = np.linalg.norm(b - A * sol)
             logger.info(f"||b-Ax|| = {norm}")
