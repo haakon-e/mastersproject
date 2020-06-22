@@ -349,14 +349,15 @@ class Mechanics(CommonAbstractModel):
         """ Check convergence and compute error of matrix displacement variable"""
         var_m = self.displacement_variable
         g_max = self._nd_grid()
-        ss = self.params.scalar_scale
+        # NOTE: In previous simulations, this was erronuously scalar scale.
+        ls = self.params.length_scale
 
         # Get the solution from current and previous iterates,
         # as well as the initial guess.
         mech_dof = self.assembler.dof_ind(g_max, var_m)
-        u_mech_now = solution[mech_dof] * ss
-        u_mech_prev = prev_solution[mech_dof] * ss
-        u_mech_init = init_solution[mech_dof] * ss
+        u_mech_now = solution[mech_dof] * ls
+        u_mech_prev = prev_solution[mech_dof] * ls
+        u_mech_init = init_solution[mech_dof] * ls
 
         # Calculate errors
         difference_in_iterates_mech = np.sum((u_mech_now - u_mech_prev) ** 2)
