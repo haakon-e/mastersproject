@@ -297,21 +297,10 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
     gb : pp.GridBucket
     """
     # Shorthand
-    borehole = params.source_scalar_borehole_shearzone.get("borehole")
     shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
 
-    # Compute the intersections between boreholes and shear zones
-    df = ISCData().borehole_plane_intersection()
-
-    # Get the UNSCALED coordinates of the borehole - shearzone intersection.
-    _mask = (df.shearzone == shearzone) & (df.borehole == borehole)
-    result = df.loc[_mask, ("x_sz", "y_sz", "z_sz")]
-    if result.empty:
-        raise ValueError("No intersection found.")
-
-    # Scale the intersection coordinates by length_scale. (scaled)
-    pts = result.to_numpy().T / params.length_scale
-    assert pts.shape == (3, 1), "There should only be one intersection"
+    # Get intersection point
+    pts = shearzone_borehole_intersection(params)
 
     # Get the grid to inject to
     injection_grid = gb.get_grids(lambda g: gb.node_props(g, "name") == shearzone)[0]
@@ -321,6 +310,38 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
 
     # Tag injection grid with 1 in the injection cell
     _tag_injection_cell(gb, injection_grid, pts, params.length_scale)
+
+
+def nd_sides_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
+    """ Tag the Nd cells surrounding a shear zone injection point."""
+    # Shorthand
+    shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
+
+    # First, tag the fracture cell, and get the tag
+    shearzone_injection_cell(params, gb)
+    fracture = gb.get_grids(lambda g: gb.node_props(g, "name") == shearzone)[0]
+    tags = fracture.tags["well_cells"]
+    # Second, map the cell to the Nd grid
+    nd_grid: pp.Grid = gb.grids_of_dimension(gb.dim_max())[0]
+    data_edge = gb.edge_props((fracture, nd_grid))
+    mg: pp.MortarGrid = data_edge["mortar_grid"]
+
+    slave_to_master_face = (
+        mg.mortar_to_master_int()
+        * mg.slave_to_mortar_int()
+    )
+    face_to_cell = nd_grid.cell_faces.T
+    slave_to_master_cell = face_to_cell * slave_to_master_face
+    nd_tags = np.abs(slave_to_master_cell) * tags
+
+    # Set tags on the nd-grid
+    nd_grid.tags["well_cells"] = nd_tags
+    gb.set_node_prop(nd_grid, "well", nd_tags)
+
+    # reset tags on the fracture
+    zeros = np.zeros(fracture.num_cells)
+    fracture.tags["well_cells"] = zeros
+    gb.set_node_prop(fracture, "well", zeros)
 
 
 def _tag_injection_cell(
@@ -353,6 +374,31 @@ def _tag_injection_cell(
         f"ideal (scaled) point coordinate: {pts.T}\n"
         f"nearest (scaled) cell center coordinate: {g.cell_centers[:, ids].T}\n"
     )
+
+
+def _shearzone_borehole_intersection(borehole: str, shearzone: str, length_scale: float):
+    """ Find the cell which is the intersection of a borehole and a shear zone"""
+    # Compute the intersections between boreholes and shear zones
+    df = ISCData().borehole_plane_intersection()
+
+    # Get the UNSCALED coordinates of the borehole - shearzone intersection.
+    _mask = (df.shearzone == shearzone) & (df.borehole == borehole)
+    result = df.loc[_mask, ("x_sz", "y_sz", "z_sz")]
+    if result.empty:
+        raise ValueError("No intersection found.")
+
+    # Scale the intersection coordinates by length_scale. (scaled)
+    pts = result.to_numpy().T / length_scale
+    assert pts.shape == (3, 1), "There should only be one intersection"
+    return pts
+
+
+def shearzone_borehole_intersection(params: FlowParameters):
+    """ Wrapper to get intersection using FlowParameters class"""
+    borehole = params.source_scalar_borehole_shearzone.get("borehole")
+    shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
+    length_scale = params.length_scale
+    return _shearzone_borehole_intersection(borehole, shearzone, length_scale)
 
 
 # --- other models ---
