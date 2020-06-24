@@ -173,7 +173,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
         # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
         if g.dim == nd:
-            pass
+            return aperture
         elif g.dim == nd - 1:
             shearzone = gb.node_props(g, "name")
             aperture *= self.params.initial_fracture_aperture[shearzone]
