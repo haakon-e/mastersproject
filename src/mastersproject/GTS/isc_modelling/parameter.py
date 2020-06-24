@@ -312,8 +312,21 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
     _tag_injection_cell(gb, injection_grid, pts, params.length_scale)
 
 
-def nd_sides_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
-    """ Tag the Nd cells surrounding a shear zone injection point."""
+def nd_sides_shearzone_injection_cell(
+        params: FlowParameters, gb: pp.GridBucket, reset_frac_tags: bool = True,
+) -> None:
+    """ Tag the Nd cells surrounding a shear zone injection point
+
+    Parameters
+    ----------
+    params : FlowParameters
+        parameters that contain "source_scalar_borehole_shearzone" (with "shearzone", and "borehole")
+        and "length_scale".
+    gb : pp.GridBucket
+        grid bucket
+    reset_frac_tags : bool [Default: True]
+        if set to False, keep injection tag in the shear zone.
+    """
     # Shorthand
     shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
 
@@ -338,10 +351,17 @@ def nd_sides_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket)
     nd_grid.tags["well_cells"] = nd_tags
     gb.set_node_prop(nd_grid, "well", nd_tags)
 
-    # reset tags on the fracture
-    zeros = np.zeros(fracture.num_cells)
-    fracture.tags["well_cells"] = zeros
-    gb.set_node_prop(fracture, "well", zeros)
+    if reset_frac_tags:
+        # reset tags on the fracture
+        zeros = np.zeros(fracture.num_cells)
+        fracture.tags["well_cells"] = zeros
+        gb.set_node_prop(fracture, "well", zeros)
+
+
+def nd_and_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
+    """ Wrapper of above method to toggle keep shear zone injection tag"""
+    reset_frac_tags = False
+    nd_sides_shearzone_injection_cell(params, gb, reset_frac_tags)
 
 
 def _tag_injection_cell(
