@@ -162,6 +162,7 @@ class TestContactMechanicsBiotBase:
         """ Test for zero initial conditions.
         Will fail if gravity is introduced
         """
+        setup.set_biot_parameters()
         setup.initial_biot_condition()
         gb = setup.gb
         nd = setup.Nd
@@ -227,14 +228,17 @@ class TestContactMechanicsBiotBase:
     def test_after_newton_iteration(self):
         assert False
 
-    def test_set_viz(self):
-        assert False
+    def test_set_viz(self, setup):
+        setup.set_viz()
 
     def test_export_step(self):
         assert False
 
     def test_reconstruct_stress(self):
         assert False
+
+    def test_prepare_simulation(self, setup):
+        setup.prepare_simulation()
 
     def test_run_simulation(self, setup):
         setup.prepare_simulation()

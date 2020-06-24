@@ -1,14 +1,13 @@
 import logging
+from typing import Dict
 
 import pytest
 from pathlib import Path
 import numpy as np
 
 import porepy as pp
-from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotBase
 from GTS.isc_modelling.isc_model import ISCBiotContactMechanics
 from GTS.isc_modelling.parameter import BiotParameters, stress_tensor, shearzone_injection_cell, GrimselGranodiorite
-from porepy.utils.derived_discretizations import implicit_euler
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +35,28 @@ def biot_params() -> BiotParameters:
 
 
 @pytest.fixture
-def isc_setup(
-        biot_params,
-) -> ContactMechanicsBiotBase:
-    """ Contact Mechanics Biot setup with isc grid"""
-    _setup = ISCBiotContactMechanics(biot_params)
+def biot_params_small() -> Dict:
+    """ Initialize Biot parameters with 'easy' values on small grid"""
+    here = Path(__file__).parent / "simulations"
+    _sz = 6
 
-    return _setup
+    values = {
+        "folder_name": here,
+        "stress": stress_tensor(),
+        "injection_rate": 1 / 6,
+        "frac_permeability": 3,  # -> frac_aperture = 6.0
+        "intact_permeability": 1e-12,
+        "well_cells": shearzone_injection_cell,
+        "rock": GrimselGranodiorite(),
+        "mesh_args": {
+             "mesh_size_frac": 10,
+             "mesh_size_min": 10,
+             "mesh_size_bound": 30,
+        },
+        "length_scale": 7,
+        "scalar_scale": 11,
+    }
+    return values
 
 
 class TestISCBiotContactMechanics:
@@ -52,8 +66,103 @@ class TestISCBiotContactMechanics:
     def test_well_cells(self):
         assert False
 
+    def test_compute_initial_aperture(self, biot_params_small):
+        """ Test computation of initial aperture in intact rock and fractured rock."""
+        # Setup model
+        params = BiotParameters(**biot_params_small)
+        setup = ISCBiotContactMechanics(params)
+        setup.create_grid()
+
+        g3: pp.Grid = setup._nd_grid()
+        a = setup.compute_initial_aperture(g3, scaled=False)
+        assert np.isclose(np.sum(a), g3.num_cells)
+
+        g2: pp.Grid = setup.gb.grids_of_dimension(2)[0]
+        a = setup.compute_initial_aperture(g2, scaled=False)
+        assert np.isclose(np.sum(a), 6.0 * g2.num_cells)
+
+    def test_mechanical_aperture(self, biot_params_small):
+        """ Test computation of mechanical aperture in fractured rock"""
+        # Prepare the model
+        biot_params_small["shearzone_names"] = ["F1"]
+        biot_params_small["length_scale"] = 1
+        params = BiotParameters(**biot_params_small)
+        setup = ISCBiotContactMechanics(params)
+
+        # --- Structured Grid with one fracture
+        nx = np.array([2, 2, 2])
+        physdims = np.array([10, 10, 10])
+
+        # fmt: off
+        frac_pts = np.array(
+            [[0, 10, 10, 0],
+             [5, 5, 5, 5],
+             [0, 0, 5, 5]]) / params.length_scale
+        # fmt: on
+        gb = pp.meshing.cart_grid([frac_pts], nx=nx, physdims=physdims / params.length_scale, )
+        # --- ---
+        setup.gb = gb
+        setup.assign_biot_variables()
+
+        # Assign dummy displacement values to the fracture edge
+        nd_grid = setup.grids_by_name(params.intact_name)[0]
+        frac = setup.grids_by_name(params.shearzone_names[0])[0]
+        edge = (frac, nd_grid)
+        data_edge = setup.gb.edge_props(edge)
+        mg: pp.MortarGrid = data_edge["mortar_grid"]
+        nd = setup.Nd
+        var_mortar = setup.mortar_displacement_variable
+
+        if pp.STATE not in data_edge:
+            data_edge[pp.STATE] = {}
+        nc = frac.num_cells
+
+        # Set mechanical mortar displacement to STATE.
+        # Set u_n = 1 and ||u_t|| = 0 on side 1
+        # Set all zero on side 1.
+        s1 = np.vstack((  # mortar side 1
+            np.zeros(nc),
+            np.ones(nc),
+            np.zeros(nc),
+        ))
+        mortar_u = np.hstack((
+            s1,                     # mortar side 1
+            np.zeros((nd, nc)),     # mortar side 2
+        )).ravel("F")
+
+        # Set mechanical mortar displacement to previous iterate.
+        # Set u = (1, 1, 1) on side 1
+        # Set u = (3, 3, 3) on side 2.
+        # This should give an aperture of 2.
+        s2 = np.vstack((
+            3 * np.ones((nd, nc)),
+        ))
+        mortar_u_prev_iter = np.hstack((
+            np.ones((nd, nc)),     # mortar side 1
+            s2,                     # mortar side 2
+        )).ravel("F")
+
+        data_edge[pp.STATE].update({
+            var_mortar: mortar_u,
+            "previous_iterate": {
+                var_mortar: mortar_u_prev_iter
+            },
+        })
+
+        # Get mechanical aperture
+        # Nd
+        aperture_nd = setup.mechanical_aperture(nd_grid, from_iterate=False)
+        assert np.allclose(aperture_nd, 0)
+        aperture_nd_iter = setup.mechanical_aperture(nd_grid, from_iterate=False)
+        assert np.allclose(aperture_nd_iter, 0)
+        # fracture
+        aperture_frac = setup.mechanical_aperture(frac, from_iterate=False)
+        assert np.allclose(aperture_frac, np.ones(nc))
+        aperture_frac_iter = setup.mechanical_aperture(frac, from_iterate=True)
+        assert np.allclose(aperture_frac_iter, 2 * np.ones(nc))
+
     def test_aperture(self):
-        assert False
+        pass
 
     def test_permeability(self):
         assert False
@@ -79,12 +188,14 @@ class TestISCBiotContactMechanics:
     def test_source(self):
         assert False
 
-    def test_prepare_simulation(self, isc_setup):
-        isc_setup.prepare_simulation()
+    def test_prepare_simulation(self, biot_params):
+        setup = ISCBiotContactMechanics(biot_params)
+        setup.prepare_simulation()
 
-    def test_run_simulation(self, isc_setup):
-        isc_setup.prepare_simulation()
-        pp.run_time_dependent_model(isc_setup, {})
+    def test_run_simulation(self, biot_params):
+        setup = ISCBiotContactMechanics(biot_params)
+        setup.prepare_simulation()
+        pp.run_time_dependent_model(setup, {})
 
     def test_realistic_setup(self):
         """ For a 50 000 cell setup, test Contact mechanics Biot model on 5 shear zones.
