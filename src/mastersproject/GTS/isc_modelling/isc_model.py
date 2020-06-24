@@ -231,10 +231,18 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if g.dim == nd:
             return np.zeros(g.num_cells)
 
+        master_grids = gb.node_neighbors(g, only_higher=True)
+        n_edges = len(master_grids)
+        de = [gb.edge_props((g, e)) for e in master_grids]
+        initialized = np.alltrue(np.fromiter(
+            (pp.STATE in d for d in de), dtype=bool, count=n_edges
+        ))
+        if not initialized:
+            return np.zeros(g.num_cells)
+
         # In fractures
         elif g.dim == nd - 1:
-            nd_grid = self._nd_grid()
-            data_edge = gb.edge_props((g, nd_grid))
+            data_edge = gb.edge_props((g, master_grids[0]))
             aperture = _aperture_from_edge(data_edge)
             return aperture
 
@@ -244,7 +252,6 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         elif g.dim == nd - 2:
             # (g is the slave grid.)
             # Fetch edges of g that points to a higher-dimensional grid
-            master_grids = gb.node_neighbors(g, only_higher=True)
             edges = ((g, g_h) for g_h in master_grids)
             cell_faces = (g_h.cell_faces for g_h in master_grids)
 
@@ -271,6 +278,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             )
 
             # expand the iterator
+            apertures = np.zeros((n_edges, g.num_cells))
+            for i, ap in enumerate(master_to_slave_apertures):
+                apertures[i, :] = ap
             apertures = np.vstack(master_to_slave_apertures)
             # average the apertures from master to determine the slave aperture
             avg_aperture = np.mean(apertures, axis=0)  # / 2  <-- divide by 2 for each mortar side???
