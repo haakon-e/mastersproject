@@ -54,7 +54,7 @@ class GrimselGranodiorite(pp.UnitRock):
         super().__init__()
         from porepy.params import rock as pp_rock
 
-        self.PERMEABILITY = 1
+        self.PERMEABILITY = 1e-20
         self.THERMAL_EXPANSION = 1
         self.DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
 
