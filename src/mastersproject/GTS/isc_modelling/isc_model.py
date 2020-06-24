@@ -206,9 +206,19 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         -------
         aperture : np.ndarray
             Apertures for each cell in the grid.
+
+        Notes
+        -----
+        This method relies on a current (pp.STATE) or previous ('previous_iterate')
+        being set for the mortar displacement variable.
+        In case pp.STATE doesn't exist, uniformly 0 is returned.
+        Otherwise, we require values for the mortar displacement variable.
+        One way to ensure this in practice, is to set initial conditions
+        before discretizations
         """
         nd = self.Nd
         gb = self.gb
+        nd_grid = self._nd_grid()
 
         def _aperture_from_edge(data: Dict):
             """ Compute the mechanical contribution to the aperture
@@ -242,7 +252,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
         # In fractures
         elif g.dim == nd - 1:
-            data_edge = gb.edge_props((g, master_grids[0]))
+            data_edge = gb.edge_props((g, nd_grid))
             aperture = _aperture_from_edge(data_edge)
             return aperture
 
@@ -252,10 +262,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         elif g.dim == nd - 2:
             # (g is the slave grid.)
             # Fetch edges of g that points to a higher-dimensional grid
-            edges = ((g, g_h) for g_h in master_grids)
+            intx_edges = ((g, g_h) for g_h in master_grids)
+            nd_edges = ((g_h, nd_grid) for g_h in master_grids)
             cell_faces = (g_h.cell_faces for g_h in master_grids)
 
-            data_edges = (gb.edge_props(edge) for edge in edges)
+            data_edges = (gb.edge_props(edge) for edge in nd_edges)
             master_apertures = (_aperture_from_edge(data_edge) for data_edge in data_edges)
 
             # Map parent apertures to faces
@@ -266,7 +277,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             )
 
             # .. and project face apertures to slave grid
-            mortar_grids = (gb.edge_props(edge)["mortar_grid"] for edge in edges)
+            mortar_grids = (gb.edge_props(edge)["mortar_grid"] for edge in intx_edges)
 
             # Use _int() here to sum apertures, then we average at the end.
             master_to_slave_apertures = (
@@ -281,7 +292,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             apertures = np.zeros((n_edges, g.num_cells))
             for i, ap in enumerate(master_to_slave_apertures):
                 apertures[i, :] = ap
-            apertures = np.vstack(master_to_slave_apertures)
+
             # average the apertures from master to determine the slave aperture
             avg_aperture = np.mean(apertures, axis=0)  # / 2  <-- divide by 2 for each mortar side???
             return avg_aperture
