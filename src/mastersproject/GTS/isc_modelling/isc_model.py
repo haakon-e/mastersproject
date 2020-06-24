@@ -18,30 +18,6 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def __init__(self, params: BiotParameters):
         super().__init__(params)
 
-        # --- PHYSICAL PARAMETERS ---
-
-        # * Permeability and aperture *
-
-        # For now, constant permeability in fractures
-        initial_frac_permeability = (
-            {sz: params.frac_permeability for sz in params.shearzone_names}
-            if params.shearzone_names
-            else {}
-        )
-        initial_intact_permeability = {params.intact_name: params.intact_permeability}
-        self.initial_permeability = {
-            **initial_frac_permeability,
-            **initial_intact_permeability,
-        }
-
-        # Use cubic law to compute initial apertures in fractures.
-        # k = a^2 / 12 => a=sqrt(12k)
-        self.initial_aperture = {
-            sz: np.sqrt(12 * k) for sz, k in self.initial_permeability.items()
-        }
-        self.initial_aperture[params.intact_name] = 1  # Set 3D matrix aperture to 1.
-
-
         # -- GRAVITY OPTIONS
 
         # TODO: Add these options to the MechanicsParameters
@@ -151,51 +127,175 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     # --- Aperture related methods ---
 
-    def aperture(self, g: pp.Grid, scaled) -> np.ndarray:
+    def specific_volume(self, g: pp.Grid, scaled=False, from_iterate=True) -> np.ndarray:
         """
+        The specific volume of a cell accounts for the dimension reduction and has
+        dimensions [m^(Nd - d)].
+        Typically equals 1 in Nd, the aperture in codimension 1 and the square/cube
+        of aperture in codimensions 2 and 3.
+        """
+        a = self.aperture(g, scaled, from_iterate)
+        return np.power(a, self.Nd - g.dim)
+
+    def aperture(self, g: pp.Grid, scaled: bool, from_iterate: bool = True) -> np.ndarray:
+        """ Compute the total aperture of each cell on a grid
+
+        Parameters
+        ----------
+        g : pp.Grid
+            grid
+        scaled : bool
+            whether to scale the aperture, which has units [m]
+        from_iterate : bool
+            whether to compute mechanical aperture from iterate.
+
+
         Aperture is a characteristic thickness of a cell, with units [m].
         1 in matrix, thickness of fractures and "side length" of cross-sectional
         area/volume (or "specific volume") for intersections of co-dimension 2 and 3.
         See also specific_volume.
         """
-        # TODO: This does not resolve what happens in 1D fractures
-        aperture = np.ones(g.num_cells)
+        a_init = self.compute_initial_aperture(g, scaled=scaled)
+        a_mech = self.mechanical_aperture(g, from_iterate=from_iterate)
+        if not scaled:
+            # Mechanical aperture is scaled by default, whereas initial aperture (above)
+            # is not. This "upscaling" ensures they are consistent.
+            a_mech *= (self.params.length_scale / pp.METER)
 
-        if g.dim == self.Nd or g.dim == self.Nd - 1:
-            # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
-            shearzone = self.gb.node_props(g, "name")
-            aperture *= self.initial_aperture[shearzone]
+        a_total = a_init + a_mech
+        return a_total
+
+    def compute_initial_aperture(self, g: pp.Grid, scaled) -> np.ndarray:
+        """ Fetch the initial aperture. See __init__ for details """
+        aperture = np.ones(g.num_cells)
+        nd = self.Nd
+        gb = self.gb
+
+        # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
+        if g.dim == nd:
+            pass
+        elif g.dim == nd - 1:
+            shearzone = gb.node_props(g, "name")
+            aperture *= self.params.initial_fracture_aperture[shearzone]
+        elif g.dim == nd - 2:
+            master_grids = gb.node_neighbors(g, only_higher=True)
+            shearzones = (gb.node_props(g_h, "name") for g_h in master_grids)
+            apertures = np.vstack(
+                self.params.initial_fracture_aperture[sz] for sz in shearzones
+            )
+            aperture *= np.mean(apertures, axis=0)
         else:
-            # Temporary solution: Just take one of the higher-dim grids' aperture
-            g_h = self.gb.node_neighbors(g, only_higher=True)[0]
-            shearzone = self.gb.node_props(g_h, "name")
-            aperture *= self.initial_aperture[shearzone]
+            raise ValueError("Not implemented 1d intersection points")
 
         if scaled:
             aperture *= pp.METER / self.params.length_scale
 
         return aperture
 
+    def mechanical_aperture(self, g: pp.Grid, from_iterate: bool) -> np.ndarray:
+        """ Compute aperture contribution from mechanical opening of fractures
+
+        Parameters
+        ----------
+        g : pp.Grid
+            a grid
+        from_iterate : bool
+            whether to fetch displacement jump from from iterate or from pp.STATE.
+
+        Returns
+        -------
+        aperture : np.ndarray
+            Apertures for each cell in the grid.
+        """
+        nd = self.Nd
+        gb = self.gb
+
+        def _aperture_from_edge(data: Dict):
+            """ Compute the mechanical contribution to the aperture
+            for a given fracture. data is the edge data.
+            """
+            # Get normal displacement component from solution
+            u_mortar_local = self.reconstruct_local_displacement_jump(
+                data, from_iterate=from_iterate,
+            )
+            # Jump distances in each cell
+            normal_jump = np.abs(u_mortar_local[-1, :])
+            # tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
+
+            aperture_contribution = normal_jump
+            return aperture_contribution
+
+        # -- Computations --
+
+        # No contribution in 3d
+        if g.dim == nd:
+            return np.zeros(g.num_cells)
+
+        # In fractures
+        elif g.dim == nd - 1:
+            nd_grid = self._nd_grid()
+            data_edge = gb.edge_props((g, nd_grid))
+            aperture = _aperture_from_edge(data_edge)
+            return aperture
+
+        # TODO: Think about how to accurately do aperture computation (and specific volume)
+        #  for fracture intersections where either side of fracture has different aperture.
+        # In fracture intersections
+        elif g.dim == nd - 2:
+            # (g is the slave grid.)
+            # Fetch edges of g that points to a higher-dimensional grid
+            master_grids = gb.node_neighbors(g, only_higher=True)
+            edges = ((g, g_h) for g_h in master_grids)
+            cell_faces = (g_h.cell_faces for g_h in master_grids)
+
+            data_edges = (gb.edge_props(edge) for edge in edges)
+            master_apertures = (_aperture_from_edge(data_edge) for data_edge in data_edges)
+
+            # Map parent apertures to faces
+            master_face_apertures = (
+                np.abs(cell_face) * parent_aperture
+                for cell_face, parent_aperture
+                in zip(cell_faces, master_apertures)
+            )
+
+            # .. and project face apertures to slave grid
+            mortar_grids = (gb.edge_props(edge)["mortar_grid"] for edge in edges)
+
+            # Use _int() here to sum apertures, then we average at the end.
+            master_to_slave_apertures = (
+                mg.mortar_to_slave_int()
+                * mg.master_to_mortar_int()
+                * master_face_aperture
+                for mg, master_face_aperture
+                in zip(mortar_grids, master_face_apertures)
+            )
+
+            # expand the iterator
+            apertures = np.vstack(master_to_slave_apertures)
+            # average the apertures from master to determine the slave aperture
+            avg_aperture = np.mean(apertures, axis=0)  # / 2  <-- divide by 2 for each mortar side???
+            return avg_aperture
+
+        else:
+            raise ValueError("Not implemented 1d intersection points")
+
     # --- Parameter related methods ---
 
-    def permeability(self, g):
+    def permeability(self, g, scaled) -> np.ndarray:
         """ Set (uniform) permeability in a subdomain"""
-
-        # TODO: This does not resolve what happens in 1D fractures
-        if g.dim == self.Nd or g.dim == self.Nd - 1:
-            # get the shearzone
-            shearzone = self.gb.node_props(g, "name")
-            k = self.initial_permeability[shearzone]
+        # intact rock gets permeability from rock
+        if g.dim == self.Nd:
+            k = self.params.rock.PERMEABILITY * np.ones(g.num_cells)
+            if scaled:
+                k *= (pp.METER / self.params.length_scale) ** 2
+        # fractures get permeability from cubic law
         else:
-            # Set the permeability in fracture intersections as
-            # the average of the neighbouring fractures
+            def cubic_law(a):
+                return np.power(a, 2) / 12
 
-            # Temporary solution: Just take one of the higher-dim grids' permeability
-            g_h = self.gb.node_neighbors(g, only_higher=True)[0]
-            shearzone = self.gb.node_props(g_h, "name")
-            k = self.initial_permeability[shearzone]
-
-        return k * np.ones(g.num_cells)
+            aperture = self.aperture(g, scaled=scaled, from_iterate=True)
+            k = cubic_law(aperture)
+        return k
 
     @property
     def source_flow_rate(self) -> float:
@@ -222,6 +322,12 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if self.gb is None:
             super()._prepare_grid()
         self.well_cells()  # tag well cells
+
+    def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
+        super().after_newton_iteration(solution_vector)
+        # Update Biot parameters using aperture from iterate
+        # (i.e. displacements from iterate)
+        self.set_biot_parameters()
 
     # -- For testing --
 
@@ -308,10 +414,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         with summary_path.open(mode="w") as f:
             f.write(summary_text)
 
-
-
     # --- MECHANICS ---
-
 
     def faces_to_fix(self, g: pp.Grid):
         """ Fix some boundary faces to dirichlet to ensure unique solution to problem.

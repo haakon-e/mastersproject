@@ -41,7 +41,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
             alpha = self.biot_alpha(g)
             mech_params = {
                 "biot_alpha": alpha,
-                "time_step": self.time_step,  # TODO: Is this needed?
+                "time_step": self.time_step,
             }
             scalar_params = {"biot_alpha": alpha}
 
@@ -257,21 +257,6 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
         self.assembler.discretize(term_filter=[self.friction_coupling_term])
-
-    def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
-        """ Actions after each Newton iteration
-
-        For instance; update_state updates the non-linear terms.
-
-        Parameters:
-            solution_vector : np.ndarray
-                solution vector for the current iterate.
-
-        Returns:
-            (np.array): displacement solution vector for the Nd grid.
-
-        """
-        self.update_state(solution_vector)
 
     def after_newton_convergence(self, solution, errors, iteration_counter) -> None:
         super().after_newton_convergence(solution, errors, iteration_counter)

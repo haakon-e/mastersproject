@@ -3,7 +3,7 @@ from __future__ import annotations  # forward reference to not-yet-constructed m
 
 import logging
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
 
 import numpy as np
 import pendulum
@@ -219,11 +219,11 @@ class FlowParameters(GeometryParameters):
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
     injection_rate: float
 
-    # Set uniform permeability in fractures and intact rock, respectively
+    # Set permeability in fractures and intact rock, respectively
     # Grimsel Test Site values: frac=4.9e-16 m2, intact=2e-20 m2
     #   see: "2020-04-21 Møtereferat" (Veiledningsmøte)
-    frac_permeability: float
-    intact_permeability: float
+    frac_permeability: Union[float, List[float]]
+    initial_fracture_aperture: Optional[Dict[str, float]] = None
 
     # Validators
     @validator("source_scalar_borehole_shearzone")
@@ -233,6 +233,29 @@ class FlowParameters(GeometryParameters):
             assert "borehole" in v
             assert v["shearzone"] in values["shearzone_names"]
         return v
+
+    @validator("initial_fracture_aperture", always=True)
+    def set_fracture_aperture_from_cubic_law(cls, v, values):  # noqa
+        """ Fracture aperture from cubic law"""
+        if v is not None:
+            raise ValueError("initial_fracture_aperture should not be set directly.")
+
+        def cubic_law(k: float):
+            return np.sqrt(12 * k)
+        shearzones: List = values["shearzone_names"]
+        k_frac: Union[float, List[float]] = values["frac_permeability"]
+
+        if shearzones:
+            n_sz = len(shearzones)
+            if isinstance(k_frac, (float, int)):
+                k_frac = [k_frac] * n_sz
+            assert len(k_frac) == len(shearzones)
+            initial_fracture_apertures = {
+                sz: cubic_law(k) for sz, k in zip(shearzones, k_frac)
+            }
+            return initial_fracture_apertures
+        else:
+            return None
 
 
 class BiotParameters(FlowParameters, MechanicsParameters):

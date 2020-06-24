@@ -94,7 +94,7 @@ class Flow(CommonAbstractModel):
             aperture *= pp.METER / self.params.length_scale
         return aperture
 
-    def specific_volume(self, g: pp.Grid, scaled) -> np.ndarray:
+    def specific_volume(self, g: pp.Grid, scaled: bool) -> np.ndarray:
         """
         The specific volume of a cell accounts for the dimension reduction and has
         dimensions [m^(Nd - d)].
@@ -147,8 +147,11 @@ class Flow(CommonAbstractModel):
         # Set permeability on grid, fracture and mortar grids.
         self.set_permeability_from_aperture()
 
-    def permeability(self, g) -> np.ndarray:
-        return np.ones(g.num_cells)
+    def permeability(self, g, scaled) -> np.ndarray:
+        k = np.ones(g.num_cells)
+        if scaled:
+            k *= (pp.METER / self.params.length_scale) ** 2
+        return k
 
     def porosity(self, g) -> np.ndarray:
         return np.ones(g.num_cells)
@@ -167,7 +170,7 @@ class Flow(CommonAbstractModel):
         )
         for g, d in gb:
             # permeability [m2] (scaled)
-            k: np.ndarray = self.permeability(g) * (pp.METER / self.params.length_scale) ** 2
+            k: np.ndarray = self.permeability(g, scaled=True)
             logger.info(f"Scaled permeability in dim {g.dim} has "
                         f"min value {k.min():.3e}; "
                         f"mean value {k.mean():.3e}; "
@@ -460,22 +463,26 @@ class Flow(CommonAbstractModel):
         self.export_times = []  # noqa
 
         self.p_exp = "p_exp"  # noqa
+        self.aperture_exp = "aperture"  # noqa
 
-        self.export_fields.extend(
-            [self.p_exp]
-        )
+        self.export_fields.extend([
+            self.p_exp,
+            self.aperture
+        ])
 
     def export_step(self, write_vtk=True):
         """ Export a step with pressures """
         super().export_step(write_vtk=False)
         for g, d in self.gb:
+            state = d[pp.STATE]
+            state[self.aperture_exp] = self.aperture(g, scaled=False)
             # Export pressure variable
-            if self.scalar_variable in d[pp.STATE]:
-                d[pp.STATE][self.p_exp] = (
-                    d[pp.STATE][self.scalar_variable].copy() * self.params.scalar_scale
+            if self.scalar_variable in state:
+                state[self.p_exp] = (
+                    state[self.scalar_variable].copy() * self.params.scalar_scale
                 )
             else:
-                d[pp.STATE][self.p_exp] = np.zeros((self.Nd, g.num_cells))
+                state[self.p_exp] = np.zeros((self.Nd, g.num_cells))
 
         if write_vtk:
             self.viz.write_vtk(
