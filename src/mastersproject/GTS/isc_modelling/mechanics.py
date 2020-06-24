@@ -401,6 +401,9 @@ class Mechanics(CommonAbstractModel):
                     )
                 )
 
+        # IS POREPY TRACTION WEIGHED ???
+        ls = self.params.length_scale
+        ss = self.params.scalar_scale
         # Pick out the solution from current, previous iterates, as well as the
         # initial guess.
         contact_now = solution[contact_dof]
@@ -408,9 +411,9 @@ class Mechanics(CommonAbstractModel):
         contact_init = init_solution[contact_dof]
 
         # Calculate errors
-        contact_norm = np.sum(contact_now ** 2)
-        difference_in_iterates_contact = np.sum((contact_now - contact_prev) ** 2)
-        difference_from_init_contact = np.sum((contact_now - contact_init) ** 2)
+        contact_norm = np.sum(contact_now ** 2) * ss * ls ** 2
+        difference_in_iterates_contact = np.sum((contact_now - contact_prev) ** 2) * ss * ls ** 2
+        difference_from_init_contact = np.sum((contact_now - contact_init) ** 2) * ss * ls ** 2
 
         tol_convergence = nl_params["nl_convergence_tol"]
 
