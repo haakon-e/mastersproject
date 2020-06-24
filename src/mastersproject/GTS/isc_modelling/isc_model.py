@@ -162,7 +162,12 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             # is not. This "upscaling" ensures they are consistent.
             a_mech *= (self.params.length_scale / pp.METER)
 
-        a_total = a_init + a_mech
+        # Find the cells that are not injection (or sink) cells
+        injection_tags = g.tags["well_cells"]
+        not_injection_cells = 1 - np.abs(injection_tags)
+
+        # Only add the mechanical contribution to non-injection cells:
+        a_total = a_init + a_mech * not_injection_cells
         return a_total
 
     def compute_initial_aperture(self, g: pp.Grid, scaled) -> np.ndarray:
