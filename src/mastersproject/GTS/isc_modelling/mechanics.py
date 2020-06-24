@@ -382,8 +382,8 @@ class Mechanics(CommonAbstractModel):
                 converged = True
             error_mech = difference_in_iterates_mech / difference_from_init_mech
 
-        logger.info(f"Error in matrix displacement is {error_mech:.6e}"
-                    f"\nMatrix displacement {'converged' if converged else 'did not converge'}. ")
+        logger.info(f"Error in matrix displacement is {error_mech:.6e}")
+        logger.info(f"Matrix displacement {'converged' if converged else 'did not converge'}. ")
 
         return error_mech, converged, diverged
 

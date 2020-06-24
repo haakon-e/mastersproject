@@ -208,7 +208,7 @@ class CommonAbstractModel(AbstractModel):
         """ Whether the problem is non-linear"""
         return False
 
-    def _nd_grid(self):
+    def _nd_grid(self) -> pp.Grid:
         """ Get the grid of the highest dimension. Assumes self.gb is set.
         """
         return self.gb.grids_of_dimension(self.Nd)[0]
