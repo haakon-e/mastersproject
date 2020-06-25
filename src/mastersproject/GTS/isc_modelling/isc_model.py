@@ -125,6 +125,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     # ---- FLOW -----
 
+    def biot_alpha(self, g: pp.Grid) -> float:  # noqa
+        # if g.dim == self.Nd:
+        #     return self.params.alpha
+        # else:
+        #     # Set to zero to turn off effects of DivUCoupling in 2d fractures.
+        #     return 0.0
+        return self.params.alpha
+
     # --- Aperture related methods ---
 
     def specific_volume(self, g: pp.Grid, scaled=False, from_iterate=True) -> np.ndarray:
