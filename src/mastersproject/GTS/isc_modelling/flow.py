@@ -171,10 +171,11 @@ class Flow(CommonAbstractModel):
         for g, d in gb:
             # permeability [m2] (scaled)
             k: np.ndarray = self.permeability(g, scaled=True)
-            logger.info(f"Scaled permeability in dim {g.dim} has "
-                        f"min value {k.min():.3e}; "
-                        f"mean value {k.mean():.3e}; "
-                        f"max value {k.max():.3e}")
+            a = self.aperture(g, scaled=True)
+            logger.info(f"Scaled permeability and aperture in dim {g.dim} have values: "
+                        f"min [k={np.min(k):.2e}, a={np.min(a):.2e}]; "
+                        f"mean [k={np.mean(k):.2e}, a={np.mean(a):.2e}]; "
+                        f"max [k={np.max(k):.2e}, a={np.max(a):.2e}]")
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
