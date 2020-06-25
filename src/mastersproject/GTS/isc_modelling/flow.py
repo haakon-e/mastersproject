@@ -467,7 +467,7 @@ class Flow(CommonAbstractModel):
 
         self.export_fields.extend([
             self.p_exp,
-            self.aperture
+            self.aperture_exp
         ])
 
     def export_step(self, write_vtk=True):
