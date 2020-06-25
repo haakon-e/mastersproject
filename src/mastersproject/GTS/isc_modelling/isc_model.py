@@ -376,9 +376,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         summary_p_common = (
             f"\nInformation on negative values:\n"
             f"pressure values. "
-            f"max: {p.max():.2e}. "
-            f"Mean: {p.mean():.2e}. "
-            f"Min: {p.min():.2e}\n"
+            f"max: {np.max(p):.2e}. "
+            f"Mean: {np.mean(p):.2e}. "
+            f"Min: {np.min(p):.2e}\n"
         )
         if neg_ind.size > 0:
             summary_p = (
@@ -409,7 +409,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             f"length scale: {self.params.length_scale:.2e}\n"
             f"scalar scale: {self.params.scalar_scale:.2e}\n"
             f"3d permeability: "
-            f"{self.initial_permeability[self.params.intact_name]:.2e}\n"
+            f"{np.mean(self.permeability(self._nd_grid(), scaled=False)):.2e}\n"
             f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
             f"3d cells: {g.num_cells}\n"
             f"pp condition number: {pp_cond:.2e}\n"
