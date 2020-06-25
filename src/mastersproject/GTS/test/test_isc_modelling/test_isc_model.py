@@ -60,8 +60,9 @@ def biot_params_small() -> Dict:
 
 
 class TestISCBiotContactMechanics:
-    def test_create_grid(self, isc_setup):
-        isc_setup.create_grid()
+    def test_create_grid(self, biot_params):
+        setup = ISCBiotContactMechanics(biot_params)
+        setup.create_grid()
 
     def test_well_cells(self):
         assert False
@@ -231,13 +232,56 @@ class TestISCBiotContactMechanics:
             intact_permeability=1e-20,
         )
 
-        class NeverFailtBiotCM(ISCBiotContactMechanics):
-            def after_newton_failure(self, solution, errors, iteration_counter):
-                """ Instead of raising error on failure, simply continue.
-                """
-                logger.error("Newton iterations did not converge")
-                self.after_newton_convergence(solution, errors, iteration_counter)
-
         setup = NeverFailtBiotCM(params)
         newton_params = params.newton_options
         pp.run_time_dependent_model(setup, newton_params)
+
+    def test_realistic_only_fracture_zone(self):
+        # _sz = 2, bounding_box=None -> ~53k 3d, ~6k 2d, 80 1d cells
+        _sz = 2
+        params = BiotParameters(
+            # Base parameters
+            length_scale=0.05,
+            scalar_scale=1e6,
+            head="60k-5frac/only-frac-zone",
+            time_step=pp.MINUTE,
+            end_time=2 * pp.MINUTE,
+            rock=GrimselGranodiorite(),
+            # Geometry parameters
+            mesh_args={
+                "mesh_size_frac": _sz,
+                "mesh_size_min": 0.2 * _sz,
+                "mesh_size_bound": 3 * _sz,
+            },
+            bounding_box=None,
+            shearzone_names=["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],
+            # Mechanical parameters
+            stress=stress_tensor(),
+            newton_options={
+                "max_iterations": 30,
+                "nl_convergence_tol": 1e-10,
+                "nl_divergence_tol": 1e5,
+            },
+            # Flow parameters
+            source_scalar_borehole_shearzone={
+                "shearzone": "S1_2",
+                "borehole": "INJ1",
+            },
+            well_cells=nd_and_shearzone_injection_cell,
+            injection_rate=(1 / 6) / 3,  # = 10 l/min  - Divide by 3 due to 3 injection cells.
+            frac_permeability=[2.3e-15, 4.5e-17, 2.3e-17, 6.4e-14, 1e-16],
+            intact_permeability=2e-20,
+
+
+        )
+        setup = NeverFailtBiotCM(params)
+        newton_params = params.newton_options
+        pp.run_time_dependent_model(setup, newton_params)
+
+
+class NeverFailtBiotCM(ISCBiotContactMechanics):
+    def after_newton_failure(self, solution, errors, iteration_counter):
+        """ Instead of raising error on failure, simply continue.
+        """
+        logger.error("Newton iterations did not converge")
+        self.after_newton_convergence(solution, errors, iteration_counter)
