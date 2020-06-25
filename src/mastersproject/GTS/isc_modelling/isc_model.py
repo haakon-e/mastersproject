@@ -185,10 +185,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         elif g.dim == nd - 2:
             master_grids = gb.node_neighbors(g, only_higher=True)
             shearzones = (gb.node_props(g_h, "name") for g_h in master_grids)
-            apertures = np.vstack(
-                self.params.initial_fracture_aperture[sz] for sz in shearzones
+            apertures = np.fromiter(
+                (self.params.initial_fracture_aperture[sz] for sz in shearzones),
+                dtype=float, count=len(master_grids),
             )
-            aperture *= np.mean(apertures, axis=0)
+            aperture *= np.mean(apertures)
         else:
             raise ValueError("Not implemented 1d intersection points")
 
