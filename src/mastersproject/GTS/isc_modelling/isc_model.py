@@ -361,9 +361,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
         super().before_newton_iteration()
-        for g, _ in self.gb:
-            if g.dim < self.Nd:
-                self.assembler.discretize(variable_filter=["diffusion"])
+        self.assembler.discretize(term_filter=["diffusion", "mass"])
+        # for g, _ in self.gb:
+        #     if g.dim < self.Nd:
+        #         self.assembler.discretize(variable_filter=["diffusion", "mass"])
 
     def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
         super().after_newton_iteration(solution_vector)
