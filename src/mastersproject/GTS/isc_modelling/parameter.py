@@ -364,6 +364,27 @@ def nd_and_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -
     nd_sides_shearzone_injection_cell(params, gb, reset_frac_tags)
 
 
+def center_of_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
+    """ Tag the center cell of the given shear zone with 1 (injection)
+
+    Parameters
+    ----------
+    params : FlowParameters
+    gb : pp.GridBucket
+    """
+
+    # Shorthand
+    shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
+
+    # Get the grid to inject to
+    frac: pp.Grid = gb.get_grids(lambda g: gb.node_props(g, "name") == shearzone)[0]
+    centers: np.ndarray = frac.cell_centers
+    pts = np.mean(centers, axis=1)
+
+    # Tag injection grid with 1 in the injection cell
+    _tag_injection_cell(gb, frac, pts, params.length_scale)
+
+
 def _tag_injection_cell(
     gb: pp.GridBucket, g: pp.Grid, pts: np.ndarray, length_scale
 ) -> None:
