@@ -34,10 +34,7 @@ from GTS.isc_modelling.setup import (
 # --- MODELS ---
 
 # Contact mechanics model
-from GTS.isc_modelling.mechanics import ContactMechanicsISC
-
-# Contact Mechanics Biot
-from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotISC
+from GTS.isc_modelling.mechanics import Mechanics
 
 # Flow model
 from GTS.isc_modelling.flow import (
@@ -45,10 +42,18 @@ from GTS.isc_modelling.flow import (
     FlowISC,
 )
 
-# PREPARE DIRECTORIES AND PARAMETERS
-from GTS.isc_modelling.setup import (
-    prepare_directories,
-    SetupParams,
+# Contact Mechanics Biot model
+from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotBase
+from GTS.isc_modelling.isc_model import ISCBiotContactMechanics
+
+# PARAMETERS
+from GTS.isc_modelling.parameter import (
+    GrimselGranodiorite,
+    BaseParameters,
+    GeometryParameters,
+    MechanicsParameters,
+    FlowParameters,
+    BiotParameters,
 )
 
 __all__ = [
@@ -64,10 +69,15 @@ __all__ = [
     "run_biot_model",
     "run_biot_gts_model",
     "run_abstract_model",
-    "ContactMechanicsISC",
-    "ContactMechanicsBiotISC",
+    "Mechanics",
     "Flow",
     "FlowISC",
-    "prepare_directories",
-    "SetupParams",
+    "ContactMechanicsBiotBase",
+    "ISCBiotContactMechanics",
+    "GrimselGranodiorite",
+    "BaseParameters",
+    "GeometryParameters",
+    "MechanicsParameters",
+    "FlowParameters",
+    "BiotParameters",
 ]
