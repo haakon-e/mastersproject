@@ -227,10 +227,13 @@ class TestISCBiotContactMechanics:
                 "nl_divergence_tol": 1e5,
             },
             # Flow parameters
-            well_cells=shearzone_injection_cell,
-            injection_rate=1 / 6,  # = 10 l/min
-            frac_permeability=1e-16,
-            intact_permeability=1e-20,
+            source_scalar_borehole_shearzone={
+                "shearzone": "S1_2",
+                "borehole": "INJ1",
+            },
+            well_cells=center_of_shearzone_injection_cell,
+            injection_rate=(10 / 60) * 2,  # (10/60)*2 = 20l per 60s = 20 l/min
+            frac_transmissivity=[1e-9, 3.7e-7],
         )
 
         setup = NeverFailtBiotCM(params)

@@ -5,31 +5,36 @@ import numpy as np
 
 from GTS.isc_modelling.isc_model import ISCBiotContactMechanics
 from GTS.isc_modelling.parameter import BiotParameters, stress_tensor, shearzone_injection_cell, GrimselGranodiorite, \
-    nd_sides_shearzone_injection_cell
+    nd_sides_shearzone_injection_cell, FlowParameters
 
 
 class TestFlowParameters:
     def test_validate_source_scalar_borehole_shearzone(self):
         assert False
 
-    def test_set_fracture_aperture_from_cubic_law(self):
-        here = Path(__file__).parent / "simulations"
+    def test_set_fracture_aperture_from_cubic_law(self, tmp_path):
+        here = tmp_path / "simulations"
         _sz = 6
-        params = BiotParameters(
+        params = FlowParameters(
+            # BaseParameters
             folder_name=here,
-            stress=stress_tensor(),
-            injection_rate=1 / 6,
-            frac_permeability=1e-9,
-            intact_permeability=1e-12,
-            well_cells=shearzone_injection_cell,
-            rock=GrimselGranodiorite(),
-            mesh_args={
-                "mesh_size_frac": _sz,
-                "mesh_size_min": 0.2 * _sz,
-                "mesh_size_bound": 3 * _sz,
-            },
+            # GeometryParameters
+            shearzone_names=["S1_1", "S1_2"],
+            # FlowParameters
+            injection_rate=1,
+            frac_transmissivity=1,
         )
         assert params.initial_fracture_aperture is not None
+        # Check that correct Transmissivity is calculated
+        res = np.cbrt(params.mu_over_rho_g*12)
+        aperture_list = np.array([*params.initial_fracture_aperture.values()])
+        assert np.allclose(res, aperture_list)
+        assert np.isclose(params.mu_over_rho_g, 1/params.rho_g_over_mu)
+
+        # Another test
+        params.frac_transmissivity = params.rho_g_over_mu/12
+        aperture_list = np.array([*params.initial_fracture_aperture.values()])
+        assert np.allclose(1, aperture_list)
 
 
 def test_nd_sides_shearzone_injection_cell():

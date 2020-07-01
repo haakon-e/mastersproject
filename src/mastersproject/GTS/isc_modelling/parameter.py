@@ -227,11 +227,62 @@ class FlowParameters(GeometryParameters):
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
     injection_rate: float
 
-    # Set permeability in fractures and intact rock, respectively
-    # Grimsel Test Site values: frac=4.9e-16 m2, intact=2e-20 m2
-    #   see: "2020-04-21 Møtereferat" (Veiledningsmøte)
-    frac_permeability: Union[float, List[float]]
-    initial_fracture_aperture: Optional[Dict[str, float]] = None
+    # Set transmissivity in fractures
+    frac_transmissivity: Union[float, List[float]]
+
+    # See 'methods to estimate permeability of shear zones at Grimsel Test Site'
+    # in 'Presentasjon til underveismøte' for details on relations between
+    # aperture, transmissivity, permeability and hydraulic conductivity
+
+    @property
+    def initial_fracture_aperture(self) -> Union[Dict[str, float], None]:
+        """ Initial aperture, computed from initial transmissivity
+
+        Assumes uniform transmissivity in each shear zone
+        """
+
+        transmissivity: Union[float, List[float]] = self.frac_transmissivity
+        shear_zones: List = self.shearzone_names
+        if shear_zones:
+            n_sz = len(shear_zones)
+            if isinstance(transmissivity, (float, int)):
+                transmissivity = [transmissivity] * n_sz
+            assert len(transmissivity) == len(shear_zones)
+            initial_aperture = {
+                s: self.b_from_T(t) for s, t in zip(shear_zones, transmissivity)
+            }
+            return initial_aperture
+        else:
+            return None
+
+    @property
+    def rho_g_over_mu(self):
+        mu = self.fluid.dynamic_viscosity()
+        rho = self.fluid.density()
+        g = pp.GRAVITY_ACCELERATION
+        return rho * g / mu
+
+    @property
+    def mu_over_rho_g(self):
+        return 1 / self.rho_g_over_mu
+
+    def T_from_K_b(self, K, b):
+        return K * b
+
+    def K_from_k(self, k):
+        return k * self.rho_g_over_mu
+
+    def cubic_law(self, a):
+        # k from a
+        return a ** 2 / 12
+
+    def T_from_b(self, b):
+        return self.T_from_K_b(
+            self.K_from_k(self.cubic_law(b)), b
+        )
+
+    def b_from_T(self, T):
+        return np.cbrt(T * 12 * self.mu_over_rho_g)
 
     # Validators
     @validator("source_scalar_borehole_shearzone")
@@ -241,29 +292,6 @@ class FlowParameters(GeometryParameters):
             assert "borehole" in v
             assert v["shearzone"] in values["shearzone_names"]
         return v
-
-    @validator("initial_fracture_aperture", always=True)
-    def set_fracture_aperture_from_cubic_law(cls, v, values):  # noqa
-        """ Fracture aperture from cubic law"""
-        if v is not None:
-            raise ValueError("initial_fracture_aperture should not be set directly.")
-
-        def cubic_law(k: float):
-            return np.sqrt(12 * k)
-        shearzones: List = values["shearzone_names"]
-        k_frac: Union[float, List[float]] = values["frac_permeability"]
-
-        if shearzones:
-            n_sz = len(shearzones)
-            if isinstance(k_frac, (float, int)):
-                k_frac = [k_frac] * n_sz
-            assert len(k_frac) == len(shearzones)
-            initial_fracture_apertures = {
-                sz: cubic_law(k) for sz, k in zip(shearzones, k_frac)
-            }
-            return initial_fracture_apertures
-        else:
-            return None
 
 
 class BiotParameters(FlowParameters, MechanicsParameters):
