@@ -605,3 +605,18 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         """
         return np.ones(g.num_cells) * self.params.rock.FRICTION_COEFFICIENT
 
+    def set_mechanics_parameters(self) -> None:
+        """ Set the dilation angle for slip in fractures"""
+        super().set_mechanics_parameters()
+        gb = self.gb
+
+        for g, d in gb:
+            if g.dim == self.Nd - 1:
+                params: pp.Parameters = d[pp.PARAMETERS]
+                mech_params = {
+                    "dilation_angle": self.params.dilation_angle
+                }
+                params.update_dictionaries(
+                    [self.mechanics_parameter_key],
+                    [mech_params],
+                )

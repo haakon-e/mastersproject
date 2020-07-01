@@ -220,6 +220,7 @@ class TestISCBiotContactMechanics:
             },
             # Mechanical parameters
             stress=stress_tensor(),
+            dilation_angle=(np.pi/180) * 5,  # 5 degrees dilation angle.
             newton_options={
                 "max_iterations": 20,
                 "nl_convergence_tol": 1e-6,

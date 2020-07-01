@@ -60,11 +60,12 @@ class GrimselGranodiorite(pp.UnitRock):
 
         # Lamé parameters
         self.YOUNG_MODULUS = (
-            49 * pp.GIGA * pp.PASCAL
-        )  # Krietsch et al 2018 (Data Descriptor) - Dynamic E
+            40 * pp.GIGA * pp.PASCAL
+        )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
         self.POISSON_RATIO = (
-            0.32  # Krietsch et al 2018 (Data Descriptor) - Dynamic Poisson
-        )
+            0.25
+        )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+
         self.LAMBDA, self.MU = pp_rock.lame_from_young_poisson(
             self.YOUNG_MODULUS, self.POISSON_RATIO
         )
@@ -188,6 +189,9 @@ class MechanicsParameters(GeometryParameters):
     """ Parameters for a mechanics model"""
 
     stress: np.ndarray
+    # See "numerics > contact_mechanics > contact_conditions.py > ColoumbContact"
+    # for details on dilation angle
+    dilation_angle: float
 
     # Parameters for Newton solver
     newton_options = {
@@ -264,7 +268,8 @@ class FlowParameters(GeometryParameters):
 
 class BiotParameters(FlowParameters, MechanicsParameters):
     """ Parameters for the Biot problem with contact mechanics"""
-    alpha: float = 1
+    # Selvadurai (2019): Biot aritcle --> Table 9., on Pahl et. al (1989), mean of aL, aU.
+    alpha: float = 0.57
 
 
 # --- Flow injection cell taggers ---
