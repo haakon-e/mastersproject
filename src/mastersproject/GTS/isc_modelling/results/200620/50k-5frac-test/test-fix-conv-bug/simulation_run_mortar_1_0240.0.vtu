@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt32" compressor="vtkZLibDataCompressor">
+  <UnstructuredGrid>
+    <Piece NumberOfPoints="136"                  NumberOfCells="112"                 >
+      <PointData>
+      </PointData>
+      <CellData>
+        <DataArray type="Int32" Name="grid_dim" format="appended" RangeMin="1"                    RangeMax="1"                    offset="0"                   />
+        <DataArray type="Int32" Name="cell_id" format="appended" RangeMin="0"                    RangeMax="27"                   offset="48"                  />
+        <DataArray type="Int32" Name="grid_edge_number" format="appended" RangeMin="5"                    RangeMax="16"                   offset="184"                 />
+        <DataArray type="Int8" Name="is_mortar" format="appended" RangeMin="1"                    RangeMax="1"                    offset="268"                 />
+        <DataArray type="Int32" Name="mortar_side" format="appended" RangeMin="1"                    RangeMax="2"                    offset="308"                 />
+      </CellData>
+      <Points>
+        <DataArray type="Float32" Name="Points" NumberOfComponents="3" format="appended" RangeMin="2262.6201048"         RangeMax="2571.9864331"         offset="388"                 >
+          <InformationKey name="L2_NORM_RANGE" location="vtkDataArray" length="2">
+            <Value index="0">
+              2262.6201048
+            </Value>
+            <Value index="1">
+              2571.9864331
+            </Value>
+          </InformationKey>
+        </DataArray>
+      </Points>
+      <Cells>
+        <DataArray type="Int64" Name="connectivity" format="appended" RangeMin=""                     RangeMax=""                     offset="1036"                />
+        <DataArray type="Int64" Name="offsets" format="appended" RangeMin=""                     RangeMax=""                     offset="1412"                />
+        <DataArray type="UInt8" Name="types" format="appended" RangeMin=""                     RangeMax=""                     offset="1732"                />
+      </Cells>
+    </Piece>
+  </UnstructuredGrid>
+  <AppendedData encoding="base64">
+   _AQAAAACAAADAAQAAEQAAAA==eJxjZGBgYBzFQxYDAGSgAHE=AQAAAACAAADAAQAAUgAAAA==eJzF0MkOgDAIRdFnna3zWPX//9ObuK91VZKzABIISFICgxQZchQo9YavX6FGA4sWHXoMGDFhxoIVG3YccDhx4fbsC61/5aH3/Z0T6w8P8I4DgQ==AQAAAACAAADAAQAALQAAAA==eJxjZWBgYMWD2eiM2XFgDhyYEw1zoWFuApgHB+ZFw3x0xvw4sAAaBgAdRQRtAQAAAACAAABwAAAADAAAAA==eJxjZKQvAAAZKABxAQAAAACAAADAAQAAKAAAAA==eJxjZGBgYETCTGiYkUyMbg6xGJcZhMQJ8YnxHzHmDpZwgPEBklgAqQ==AQAAAACAAABgBgAA0wEAAA==eJzbeybYxfMYo6uu/TTnk3qRLvXNzK7zZx92Dj8Z5/I1iNXV4son5x3zUlxyTNld7f8JuoRszHJZo83pmjhF22UvBXrtPjW6dG3gcX3+WMvlcEKjC7snj6uQnarLxZMNLgvucru+TpR3MdFtcDHI43ZN95V0yRCtd5n4i8s185+Qi/GRWpeZTVyue4t4XILSalwU2LhcZVewuvj8rnL52cLpGmLx13lRU6XLj38crg9nvHO++Lvc5V0xh+vJnPvOQWllLqsfs7seWXfeefrBEpe/vuyuoZH7nXl4i13WbWJzPZu2zlnGo9ClS5DN1eXiHGe1onyXyCxW11mTupyHopsXMhq6PMxhdf3Kd8n5fLuxi705u6ti4T9nZ34zlxYmTtcLJaIuf6ZbuGw4x+XqsEfbhVT1Nw4FueSs5HP9uVrb5d/yABf5PTyuyxOEXFR6/VwuAtWs1vrk7FXk49LykMOVfcp+Z1LVC/1mdOHP5HE9c1DTJceGycVkFrerjLuCy4x6JpfJR7lcN3WIuRCjxvizjEvNRQHX/modF9aTsi5pDfyuh/1lXOTWy7ksFeVz3fqCiyg1lKR5SvTSOh6pFc5DMY8MRTfTOt9RK78AANijfqc=AQAAAACAAAAABwAABgEAAA==eJxdxdciEAAAQFFCRvZeIXtl772yN2VmV/YqI0IkftuD+3TPywkIeBWo3+ggHcwh/FaH6jAdzhH8TkfqKB2tY3SsjtPxOkEn6iSdrFN0Kqdxus7Qmfq9ztLZOkd/0Lk6T+frAl2oi7iYS3SpLuNy/qgrdCVXcbWu0bVcx/W6QTdyEzfrFm7lNt3OHdypu7ibe3Qv9/En3a8H9CAP8bAe0aN6jMd5Qk/qKZ7mGT2rP/MXntPzvMCLeomX+ate0at6Ta/rDb2pt/Q3/V3/0Nt6R+/yHu/rA32oj/SxPtGn+qf+pc/0ub7Ql/o3X/G1/qNv+Jbv9F99zw/8Tz/yf37Sz/wCP2k6YQ==AQAAAACAAACAAwAA3AAAAA==eJwtxdFGAwAAAMAkSZJJkiSZJEmSJJnJTJJJkkmSJEmSJEkymUySJMkkSZIkSZIkSZIkSZIk2af00N3LZWf9y3Gu85zvAhc64CIXu8SlLnO5K1zpoKtc7RrXus71bnCjm9zsFrc65LDbHHHU7e5wp2Pucrd73Ou4+9zvAQ96yMMe8ajHPO4JT3rK057xrOc87wUnvOikl5zysle86jWve8Ob3nLa297xrve87wMf+sjHPvGpz3zuC1/6yte+8a3vfO8HP/rJz37xq9/87g9/+svf/vGvM/4Du+YxcQ==AQAAAACAAABwAAAADAAAAA==eJxjZqYvAABKmAFR
+  </AppendedData>
+</VTKFile>
