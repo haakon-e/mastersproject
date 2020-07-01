@@ -531,8 +531,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         bc_values[:, all_bf] += bf_stress / self.params.scalar_scale  # Mechanical stress
 
         # --- gravitational forces ---
-        # See init-method to turn on/off gravity effects (Default: OFF)
-        if self._gravity_bc:
+        # See MechanicsParameters to turn on/off gravity effects (Default: OFF)
+        if self.params.gravity_bc:
             lithostatic_bc = self._adjust_stress_for_depth(g, outward_normals)
 
             # NEUMANN
@@ -577,7 +577,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         lithostatic_stress = stress_scaler.dot(np.multiply(outward_normals, rho_g_h))
         return lithostatic_stress
 
-    def source(self, g: pp.Grid) -> np.array:
+    def source_mechanics(self, g: pp.Grid) -> np.ndarray:
         """ Gravity term.
 
         Gravity points downward, but we give the term
@@ -585,17 +585,18 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         negative (i.e. the vector given will be
         pointing upwards)
         """
-        # See init-method to turn on/off gravity effects (Default: OFF)
-        if not self._gravity_src:
+        # See MechanicsParameters to turn on/off gravity effects (Default: OFF)
+        if self.params.gravity_src:
+            # Gravity term
+            values = np.zeros((self.Nd, g.num_cells))
+            scaling = self.params.length_scale / self.params.scalar_scale
+            values[2] = self.params.rock.lithostatic_pressure(g.cell_volumes) * scaling
+            return values.ravel("F")
+        else:
+            # No gravity term
             return np.zeros(self.Nd * g.num_cells)
 
-        # Gravity term
-        values = np.zeros((self.Nd, g.num_cells))
-        scaling = self.params.length_scale / self.params.scalar_scale
-        values[2] = self.params.rock.lithostatic_pressure(g.cell_volumes) * scaling
-        return values.ravel("F")
-
-    # --- Set parameters ---
+    # --- Set mechanics parameters ---
 
     def rock_friction_coefficient(self, g: pp.Grid) -> np.ndarray:  # noqa
         """ The friction coefficient is uniform, and equal to 1.

@@ -196,6 +196,10 @@ class MechanicsParameters(GeometryParameters):
         "nl_divergence_tol": 1e5,
     }
 
+    # Gravity for mechanics
+    gravity_src: bool = False
+    gravity_bc: bool = False
+
     class Config:
         arbitrary_types_allowed = True
 
