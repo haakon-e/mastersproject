@@ -134,7 +134,6 @@ class Mechanics(CommonAbstractModel):
                         "source": source_val,
                         "fourth_order_tensor": constit,
                         # "max_memory": 7e7,
-                        # "inverter": python,
                     },
                 )
 
@@ -432,9 +431,11 @@ class Mechanics(CommonAbstractModel):
                     difference_in_iterates_contact / difference_from_init_contact
             )
 
-        logger.info(f"Error in contact force is {error_contact:.6e}.\n"
-                    f"Contact force {'converged' if converged else 'did not converge'}.")
+        logger.info(f"Error in contact force is {error_contact:.6e}.\n")
+        logger.info(f"Contact force {'converged' if converged else 'did not converge'}.")
 
+        logger.info("DISABLE CONVERGENCE CHECK FOR CONTACT FORCE PENDING DEBUGGING")
+        converged = True
         return error_contact, converged, diverged
 
     def check_convergence(

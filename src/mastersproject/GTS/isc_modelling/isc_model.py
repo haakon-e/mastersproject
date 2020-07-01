@@ -9,7 +9,7 @@ from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotBase
 from GTS.isc_modelling.parameter import BiotParameters
 
-from mastersproject.util.logging_util import trace
+from mastersproject.util.logging_util import trace, timer
 
 logger = logging.getLogger(__name__)
 
@@ -315,7 +315,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         else:
             raise ValueError("Not implemented 1d intersection points")
 
-    # --- Parameter related methods ---
+    # --- Flow parameter related methods ---
 
     def permeability(self, g, scaled) -> np.ndarray:
         """ Set (uniform) permeability in a subdomain"""
@@ -359,13 +359,16 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             super()._prepare_grid()
         self.well_cells()  # tag well cells
 
+    @timer(logger, level="INFO")
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
         super().before_newton_iteration()
-        self.assembler.discretize(term_filter=["diffusion", "mass"])
+        self.assembler.discretize(
+            term_filter=["!grad_p", "!div_u", "!stabilization"]
+        )
         # for g, _ in self.gb:
         #     if g.dim < self.Nd:
-        #         self.assembler.discretize(variable_filter=["diffusion", "mass"])
+        #         self.assembler.discretize(grid=g)
 
     def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
         super().after_newton_iteration(solution_vector)

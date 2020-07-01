@@ -379,7 +379,7 @@ def center_of_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket
     # Get the grid to inject to
     frac: pp.Grid = gb.get_grids(lambda g: gb.node_props(g, "name") == shearzone)[0]
     centers: np.ndarray = frac.cell_centers
-    pts = np.mean(centers, axis=1)
+    pts = np.atleast_2d(np.mean(centers, axis=1)).T
 
     # Tag injection grid with 1 in the injection cell
     _tag_injection_cell(gb, frac, pts, params.length_scale)
