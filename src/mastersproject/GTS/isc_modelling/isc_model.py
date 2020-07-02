@@ -121,7 +121,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             pp.set_state(d, {"well": tags.copy()})
 
         # Set injection cells
-        self.params.well_cells(self.params, self.gb)
+        if self.params.well_cells:
+            self.params.well_cells(self.params, self.gb)
 
     # ---- FLOW -----
 
