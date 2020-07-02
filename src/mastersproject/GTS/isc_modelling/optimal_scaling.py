@@ -1,20 +1,21 @@
 """ method to find optimal scaling of a problem """
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
-from GTS import FlowISC, SetupParams, prepare_directories
+from GTS import ISCBiotContactMechanics, BiotParameters, stress_tensor, GrimselGranodiorite
 
 
-def best_cond_numb(initial_guess: np.array = None):
+def best_cond_numb(initial_guess: np.array = None) -> pd.DataFrame:
     """ Find best condition numbers
 
     initial_guess = (length_scale, log10(scalar_scale))
         if not set, then default is length_scale=0.05, scalar_scale=1e+9.
     """
     if not initial_guess:
-        initial_guess = np.array([0.05, 9])
+        initial_guess = np.array([0.05, 6])
     ls_0, log_ss_0 = initial_guess
-    assert log_ss_0 >= 2, "log10 scalar_scale < 2 results in negative test values."
 
     length_scales = np.array((1 / 4, 1 / 2, 1, 2, 4)) * ls_0
     log_scalar_scales = np.array((-2, -1, 0, 1, 2)) + log_ss_0
@@ -22,13 +23,14 @@ def best_cond_numb(initial_guess: np.array = None):
     results = pd.DataFrame(columns=["ls", "log_ss", "cond_pp", "cond_umfpack"])
     for ls in length_scales:
         for log_ss in log_scalar_scales:
+            A = assemble_isc_matrix(np.array([ls, log_ss]))
             try:
-                A = assemble_isc_matrix([ls, log_ss])
                 cond_pp = condition_number_porepy(A)
                 cond_umfpack = condition_number_umfpack(A)
-            except ValueError:
-                cond_pp = "singular"
-                cond_umfpack = "singular"
+            except ValueError as e:
+                cond_pp = np.nan
+                cond_umfpack = np.nan
+                print(e)
             v = {
                 "ls": ls,
                 "log_ss": log_ss,
@@ -48,7 +50,7 @@ def assemble_isc_matrix(values):
     if return_both is set, return both estimates for condition number.
     """
     length_scale, log_scalar_scale = values  # Component values of input
-    scalar_scale = 10 ** log_scalar_scale
+    scalar_scale = np.float_power(10, log_scalar_scale)
 
     _sz = 40
     mesh_args = {
@@ -56,17 +58,24 @@ def assemble_isc_matrix(values):
         "mesh_size_min": 0.2 * _sz,
         "mesh_size_bound": 3 * _sz,
     }
-
-    folder = prepare_directories(
-        f"test_optimal_scaling/ls{length_scale:.2e}_ss{scalar_scale:.2e}"
-    )
-    params = SetupParams(
-        folder_name=folder,
+    here = Path(__file__).parent / f"results/test_optimal_scaling/ls{length_scale:.2e}_ss{scalar_scale:.2e}"
+    params = BiotParameters(
+        # Base
         length_scale=length_scale,
         scalar_scale=scalar_scale,
+        folder_name=here,
+        time_step=1*60,  # 1 minute
+        rock=GrimselGranodiorite(),
+        # Geometry
+        shearzone_names=["S1_2", "S3_1"],
         mesh_args=mesh_args,
+        # Mechanics
+        stress=stress_tensor(),
+        dilation_angle=(np.pi/180) * 5,
+        # Flow
+        frac_transmissivity=[1e-9, 3.7e-7],
     )
-    setup = FlowISC(params.dict())
+    setup = ISCBiotContactMechanics(params)
     setup.prepare_simulation()
 
     A, _ = setup.assembler.assemble_matrix_rhs()
@@ -80,4 +89,8 @@ def condition_number_porepy(A):
 
 def condition_number_umfpack(A):
     diag = np.abs(A.diagonal())
-    return np.max(diag) / np.min(diag)
+    cond = np.min(diag) / np.max(diag)
+    if np.isclose(cond, 0):
+        return np.inf
+    else:
+        return 1/cond
