@@ -8,9 +8,14 @@ import numpy as np
 import porepy as pp
 from GTS.isc_modelling.isc_model import ISCBiotContactMechanics
 from GTS.isc_modelling.parameter import (
-    BiotParameters, stress_tensor, shearzone_injection_cell, GrimselGranodiorite,
-    nd_sides_shearzone_injection_cell, nd_and_shearzone_injection_cell,
-    center_of_shearzone_injection_cell)
+    BiotParameters,
+    stress_tensor,
+    shearzone_injection_cell,
+    GrimselGranodiorite,
+    nd_sides_shearzone_injection_cell,
+    nd_and_shearzone_injection_cell,
+    center_of_shearzone_injection_cell,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +28,7 @@ def biot_params() -> BiotParameters:
     params = BiotParameters(
         folder_name=here,
         stress=stress_tensor(),
-        injection_rate=1/6,
+        injection_rate=1 / 6,
         frac_permeability=1e-9,
         intact_permeability=1e-12,
         well_cells=shearzone_injection_cell,
@@ -52,9 +57,9 @@ def biot_params_small() -> Dict:
         "well_cells": shearzone_injection_cell,
         "rock": GrimselGranodiorite(),
         "mesh_args": {
-             "mesh_size_frac": 10,
-             "mesh_size_min": 10,
-             "mesh_size_bound": 30,
+            "mesh_size_frac": 10,
+            "mesh_size_min": 10,
+            "mesh_size_bound": 30,
         },
         "length_scale": 7,
         "scalar_scale": 11,
@@ -103,7 +108,9 @@ class TestISCBiotContactMechanics:
              [5, 5, 5, 5],
              [0, 0, 5, 5]]) / params.length_scale
         # fmt: on
-        gb = pp.meshing.cart_grid([frac_pts], nx=nx, physdims=physdims / params.length_scale, )
+        gb = pp.meshing.cart_grid(
+            [frac_pts], nx=nx, physdims=physdims / params.length_scale,
+        )
         # --- ---
         setup.gb = gb
         setup.assign_biot_variables()
@@ -124,34 +131,26 @@ class TestISCBiotContactMechanics:
         # Set mechanical mortar displacement to STATE.
         # Set u_n = 1 and ||u_t|| = 0 on side 1
         # Set all zero on side 1.
-        s1 = np.vstack((  # mortar side 1
-            np.zeros(nc),
-            np.ones(nc),
-            np.zeros(nc),
-        ))
-        mortar_u = np.hstack((
-            s1,                     # mortar side 1
-            np.zeros((nd, nc)),     # mortar side 2
-        )).ravel("F")
+        s1 = np.vstack((np.zeros(nc), np.ones(nc), np.zeros(nc),))  # mortar side 1
+        mortar_u = np.hstack(
+            (s1, np.zeros((nd, nc)),)  # mortar side 1  # mortar side 2
+        ).ravel("F")
 
         # Set mechanical mortar displacement to previous iterate.
         # Set u = (1, 1, 1) on side 1
         # Set u = (3, 3, 3) on side 2.
         # This should give an aperture of 2.
-        s2 = np.vstack((
-            3 * np.ones((nd, nc)),
-        ))
-        mortar_u_prev_iter = np.hstack((
-            np.ones((nd, nc)),     # mortar side 1
-            s2,                     # mortar side 2
-        )).ravel("F")
+        s2 = np.vstack((3 * np.ones((nd, nc)),))
+        mortar_u_prev_iter = np.hstack(
+            (np.ones((nd, nc)), s2,)  # mortar side 1  # mortar side 2
+        ).ravel("F")
 
-        data_edge[pp.STATE].update({
-            var_mortar: mortar_u,
-            "previous_iterate": {
-                var_mortar: mortar_u_prev_iter
-            },
-        })
+        data_edge[pp.STATE].update(
+            {
+                var_mortar: mortar_u,
+                "previous_iterate": {var_mortar: mortar_u_prev_iter},
+            }
+        )
 
         # Get mechanical aperture
         # Nd
@@ -215,7 +214,7 @@ class TestISCBiotContactMechanics:
             scalar_scale=1e10,
             head="2frac/20l_min/inj-frac-center/dilation",
             time_step=pp.MINUTE,
-            end_time=7*pp.MINUTE,
+            end_time=7 * pp.MINUTE,
             rock=GrimselGranodiorite(),
             # Geometry parameters
             shearzone_names=["S1_2", "S3_1"],
@@ -226,17 +225,14 @@ class TestISCBiotContactMechanics:
             },
             # Mechanical parameters
             stress=stress_tensor(),
-            dilation_angle=(np.pi/180) * 5,  # 5 degrees dilation angle.
+            dilation_angle=(np.pi / 180) * 5,  # 5 degrees dilation angle.
             newton_options={
                 "max_iterations": 40,
                 "nl_convergence_tol": 1e-10,
                 "nl_divergence_tol": 1e5,
             },
             # Flow parameters
-            source_scalar_borehole_shearzone={
-                "shearzone": "S1_2",
-                "borehole": "INJ1",
-            },
+            source_scalar_borehole_shearzone={"shearzone": "S1_2", "borehole": "INJ1",},
             well_cells=center_of_shearzone_injection_cell,
             injection_rate=(10 / 60) * 2,  # (10/60)*2 = 20l per 60s = 20 l/min
             frac_transmissivity=[1e-9, 3.7e-7],
@@ -247,23 +243,31 @@ class TestISCBiotContactMechanics:
         pp.run_time_dependent_model(setup, newton_params)
 
     def test_realistic_only_fracture_zone(self):
+        # See changelist: reset changes for only fracture zone setup of 2020/06/25.
         # _sz = 2, bounding_box=None -> ~53k 3d, ~6k 2d, 80 1d cells
-        _sz = 2
+        _sz = 3.5
         params = BiotParameters(
             # Base parameters
             length_scale=0.05,
             scalar_scale=1e6,
-            head="60k-5frac/only-frac-zone",
+            head="60k-5frac/medium-sized-intact-grid/t_end-10min",
             time_step=pp.MINUTE,
-            end_time=2 * pp.MINUTE,
+            end_time=10 * pp.MINUTE,
             rock=GrimselGranodiorite(),
             # Geometry parameters
             mesh_args={
-                "mesh_size_frac": _sz,
+                "mesh_size_frac": 0.9 * _sz,
                 "mesh_size_min": 0.2 * _sz,
                 "mesh_size_bound": 3 * _sz,
             },
-            bounding_box=None,
+            bounding_box={
+                "xmin": -1 - 50,
+                "ymin": 80 - 50,
+                "zmin": -4 - 50,
+                "xmax": 86 + 50,
+                "ymax": 151 + 50,
+                "zmax": 41 + 50,
+            },
             shearzone_names=["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],
             # Mechanical parameters
             stress=stress_tensor(),
@@ -273,16 +277,12 @@ class TestISCBiotContactMechanics:
                 "nl_divergence_tol": 1e5,
             },
             # Flow parameters
-            source_scalar_borehole_shearzone={
-                "shearzone": "S1_2",
-                "borehole": "INJ1",
-            },
+            source_scalar_borehole_shearzone={"shearzone": "S1_2", "borehole": "INJ1",},
             well_cells=nd_and_shearzone_injection_cell,
-            injection_rate=(1 / 6) / 3,  # = 10 l/min  - Divide by 3 due to 3 injection cells.
+            injection_rate=(1 / 6)
+            / 3,  # = 10 l/min  - Divide by 3 due to 3 injection cells.
             frac_permeability=[2.3e-15, 4.5e-17, 2.3e-17, 6.4e-14, 1e-16],
             intact_permeability=2e-20,
-
-
         )
         setup = NeverFailtBiotCM(params)
         newton_params = params.newton_options
