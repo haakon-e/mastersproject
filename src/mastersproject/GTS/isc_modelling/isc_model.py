@@ -350,6 +350,35 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         values = flow_rate * g.tags["well_cells"] * self.time_step
         return values
 
+    def source_scalar_pressure(self, pressure):
+        """ Pressure-controlled injection"""
+        for g, d in self.gb:
+            wells = g.tags['well_cells']
+            if np.sum(np.abs(wells)) > 0:
+                dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
+                loc = np.where(wells != 0)[0]
+                glob_ind = dof_ind[loc]
+                A, b = self.assembler.assemble_matrix_rhs(matrix_format="csr")
+                self.csr_zero_rows(A, glob_ind)
+                A[glob_ind, glob_ind] = 1
+                b[glob_ind] = pressure
+
+    def csr_zero_rows(self, csr, rows_to_zero):
+        """ Efficient way to set csr sparse matrix row to zero.
+        https://stackoverflow.com/questions/19784868/
+        what-is-most-efficient-way-of-setting-row-to-zeros-for-a-sparse-scipy-matrix/
+        19800305#19800305"""
+        rows, cols = csr.shape
+        mask = np.ones((rows,), dtype=np.bool)
+        mask[rows_to_zero] = False
+        nnz_per_row = np.diff(csr.indptr)
+
+        mask = np.repeat(mask, nnz_per_row)
+        nnz_per_row[rows_to_zero] = 0
+        csr.data = csr.data[mask]
+        csr.indices = csr.indices[mask]
+        csr.indptr[1:] = np.cumsum(nnz_per_row)
+
     # --- Simulation and solvers ---
 
     def _prepare_grid(self):
