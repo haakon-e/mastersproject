@@ -7,7 +7,10 @@ import numpy as np
 
 import porepy as pp
 from GTS.isc_modelling.isc_model import ISCBiotContactMechanics
-from GTS.isc_modelling.parameter import BiotParameters, stress_tensor, shearzone_injection_cell, GrimselGranodiorite
+from GTS.isc_modelling.parameter import (
+    BiotParameters, stress_tensor, shearzone_injection_cell, GrimselGranodiorite,
+    nd_sides_shearzone_injection_cell, nd_and_shearzone_injection_cell,
+    center_of_shearzone_injection_cell)
 
 logger = logging.getLogger(__name__)
 
@@ -203,27 +206,30 @@ class TestISCBiotContactMechanics:
         Parameters are close to the ISC setup. Model is run for 10 minutes,
         with time steps of 1 minute. Injection to a shear zone.
         """
-        _sz = 6  # _sz=6 => ~50k cells
+        # _sz=6 => ~50k cells,
+        # _sz=5.5 => ~66k cells
+        _sz = 6
         params = BiotParameters(
             # Base parameters
-            length_scale=0.05,
-            scalar_scale=1e6,
-            head="50k-5frac-test",
+            length_scale=12.8,
+            scalar_scale=1e10,
+            head="2frac/20l_min/inj-frac-center/dilation",
             time_step=pp.MINUTE,
-            end_time=10*pp.MINUTE,
+            end_time=7*pp.MINUTE,
             rock=GrimselGranodiorite(),
             # Geometry parameters
+            shearzone_names=["S1_2", "S3_1"],
             mesh_args={
-                "mesh_size_frac": _sz,
+                "mesh_size_frac": _sz,  # 0.3 * _sz
                 "mesh_size_min": 0.2 * _sz,
-                "mesh_size_bound": 3 * _sz,
+                "mesh_size_bound": 3 * _sz,  # 3.2 * _sz
             },
             # Mechanical parameters
             stress=stress_tensor(),
             dilation_angle=(np.pi/180) * 5,  # 5 degrees dilation angle.
             newton_options={
-                "max_iterations": 20,
-                "nl_convergence_tol": 1e-6,
+                "max_iterations": 40,
+                "nl_convergence_tol": 1e-10,
                 "nl_divergence_tol": 1e5,
             },
             # Flow parameters
