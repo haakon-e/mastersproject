@@ -126,9 +126,7 @@ class Flow(CommonAbstractModel):
             source_values: np.ndarray = self.source_scalar(g)  # Already scaled
 
             # Mass weight  # TODO: Simplified version of mass_weight?
-            mass_weight = (
-                compressibility * porosity * specific_volume
-            )
+            mass_weight = compressibility * porosity * specific_volume
 
             # Initialize data
             pp.initialize_data(
@@ -172,10 +170,12 @@ class Flow(CommonAbstractModel):
             # permeability [m2] (scaled)
             k: np.ndarray = self.permeability(g, scaled=True)
             a = self.aperture(g, scaled=True)
-            logger.info(f"Scaled permeability and aperture in dim {g.dim} have values: "
-                        f"min [k={np.min(k):.2e}, a={np.min(a):.2e}]; "
-                        f"mean [k={np.mean(k):.2e}, a={np.mean(a):.2e}]; "
-                        f"max [k={np.max(k):.2e}, a={np.max(a):.2e}]")
+            logger.info(
+                f"Scaled permeability and aperture in dim {g.dim} have values: "
+                f"min [k={np.min(k):.2e}, a={np.min(a):.2e}]; "
+                f"mean [k={np.mean(k):.2e}, a={np.mean(a):.2e}]; "
+                f"max [k={np.max(k):.2e}, a={np.max(a):.2e}]"
+            )
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -240,9 +240,9 @@ class Flow(CommonAbstractModel):
         for _, d in gb.edges():
             add_nonpresent_dictionary(d, primary_vars)
 
-            d[primary_vars].update({
-                self.mortar_scalar_variable: {"cells": 1},
-            })
+            d[primary_vars].update(
+                {self.mortar_scalar_variable: {"cells": 1},}
+            )
 
     def assign_scalar_discretizations(self) -> None:
         """
@@ -267,29 +267,33 @@ class Flow(CommonAbstractModel):
         for _, d in gb:
             add_nonpresent_dictionary(d, discr_key)
 
-            d[discr_key].update({
-                var_s: {
-                    "diffusion": diff_disc_s,
-                    "mass": mass_disc_s,
-                    "source": source_disc_s,
-                },
-            })
+            d[discr_key].update(
+                {
+                    var_s: {
+                        "diffusion": diff_disc_s,
+                        "mass": mass_disc_s,
+                        "source": source_disc_s,
+                    },
+                }
+            )
 
         # Assign edge discretizations
         for e, d in gb.edges():
             g_l, g_h = gb.nodes_of_edge(e)
             add_nonpresent_dictionary(d, coupling_discr_key)
 
-            d[coupling_discr_key].update({
-                self.scalar_coupling_term: {
-                    g_h: (var_s, "diffusion"),
-                    g_l: (var_s, "diffusion"),
-                    e: (
-                        self.mortar_scalar_variable,
-                        pp.RobinCoupling(key_s, diff_disc_s),
-                    ),
-                },
-            })
+            d[coupling_discr_key].update(
+                {
+                    self.scalar_coupling_term: {
+                        g_h: (var_s, "diffusion"),
+                        g_l: (var_s, "diffusion"),
+                        e: (
+                            self.mortar_scalar_variable,
+                            pp.RobinCoupling(key_s, diff_disc_s),
+                        ),
+                    },
+                }
+            )
 
     @timer(logger, level="INFO")
     def discretize(self) -> None:
@@ -371,9 +375,7 @@ class Flow(CommonAbstractModel):
         # Find indices for pressure variables
         scalar_dof = np.array([], dtype=np.int)
         for g, _ in self.gb:
-            scalar_dof = np.hstack(
-                (scalar_dof, self.assembler.dof_ind(g, var_s))
-            )
+            scalar_dof = np.hstack((scalar_dof, self.assembler.dof_ind(g, var_s)))
 
         # Unscaled pressure solutions
         scalar_now = solution[scalar_dof] * ss
@@ -466,10 +468,7 @@ class Flow(CommonAbstractModel):
         self.p_exp = "p_exp"  # noqa
         self.aperture_exp = "aperture"  # noqa
 
-        self.export_fields.extend([
-            self.p_exp,
-            self.aperture_exp
-        ])
+        self.export_fields.extend([self.p_exp, self.aperture_exp])
 
     def export_step(self, write_vtk=True):
         """ Export a step with pressures """

@@ -163,23 +163,23 @@ class Mechanics(CommonAbstractModel):
         for g, d in gb:
             add_nonpresent_dictionary(d, primary_vars)
             if g.dim == self.Nd:
-                d[primary_vars].update({
-                    var_m: {"cells": self.Nd},
-                })
+                d[primary_vars].update(
+                    {var_m: {"cells": self.Nd},}
+                )
 
             elif g.dim == self.Nd - 1:
-                d[primary_vars].update({
-                    var_contact: {"cells": self.Nd},
-                })
+                d[primary_vars].update(
+                    {var_contact: {"cells": self.Nd},}
+                )
 
         for e, d in gb.edges():
             add_nonpresent_dictionary(d, primary_vars)
 
             g_l, g_h = gb.nodes_of_edge(e)
             if g_h.dim == self.Nd:
-                d[primary_vars].update({
-                    var_mortar: {"cells": self.Nd},
-                })
+                d[primary_vars].update(
+                    {var_mortar: {"cells": self.Nd},}
+                )
 
     def assign_mechanics_discretizations(self) -> None:
         """
@@ -205,14 +205,14 @@ class Mechanics(CommonAbstractModel):
             add_nonpresent_dictionary(d, discr_key)
 
             if g.dim == nd:
-                d[discr_key].update({
-                    var_m: {"mpsa": mpsa},
-                })
+                d[discr_key].update(
+                    {var_m: {"mpsa": mpsa},}
+                )
 
             elif g.dim == nd - 1:
-                d[discr_key].update({
-                    var_contact: {"empty": empty_discr},
-                })
+                d[discr_key].update(
+                    {var_contact: {"empty": empty_discr},}
+                )
 
         # Define the contact condition on the mortar grid
         coloumb = pp.ColoumbContact(key_m, nd, mpsa)
@@ -222,13 +222,15 @@ class Mechanics(CommonAbstractModel):
             g_l, g_h = gb.nodes_of_edge(e)
             add_nonpresent_dictionary(d, coupling_discr_key)
             if g_h.dim == nd:
-                d[coupling_discr_key].update({
-                    self.friction_coupling_term: {
-                        g_h: (var_m, "mpsa"),
-                        g_l: (var_contact, "empty"),
-                        e: (var_mortar, contact),
-                    },
-                })
+                d[coupling_discr_key].update(
+                    {
+                        self.friction_coupling_term: {
+                            g_h: (var_m, "mpsa"),
+                            g_l: (var_contact, "empty"),
+                            e: (var_mortar, contact),
+                        },
+                    }
+                )
 
     @timer(logger, level="INFO")
     def discretize(self) -> None:
@@ -266,19 +268,21 @@ class Mechanics(CommonAbstractModel):
             if g.dim == self.Nd:
                 # Initialize displacement variable
                 initial_displacement_value = np.zeros(g.num_cells * self.Nd)
-                d[state].update({
-                    var_m: initial_displacement_value,
-                })
+                d[state].update(
+                    {var_m: initial_displacement_value,}
+                )
 
             elif g.dim == self.Nd - 1:
                 # Initialize contact variable
                 traction = np.vstack(
                     (np.zeros((g.dim, g.num_cells)), -1 * np.ones(g.num_cells))
                 ).ravel(order="F")
-                d[state].update({
-                    "previous_iterate": {var_contact: traction},
-                    var_contact: traction,
-                })
+                d[state].update(
+                    {
+                        "previous_iterate": {var_contact: traction},
+                        var_contact: traction,
+                    }
+                )
 
         for e, d in self.gb.edges():
             add_nonpresent_dictionary(d, state)
@@ -286,12 +290,12 @@ class Mechanics(CommonAbstractModel):
             mg: pp.MortarGrid = d["mortar_grid"]
             if mg.dim == self.Nd - 1:
                 size = mg.num_cells * self.Nd
-                d[state].update({
-                    var_mortar: np.zeros(size),
-                    "previous_iterate": {
-                        var_mortar: np.zeros(size)
-                    },
-                })
+                d[state].update(
+                    {
+                        var_mortar: np.zeros(size),
+                        "previous_iterate": {var_mortar: np.zeros(size)},
+                    }
+                )
 
     # --- Simulation and solvers ---
 
@@ -344,7 +348,9 @@ class Mechanics(CommonAbstractModel):
         else:
             raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
 
-    def _check_convergence_mechanics(self, solution, prev_solution, init_solution, nl_params):
+    def _check_convergence_mechanics(
+        self, solution, prev_solution, init_solution, nl_params
+    ):
         """ Check convergence and compute error of matrix displacement variable"""
         var_m = self.displacement_variable
         g_max = self._nd_grid()
@@ -375,18 +381,22 @@ class Mechanics(CommonAbstractModel):
         else:
             # Check relative convergence criterion
             if (
-                    difference_in_iterates_mech
-                    < tol_convergence * difference_from_init_mech
+                difference_in_iterates_mech
+                < tol_convergence * difference_from_init_mech
             ):
                 converged = True
             error_mech = difference_in_iterates_mech / difference_from_init_mech
 
         logger.info(f"Error in matrix displacement is {error_mech:.6e}")
-        logger.info(f"Matrix displacement {'converged' if converged else 'did not converge'}. ")
+        logger.info(
+            f"Matrix displacement {'converged' if converged else 'did not converge'}. "
+        )
 
         return error_mech, converged, diverged
 
-    def _check_convergence_contact(self, solution, prev_solution, init_solution, nl_params):
+    def _check_convergence_contact(
+        self, solution, prev_solution, init_solution, nl_params
+    ):
         """ Check convergence and compute error of contact traction variable"""
 
         contact_dof = np.array([], dtype=np.int)
@@ -411,8 +421,12 @@ class Mechanics(CommonAbstractModel):
 
         # Calculate errors
         contact_norm = np.sum(contact_now ** 2) * ss * ls ** 2
-        difference_in_iterates_contact = np.sum((contact_now - contact_prev) ** 2) * ss * ls ** 2
-        difference_from_init_contact = np.sum((contact_now - contact_init) ** 2) * ss * ls ** 2
+        difference_in_iterates_contact = (
+            np.sum((contact_now - contact_prev) ** 2) * ss * ls ** 2
+        )
+        difference_from_init_contact = (
+            np.sum((contact_now - contact_init) ** 2) * ss * ls ** 2
+        )
 
         tol_convergence = nl_params["nl_convergence_tol"]
 
@@ -421,29 +435,31 @@ class Mechanics(CommonAbstractModel):
 
         # The if is intended to avoid division through zero
         if (
-                contact_norm < tol_convergence
-                and difference_in_iterates_contact < tol_convergence
+            contact_norm < tol_convergence
+            and difference_in_iterates_contact < tol_convergence
         ):
             converged = True
             error_contact = difference_in_iterates_contact
         else:
             error_contact = (
-                    difference_in_iterates_contact / difference_from_init_contact
+                difference_in_iterates_contact / difference_from_init_contact
             )
 
         logger.info(f"Error in contact force is {error_contact:.6e}.\n")
-        logger.info(f"Contact force {'converged' if converged else 'did not converge'}.")
+        logger.info(
+            f"Contact force {'converged' if converged else 'did not converge'}."
+        )
 
         logger.info("DISABLE CONVERGENCE CHECK FOR CONTACT FORCE PENDING DEBUGGING")
         converged = True
         return error_contact, converged, diverged
 
     def check_convergence(
-            self,
-            solution: np.ndarray,
-            prev_solution: np.ndarray,
-            init_solution: np.ndarray,
-            nl_params: Dict,
+        self,
+        solution: np.ndarray,
+        prev_solution: np.ndarray,
+        init_solution: np.ndarray,
+        nl_params: Dict,
     ) -> Tuple[np.ndarray, bool, bool]:
 
         # Convergence check for linear problems
@@ -514,14 +530,14 @@ class Mechanics(CommonAbstractModel):
                 if isinstance(g, tuple):
                     # This is really an edge
                     if name == var_mortar:
-                        mortar_u = (solution_vector[dof[bi]: dof[bi + 1]]).copy()
+                        mortar_u = (solution_vector[dof[bi] : dof[bi + 1]]).copy()
                         data = self.gb.edge_props(g)
                         data[pp.STATE]["previous_iterate"][var_mortar] = mortar_u
                 else:
                     # g is a node/grid (not edge)
                     # For the fractures, update the contact force
                     if (g.dim < self.Nd) and (name == var_contact):
-                        contact = (solution_vector[dof[bi]: dof[bi + 1]]).copy()
+                        contact = (solution_vector[dof[bi] : dof[bi + 1]]).copy()
                         data = self.gb.node_props(g)
                         data[pp.STATE]["previous_iterate"][var_contact] = contact
 
@@ -585,7 +601,9 @@ class Mechanics(CommonAbstractModel):
 
         d[pp.STATE]["stress"] = stress
 
-    def reconstruct_local_displacement_jump(self, data_edge: Dict, from_iterate: bool = True):
+    def reconstruct_local_displacement_jump(
+        self, data_edge: Dict, from_iterate: bool = True
+    ):
         """ Reconstruct the displacement jump in local coordinates.
 
         Parameters:
@@ -613,11 +631,11 @@ class Mechanics(CommonAbstractModel):
             mortar_u = data_edge[pp.STATE][var_mortar]
 
         displacement_jump_global_coord = (
-            mg.mortar_to_slave_avg(nd=nd)
-            * mg.sign_of_mortar_sides(nd=nd)
-            * mortar_u
+            mg.mortar_to_slave_avg(nd=nd) * mg.sign_of_mortar_sides(nd=nd) * mortar_u
         )
-        projection: pp.TangentialNormalProjection = data_edge["tangential_normal_projection"]
+        projection: pp.TangentialNormalProjection = data_edge[
+            "tangential_normal_projection"
+        ]
 
         # Rotated displacement jumps. these are in the local coordinates, on the fracture.
         project_to_local = projection.project_tangential_normal(int(mg.num_cells / 2))
@@ -636,14 +654,16 @@ class Mechanics(CommonAbstractModel):
         self.tangential_frac_u = "tangential_frac_u"  # noqa
         self.stress_exp = "stress_exp"  # noqa
 
-        self.export_fields.extend([
-            self.u_exp,
-            self.traction_exp,
-            self.normal_frac_u,
-            self.tangential_frac_u,
-            # Cannot save variables that are defined on faces:
-            # self.stress_exp,
-        ])
+        self.export_fields.extend(
+            [
+                self.u_exp,
+                self.traction_exp,
+                self.normal_frac_u,
+                self.tangential_frac_u,
+                # Cannot save variables that are defined on faces:
+                # self.stress_exp,
+            ]
+        )
 
     def save_matrix_stress(self, from_iterate: bool = False) -> None:
         """ Save upscaled matrix stress state to a class attribute """
@@ -677,7 +697,8 @@ class Mechanics(CommonAbstractModel):
                 u_mortar_local = (
                     self.reconstruct_local_displacement_jump(
                         data_edge, from_iterate
-                    ).copy() * ls
+                    ).copy()
+                    * ls
                 )
 
                 # Jump distances in each cell

@@ -4,18 +4,16 @@ import time
 from typing import Optional, Dict, List
 
 import numpy as np
-import scipy.sparse.linalg as spla
 
 import porepy as pp
 from GTS.isc_modelling.parameter import BaseParameters
-from mastersproject.util.logging_util import timer, trace
+from mastersproject.util.logging_util import timer
 from porepy.models.abstract_model import AbstractModel
 
 logger = logging.getLogger(__name__)
 
 
 class CommonAbstractModel(AbstractModel):
-
     def __init__(self, params: BaseParameters):
         self.params = params
 

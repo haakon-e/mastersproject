@@ -63,8 +63,8 @@ class GrimselGranodiorite(pp.UnitRock):
             40 * pp.GIGA * pp.PASCAL
         )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
         self.POISSON_RATIO = (
-            0.25
-        )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+            0.25  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+        )
 
         self.LAMBDA, self.MU = pp_rock.lame_from_young_poisson(
             self.YOUNG_MODULUS, self.POISSON_RATIO
@@ -279,9 +279,7 @@ class FlowParameters(GeometryParameters):
         return a ** 2 / 12
 
     def T_from_b(self, b):
-        return self.T_from_K_b(
-            self.K_from_k(self.cubic_law(b)), b
-        )
+        return self.T_from_K_b(self.K_from_k(self.cubic_law(b)), b)
 
     def b_from_T(self, T):
         return np.cbrt(T * 12 * self.mu_over_rho_g)
@@ -298,6 +296,7 @@ class FlowParameters(GeometryParameters):
 
 class BiotParameters(FlowParameters, MechanicsParameters):
     """ Parameters for the Biot problem with contact mechanics"""
+
     # Selvadurai (2019): Biot aritcle --> Table 9., on Pahl et. al (1989), mean of aL, aU.
     alpha: float = 0.57
 
@@ -352,15 +351,15 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
 
 
 def nd_sides_shearzone_injection_cell(
-        params: FlowParameters, gb: pp.GridBucket, reset_frac_tags: bool = True,
+    params: FlowParameters, gb: pp.GridBucket, reset_frac_tags: bool = True,
 ) -> None:
     """ Tag the Nd cells surrounding a shear zone injection point
 
     Parameters
     ----------
     params : FlowParameters
-        parameters that contain "source_scalar_borehole_shearzone" (with "shearzone", and "borehole")
-        and "length_scale".
+        parameters that contain "source_scalar_borehole_shearzone"
+        (with "shearzone", and "borehole") and "length_scale".
     gb : pp.GridBucket
         grid bucket
     reset_frac_tags : bool [Default: True]
@@ -378,10 +377,7 @@ def nd_sides_shearzone_injection_cell(
     data_edge = gb.edge_props((fracture, nd_grid))
     mg: pp.MortarGrid = data_edge["mortar_grid"]
 
-    slave_to_master_face = (
-        mg.mortar_to_master_int()
-        * mg.slave_to_mortar_int()
-    )
+    slave_to_master_face = mg.mortar_to_master_int() * mg.slave_to_mortar_int()
     face_to_cell = nd_grid.cell_faces.T
     slave_to_master_cell = face_to_cell * slave_to_master_face
     nd_tags = np.abs(slave_to_master_cell) * tags
@@ -403,7 +399,9 @@ def nd_and_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -
     nd_sides_shearzone_injection_cell(params, gb, reset_frac_tags)
 
 
-def center_of_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
+def center_of_shearzone_injection_cell(
+    params: FlowParameters, gb: pp.GridBucket
+) -> None:
     """ Tag the center cell of the given shear zone with 1 (injection)
 
     Parameters
@@ -456,7 +454,9 @@ def _tag_injection_cell(
     )
 
 
-def _shearzone_borehole_intersection(borehole: str, shearzone: str, length_scale: float):
+def _shearzone_borehole_intersection(
+    borehole: str, shearzone: str, length_scale: float
+):
     """ Find the cell which is the intersection of a borehole and a shear zone"""
     # Compute the intersections between boreholes and shear zones
     df = ISCData().borehole_plane_intersection()

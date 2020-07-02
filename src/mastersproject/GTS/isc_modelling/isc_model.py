@@ -92,7 +92,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if self.params.n_frac > 0:
             fracture_grids = self.gb.get_grids(lambda g: g.dim == self.Nd - 1)
             assert (
-                    len(fracture_grids) == self.params.n_frac
+                len(fracture_grids) == self.params.n_frac
             ), "There should be equal number of Nd-1 fractures as shearzone names"
             # We assume that order of fractures on grid creation (self.create_grid)
             # is preserved.
@@ -136,7 +136,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     # --- Aperture related methods ---
 
-    def specific_volume(self, g: pp.Grid, scaled=False, from_iterate=True) -> np.ndarray:
+    def specific_volume(
+        self, g: pp.Grid, scaled=False, from_iterate=True
+    ) -> np.ndarray:
         """
         The specific volume of a cell accounts for the dimension reduction and has
         dimensions [m^(Nd - d)].
@@ -146,7 +148,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         a = self.aperture(g, scaled, from_iterate)
         return np.power(a, self.Nd - g.dim)
 
-    def aperture(self, g: pp.Grid, scaled: bool, from_iterate: bool = True) -> np.ndarray:
+    def aperture(
+        self, g: pp.Grid, scaled: bool, from_iterate: bool = True
+    ) -> np.ndarray:
         """ Compute the total aperture of each cell on a grid
 
         Parameters
@@ -169,7 +173,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if not scaled:
             # Mechanical aperture is scaled by default, whereas initial aperture (above)
             # is not. This "upscaling" ensures they are consistent.
-            a_mech *= (self.params.length_scale / pp.METER)
+            a_mech *= self.params.length_scale / pp.METER
 
         # TODO: This is commented out to test effects of aperture variations in injection cell.
         # # Find the cells that are not injection (or sink) cells
@@ -197,7 +201,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             shearzones = (gb.node_props(g_h, "name") for g_h in master_grids)
             apertures = np.fromiter(
                 (self.params.initial_fracture_aperture[sz] for sz in shearzones),
-                dtype=float, count=len(master_grids),
+                dtype=float,
+                count=len(master_grids),
             )
             aperture *= np.mean(apertures)
         else:
@@ -260,9 +265,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         master_grids = gb.node_neighbors(g, only_higher=True)
         n_edges = len(master_grids)
         de = [gb.edge_props((g, e)) for e in master_grids]
-        initialized = np.alltrue(np.fromiter(
-            (pp.STATE in d for d in de), dtype=bool, count=n_edges
-        ))
+        initialized = np.alltrue(
+            np.fromiter((pp.STATE in d for d in de), dtype=bool, count=n_edges)
+        )
         if not initialized:
             return np.zeros(g.num_cells)
 
@@ -283,13 +288,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             cell_faces = (g_h.cell_faces for g_h in master_grids)
 
             data_edges = (gb.edge_props(edge) for edge in nd_edges)
-            master_apertures = (_aperture_from_edge(data_edge) for data_edge in data_edges)
+            master_apertures = (
+                _aperture_from_edge(data_edge) for data_edge in data_edges
+            )
 
             # Map parent apertures to faces
             master_face_apertures = (
                 np.abs(cell_face) * parent_aperture
-                for cell_face, parent_aperture
-                in zip(cell_faces, master_apertures)
+                for cell_face, parent_aperture in zip(cell_faces, master_apertures)
             )
 
             # .. and project face apertures to slave grid
@@ -300,8 +306,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 mg.mortar_to_slave_int()
                 * mg.master_to_mortar_int()
                 * master_face_aperture
-                for mg, master_face_aperture
-                in zip(mortar_grids, master_face_apertures)
+                for mg, master_face_aperture in zip(mortar_grids, master_face_apertures)
             )
 
             # expand the iterator
@@ -310,7 +315,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 apertures[i, :] = ap
 
             # average the apertures from master to determine the slave aperture
-            avg_aperture = np.mean(apertures, axis=0)  # / 2  <-- divide by 2 for each mortar side???
+            avg_aperture = np.mean(
+                apertures, axis=0
+            )  # / 2  <-- divide by 2 for each mortar side???
             return avg_aperture
 
         else:
@@ -327,6 +334,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 k *= (pp.METER / self.params.length_scale) ** 2
         # fractures get permeability from cubic law
         else:
+
             def cubic_law(a):
                 return np.power(a, 2) / 12
 
@@ -353,7 +361,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def source_scalar_pressure(self, pressure):
         """ Pressure-controlled injection"""
         for g, d in self.gb:
-            wells = g.tags['well_cells']
+            wells = g.tags["well_cells"]
             if np.sum(np.abs(wells)) > 0:
                 dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
                 loc = np.where(wells != 0)[0]
@@ -393,9 +401,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
         super().before_newton_iteration()
-        self.assembler.discretize(
-            term_filter=["!grad_p", "!div_u", "!stabilization"]
-        )
+        self.assembler.discretize(term_filter=["!grad_p", "!div_u", "!stabilization"])
         # for g, _ in self.gb:
         #     if g.dim < self.Nd:
         #         self.assembler.discretize(grid=g)
@@ -558,7 +564,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         flip_normal_to_outwards = np.where(g.cell_face_as_dense()[0, :] >= 0, 1, -1)
         outward_normals = bf_normals * flip_normal_to_outwards
         bf_stress = np.dot(self.params.stress, outward_normals[:, all_bf])
-        bc_values[:, all_bf] += bf_stress / self.params.scalar_scale  # Mechanical stress
+        bc_values[:, all_bf] += (
+            bf_stress / self.params.scalar_scale
+        )  # Mechanical stress
 
         # --- gravitational forces ---
         # See MechanicsParameters to turn on/off gravity effects (Default: OFF)
@@ -602,7 +610,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
         # All depths are translated in terms of the assumed depth
         # of the given stress tensor.
-        relative_depths = g.face_centers[2] * self.params.length_scale - true_stress_depth
+        relative_depths = (
+            g.face_centers[2] * self.params.length_scale - true_stress_depth
+        )
         rho_g_h = self.params.rock.lithostatic_pressure(relative_depths)
         lithostatic_stress = stress_scaler.dot(np.multiply(outward_normals, rho_g_h))
         return lithostatic_stress
@@ -643,10 +653,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         for g, d in gb:
             if g.dim == self.Nd - 1:
                 params: pp.Parameters = d[pp.PARAMETERS]
-                mech_params = {
-                    "dilation_angle": self.params.dilation_angle
-                }
+                mech_params = {"dilation_angle": self.params.dilation_angle}
                 params.update_dictionaries(
-                    [self.mechanics_parameter_key],
-                    [mech_params],
+                    [self.mechanics_parameter_key], [mech_params],
                 )

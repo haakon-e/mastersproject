@@ -15,16 +15,12 @@ from porepy.utils.derived_discretizations import implicit_euler
 def base_params() -> BaseParameters:
     """ Initialize BaseParameters with folder_name pointing here."""
     here = Path(__file__).parent
-    params = BaseParameters(
-        folder_name=here,
-    )
+    params = BaseParameters(folder_name=here,)
     return params
 
 
 @pytest.fixture
-def setup(
-        base_params,
-) -> ContactMechanicsBiotBase:
+def setup(base_params,) -> ContactMechanicsBiotBase:
     """ Contact Mechanics Biot Base setup with simple fractured grid"""
     _setup = ContactMechanicsBiotBase(base_params)
 
@@ -56,7 +52,7 @@ class TestContactMechanicsBiotBase:
                 "mass_weight",
                 "source",
                 "time_step",
-                "biot_alpha"
+                "biot_alpha",
             ]
             for p in scalar_param_keys:
                 assert p in params_s
@@ -112,7 +108,6 @@ class TestContactMechanicsBiotBase:
     def test_assign_biot_discretizations(self, setup):
         setup.assign_biot_discretizations()
 
-        key_s, key_m = setup.scalar_parameter_key, setup.mechanics_parameter_key
         var_s, var_m = setup.scalar_variable, setup.displacement_variable
         var_contact = setup.contact_traction_variable
         discr_key, coupling_discr_key = pp.DISCRETIZATION, pp.COUPLING_DISCRETIZATION
@@ -153,7 +148,9 @@ class TestContactMechanicsBiotBase:
 
                 if setup.subtract_fracture_pressure:
                     grad_p_fracture = cdiscr["fracture_scalar_to_force_balance"]
-                    assert isinstance(grad_p_fracture[e][1], pp.FractureScalarToForceBalance)
+                    assert isinstance(
+                        grad_p_fracture[e][1], pp.FractureScalarToForceBalance
+                    )
 
     def test_discretize(self):
         assert False
@@ -207,11 +204,11 @@ class TestContactMechanicsBiotBase:
     def test_check_convergence_call_parents(self, setup, mocker):
         mocker.patch(
             "GTS.isc_modelling.flow.Flow.check_convergence",
-            return_value=(0, True, False)
+            return_value=(0, True, False),
         )
         mocker.patch(
             "GTS.isc_modelling.mechanics.Mechanics.check_convergence",
-            return_value=(0, True, False)
+            return_value=(0, True, False),
         )
         arr = np.zeros(setup.gb.num_cells())
         setup.check_convergence(arr, arr, arr, {})
@@ -219,7 +216,7 @@ class TestContactMechanicsBiotBase:
         Flow.check_convergence.assert_called_once_with(arr, arr, arr, {})
         Mechanics.check_convergence.assert_called_once_with(arr, arr, arr, {})
 
-    def test_before_newton_loop(self, ):
+    def test_before_newton_loop(self,):
         assert False
 
     def test_before_newton_iteration(self):

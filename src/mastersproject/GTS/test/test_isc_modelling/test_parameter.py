@@ -4,8 +4,14 @@ from pathlib import Path
 import numpy as np
 
 from GTS.isc_modelling.isc_model import ISCBiotContactMechanics
-from GTS.isc_modelling.parameter import BiotParameters, stress_tensor, shearzone_injection_cell, GrimselGranodiorite, \
-    nd_sides_shearzone_injection_cell, FlowParameters
+from GTS.isc_modelling.parameter import (
+    BiotParameters,
+    stress_tensor,
+    shearzone_injection_cell,
+    GrimselGranodiorite,
+    nd_sides_shearzone_injection_cell,
+    FlowParameters,
+)
 
 
 class TestFlowParameters:
@@ -26,13 +32,13 @@ class TestFlowParameters:
         )
         assert params.initial_fracture_aperture is not None
         # Check that correct Transmissivity is calculated
-        res = np.cbrt(params.mu_over_rho_g*12)
+        res = np.cbrt(params.mu_over_rho_g * 12)
         aperture_list = np.array([*params.initial_fracture_aperture.values()])
         assert np.allclose(res, aperture_list)
-        assert np.isclose(params.mu_over_rho_g, 1/params.rho_g_over_mu)
+        assert np.isclose(params.mu_over_rho_g, 1 / params.rho_g_over_mu)
 
         # Another test
-        params.frac_transmissivity = params.rho_g_over_mu/12
+        params.frac_transmissivity = params.rho_g_over_mu / 12
         aperture_list = np.array([*params.initial_fracture_aperture.values()])
         assert np.allclose(1, aperture_list)
 

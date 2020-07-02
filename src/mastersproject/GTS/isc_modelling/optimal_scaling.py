@@ -4,7 +4,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from GTS import ISCBiotContactMechanics, BiotParameters, stress_tensor, GrimselGranodiorite
+from GTS import (
+    ISCBiotContactMechanics,
+    BiotParameters,
+    stress_tensor,
+    GrimselGranodiorite,
+)
 
 
 def best_cond_numb(initial_guess: np.array = None) -> pd.DataFrame:
@@ -58,20 +63,23 @@ def assemble_isc_matrix(values):
         "mesh_size_min": 0.2 * _sz,
         "mesh_size_bound": 3 * _sz,
     }
-    here = Path(__file__).parent / f"results/test_optimal_scaling/ls{length_scale:.2e}_ss{scalar_scale:.2e}"
+    here = (
+        Path(__file__).parent
+        / f"results/test_optimal_scaling/ls{length_scale:.2e}_ss{scalar_scale:.2e}"
+    )
     params = BiotParameters(
         # Base
         length_scale=length_scale,
         scalar_scale=scalar_scale,
         folder_name=here,
-        time_step=1*60,  # 1 minute
+        time_step=1 * 60,  # 1 minute
         rock=GrimselGranodiorite(),
         # Geometry
         shearzone_names=["S1_2", "S3_1"],
         mesh_args=mesh_args,
         # Mechanics
         stress=stress_tensor(),
-        dilation_angle=(np.pi/180) * 5,
+        dilation_angle=(np.pi / 180) * 5,
         # Flow
         frac_transmissivity=[1e-9, 3.7e-7],
     )
@@ -93,4 +101,4 @@ def condition_number_umfpack(A):
     if np.isclose(cond, 0):
         return np.inf
     else:
-        return 1/cond
+        return 1 / cond
