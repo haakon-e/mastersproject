@@ -3,7 +3,7 @@ from __future__ import annotations  # forward reference to not-yet-constructed m
 
 import logging
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
 
 import numpy as np
 import pendulum
@@ -48,6 +48,42 @@ def stress_tensor() -> np.ndarray:
     return stress_eucl
 
 
+# Define the rock type at Grimsel Test Site
+class GrimselGranodiorite(pp.UnitRock):
+    def __init__(self):
+        super().__init__()
+        from porepy.params import rock as pp_rock
+
+        self.PERMEABILITY = 1.8e-20
+        self.THERMAL_EXPANSION = 1
+        self.DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
+
+        # Lamé parameters
+        self.YOUNG_MODULUS = (
+            40 * pp.GIGA * pp.PASCAL
+        )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+        self.POISSON_RATIO = (
+            0.25  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+        )
+
+        self.LAMBDA, self.MU = pp_rock.lame_from_young_poisson(
+            self.YOUNG_MODULUS, self.POISSON_RATIO
+        )
+
+        self.FRICTION_COEFFICIENT = 0.8  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
+        self.POROSITY = 0.7 / 100
+
+    def lithostatic_pressure(self, depth):
+        """ Lithostatic pressure.
+
+        NOTE: Returns positive values for positive depths.
+        Use the negative value when working with compressive
+        boundary conditions.
+        """
+        rho = self.DENSITY
+        return rho * depth * pp.GRAVITY_ACCELERATION
+
+
 # --- Models ---
 
 
@@ -71,6 +107,7 @@ class BaseParameters(BaseModel):
     scalar_scale: float = 1  # > 0
 
     # Directories
+    base: Path = Path("C:/Users/haako/mastersproject-data")
     head: Optional[str] = None
     folder_name: Optional[Path] = None
 
@@ -87,6 +124,9 @@ class BaseParameters(BaseModel):
     # Fluid and temperature. Default is ISC temp (11 C).
     fluid: pp.UnitFluid = pp.Water(theta_ref=11)
 
+    # Rock parameters
+    rock: pp.UnitRock = pp.Granite(theta_ref=11)
+
     # --- Validators ---
 
     @validator("length_scale", "scalar_scale")
@@ -97,14 +137,15 @@ class BaseParameters(BaseModel):
     @validator("folder_name", always=True)
     def construct_absolute_path(cls, p: Optional[Path], values):  # noqa
         """ Construct a valid path, either from 'folder_name' or 'head'."""
-        head = values["head"]
+        head: str = values["head"]
+        base: Path = values["base"]
         if not bool(head) ^ bool(p):  # XOR operator
             raise ValueError("Exactly one of head and folder_name should be set")
 
         if head:
             # Creates a folder on the form
-            #   ~/mastersproject/src/mastersproject/GTS/isc_modelling/results/<YYMMDD>/<head>
-            root = Path(__file__).resolve().parent / "results"
+            #   <base>/results/<YYMMDD>/<head>
+            root = base / "results"
             date = pendulum.now().format("YYMMDD")
             p = root / date / head
         else:
@@ -121,6 +162,7 @@ class BaseParameters(BaseModel):
 class GeometryParameters(BaseParameters):
     """ Parameters for geometry"""
 
+    # Define identifying names for shear zones and the intact 3d matrix.
     shearzone_names: Optional[List[str]] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
     intact_name: str = "intact"
 
@@ -148,14 +190,21 @@ class GeometryParameters(BaseParameters):
 class MechanicsParameters(GeometryParameters):
     """ Parameters for a mechanics model"""
 
-    stress: np.ndarray
+    stress: np.ndarray = stress_tensor()
+    # See "numerics > contact_mechanics > contact_conditions.py > ColoumbContact"
+    # for details on dilation angle
+    dilation_angle: float = 0
 
     # Parameters for Newton solver
     newton_options = {
         "max_iterations": 40,
-        "nl_convergence_tol": 1e-6,
+        "nl_convergence_tol": 1e-10,
         "nl_divergence_tol": 1e5,
     }
+
+    # Gravity for mechanics
+    gravity_src: bool = False
+    gravity_bc: bool = False
 
     class Config:
         arbitrary_types_allowed = True
@@ -178,13 +227,62 @@ class FlowParameters(GeometryParameters):
     }
 
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
-    injection_rate: float
+    injection_rate: float = 0
 
-    # Set uniform permeability in fractures and intact rock, respectively
-    # Grimsel Test Site values: frac=4.9e-16 m2, intact=2e-20 m2
-    #   see: "2020-04-21 Møtereferat" (Veiledningsmøte)
-    frac_permeability: float
-    intact_permeability: float
+    # Set transmissivity in fractures
+    frac_transmissivity: Union[float, List[float]]
+
+    # See 'methods to estimate permeability of shear zones at Grimsel Test Site'
+    # in 'Presentasjon til underveismøte' for details on relations between
+    # aperture, transmissivity, permeability and hydraulic conductivity
+
+    @property
+    def initial_fracture_aperture(self) -> Union[Dict[str, float], None]:
+        """ Initial aperture, computed from initial transmissivity
+
+        Assumes uniform transmissivity in each shear zone
+        """
+
+        transmissivity: Union[float, List[float]] = self.frac_transmissivity
+        shear_zones: List = self.shearzone_names
+        if shear_zones:
+            n_sz = len(shear_zones)
+            if isinstance(transmissivity, (float, int)):
+                transmissivity = [transmissivity] * n_sz
+            assert len(transmissivity) == len(shear_zones)
+            initial_aperture = {
+                s: self.b_from_T(t) for s, t in zip(shear_zones, transmissivity)
+            }
+            return initial_aperture
+        else:
+            return None
+
+    @property
+    def rho_g_over_mu(self):
+        mu = self.fluid.dynamic_viscosity()
+        rho = self.fluid.density()
+        g = pp.GRAVITY_ACCELERATION
+        return rho * g / mu
+
+    @property
+    def mu_over_rho_g(self):
+        return 1 / self.rho_g_over_mu
+
+    def T_from_K_b(self, K, b):
+        return K * b
+
+    def K_from_k(self, k):
+        return k * self.rho_g_over_mu
+
+    def cubic_law(self, a):
+        # k from a
+        return a ** 2 / 12
+
+    def T_from_b(self, b):
+        return self.T_from_K_b(self.K_from_k(self.cubic_law(b)), b)
+
+    def b_from_T(self, T):
+        return np.cbrt(T * 12 * self.mu_over_rho_g)
 
     # Validators
     @validator("source_scalar_borehole_shearzone")
@@ -194,6 +292,13 @@ class FlowParameters(GeometryParameters):
             assert "borehole" in v
             assert v["shearzone"] in values["shearzone_names"]
         return v
+
+
+class BiotParameters(FlowParameters, MechanicsParameters):
+    """ Parameters for the Biot problem with contact mechanics"""
+
+    # Selvadurai (2019): Biot aritcle --> Table 9., on Pahl et. al (1989), mean of aL, aU.
+    alpha: float = 0.57
 
 
 # --- Flow injection cell taggers ---
@@ -230,21 +335,10 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
     gb : pp.GridBucket
     """
     # Shorthand
-    borehole = params.source_scalar_borehole_shearzone.get("borehole")
     shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
 
-    # Compute the intersections between boreholes and shear zones
-    df = ISCData().borehole_plane_intersection()
-
-    # Get the UNSCALED coordinates of the borehole - shearzone intersection.
-    _mask = (df.shearzone == shearzone) & (df.borehole == borehole)
-    result = df.loc[_mask, ("x_sz", "y_sz", "z_sz")]
-    if result.empty:
-        raise ValueError("No intersection found.")
-
-    # Scale the intersection coordinates by length_scale. (scaled)
-    pts = result.to_numpy().T / params.length_scale
-    assert pts.shape == (3, 1), "There should only be one intersection"
+    # Get intersection point
+    pts = shearzone_borehole_intersection(params)
 
     # Get the grid to inject to
     injection_grid = gb.get_grids(lambda g: gb.node_props(g, "name") == shearzone)[0]
@@ -254,6 +348,78 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
 
     # Tag injection grid with 1 in the injection cell
     _tag_injection_cell(gb, injection_grid, pts, params.length_scale)
+
+
+def nd_sides_shearzone_injection_cell(
+    params: FlowParameters, gb: pp.GridBucket, reset_frac_tags: bool = True,
+) -> None:
+    """ Tag the Nd cells surrounding a shear zone injection point
+
+    Parameters
+    ----------
+    params : FlowParameters
+        parameters that contain "source_scalar_borehole_shearzone"
+        (with "shearzone", and "borehole") and "length_scale".
+    gb : pp.GridBucket
+        grid bucket
+    reset_frac_tags : bool [Default: True]
+        if set to False, keep injection tag in the shear zone.
+    """
+    # Shorthand
+    shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
+
+    # First, tag the fracture cell, and get the tag
+    shearzone_injection_cell(params, gb)
+    fracture = gb.get_grids(lambda g: gb.node_props(g, "name") == shearzone)[0]
+    tags = fracture.tags["well_cells"]
+    # Second, map the cell to the Nd grid
+    nd_grid: pp.Grid = gb.grids_of_dimension(gb.dim_max())[0]
+    data_edge = gb.edge_props((fracture, nd_grid))
+    mg: pp.MortarGrid = data_edge["mortar_grid"]
+
+    slave_to_master_face = mg.mortar_to_master_int() * mg.slave_to_mortar_int()
+    face_to_cell = nd_grid.cell_faces.T
+    slave_to_master_cell = face_to_cell * slave_to_master_face
+    nd_tags = np.abs(slave_to_master_cell) * tags
+
+    # Set tags on the nd-grid
+    nd_grid.tags["well_cells"] = nd_tags
+    gb.set_node_prop(nd_grid, "well", nd_tags)
+
+    if reset_frac_tags:
+        # reset tags on the fracture
+        zeros = np.zeros(fracture.num_cells)
+        fracture.tags["well_cells"] = zeros
+        gb.set_node_prop(fracture, "well", zeros)
+
+
+def nd_and_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
+    """ Wrapper of above method to toggle keep shear zone injection tag"""
+    reset_frac_tags = False
+    nd_sides_shearzone_injection_cell(params, gb, reset_frac_tags)
+
+
+def center_of_shearzone_injection_cell(
+    params: FlowParameters, gb: pp.GridBucket
+) -> None:
+    """ Tag the center cell of the given shear zone with 1 (injection)
+
+    Parameters
+    ----------
+    params : FlowParameters
+    gb : pp.GridBucket
+    """
+
+    # Shorthand
+    shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
+
+    # Get the grid to inject to
+    frac: pp.Grid = gb.get_grids(lambda g: gb.node_props(g, "name") == shearzone)[0]
+    centers: np.ndarray = frac.cell_centers
+    pts = np.atleast_2d(np.mean(centers, axis=1)).T
+
+    # Tag injection grid with 1 in the injection cell
+    _tag_injection_cell(gb, frac, pts, params.length_scale)
 
 
 def _tag_injection_cell(
@@ -286,6 +452,33 @@ def _tag_injection_cell(
         f"ideal (scaled) point coordinate: {pts.T}\n"
         f"nearest (scaled) cell center coordinate: {g.cell_centers[:, ids].T}\n"
     )
+
+
+def _shearzone_borehole_intersection(
+    borehole: str, shearzone: str, length_scale: float
+):
+    """ Find the cell which is the intersection of a borehole and a shear zone"""
+    # Compute the intersections between boreholes and shear zones
+    df = ISCData().borehole_plane_intersection()
+
+    # Get the UNSCALED coordinates of the borehole - shearzone intersection.
+    _mask = (df.shearzone == shearzone) & (df.borehole == borehole)
+    result = df.loc[_mask, ("x_sz", "y_sz", "z_sz")]
+    if result.empty:
+        raise ValueError("No intersection found.")
+
+    # Scale the intersection coordinates by length_scale. (scaled)
+    pts = result.to_numpy().T / length_scale
+    assert pts.shape == (3, 1), "There should only be one intersection"
+    return pts
+
+
+def shearzone_borehole_intersection(params: FlowParameters):
+    """ Wrapper to get intersection using FlowParameters class"""
+    borehole = params.source_scalar_borehole_shearzone.get("borehole")
+    shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
+    length_scale = params.length_scale
+    return _shearzone_borehole_intersection(borehole, shearzone, length_scale)
 
 
 # --- other models ---

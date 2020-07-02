@@ -1,13 +1,14 @@
 Geometry.Tolerance = 1e-08;
 // Define points
-p0 = newp; Point(p0) = {0.0, 0.0, 1.0, 1.0 };
-p1 = newp; Point(p1) = {0.0, 0.0, 0.0, 1.0 };
-p2 = newp; Point(p2) = {0.0, 1.0, 0.0, 1.0 };
-p3 = newp; Point(p3) = {0.0, 1.0, 1.0, 1.0 };
-p4 = newp; Point(p4) = {1.0, 0.0, 1.0, 1.0 };
-p5 = newp; Point(p5) = {1.0, 0.0, 0.0, 1.0 };
-p6 = newp; Point(p6) = {1.0, 1.0, 0.0, 1.0 };
-p7 = newp; Point(p7) = {1.0, 1.0, 1.0, 1.0 };
+lc = 0.1;
+p0 = newp; Point(p0) = {0.0, 0.0, 1.0, lc };
+p1 = newp; Point(p1) = {0.0, 0.0, 0.0, lc };
+p2 = newp; Point(p2) = {0.0, 1.0, 0.0, lc };
+p3 = newp; Point(p3) = {0.0, 1.0, 1.0, lc };
+p4 = newp; Point(p4) = {1.0, 0.0, 1.0, lc };
+p5 = newp; Point(p5) = {1.0, 0.0, 0.0, lc };
+p6 = newp; Point(p6) = {1.0, 1.0, 0.0, lc };
+p7 = newp; Point(p7) = {1.0, 1.0, 1.0, lc };
 // End of point specification
 
 // Define lines 

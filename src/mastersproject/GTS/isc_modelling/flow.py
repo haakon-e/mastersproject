@@ -3,12 +3,11 @@ import time
 from typing import Dict, Optional
 
 import numpy as np
-import scipy.sparse.linalg as spla
 
 import porepy as pp
 from GTS.isc_modelling.ISCGrid import create_grid
+from GTS.isc_modelling.general_model import CommonAbstractModel
 from GTS.isc_modelling.parameter import BaseParameters, FlowParameters
-from porepy.models.abstract_model import AbstractModel
 from porepy.params.data import add_nonpresent_dictionary
 from porepy.utils.derived_discretizations import implicit_euler
 from util.logging_util import timer, trace
@@ -16,7 +15,7 @@ from util.logging_util import timer, trace
 logger = logging.getLogger(__name__)
 
 
-class Flow(AbstractModel):
+class Flow(CommonAbstractModel):
     """ General flow model for time-dependent Darcy Flow for fractured porous media"""
 
     def __init__(self, params: BaseParameters):
@@ -26,7 +25,7 @@ class Flow(AbstractModel):
         ----------
         params : BaseParameters
         """
-        self.params = params
+        super().__init__(params)
 
         # Time (must be kept for compatibility with pp.run_time_dependent_model)
         self.time = self.params.time
@@ -38,16 +37,6 @@ class Flow(AbstractModel):
         self.mortar_scalar_variable = "mortar_" + self.scalar_variable
         self.scalar_coupling_term = "robin_" + self.scalar_variable
         self.scalar_parameter_key = "flow"
-
-        # Grid
-        self.gb: Optional[pp.GridBucket] = None
-        self.Nd: Optional[int] = None
-        self.bounding_box: Optional[
-            Dict[str, float]
-        ] = None  # Keep this as it will change due to scaling
-
-        # Initialize assembler
-        self.assembler = None
 
     # --- Grid methods ---
 
@@ -63,8 +52,6 @@ class Flow(AbstractModel):
             gb (pp.GridBucket): The produced grid bucket.
             bounding_box (dict): The bounding box of the domain, defined
                 through minimum and maximum values in each dimension.
-            Nd (int): The dimension of the matrix, i.e., the highest dimension in the
-                grid bucket.
 
         After self.gb is set, the method should also call
 
@@ -107,7 +94,7 @@ class Flow(AbstractModel):
             aperture *= pp.METER / self.params.length_scale
         return aperture
 
-    def specific_volume(self, g: pp.Grid, scaled) -> np.ndarray:
+    def specific_volume(self, g: pp.Grid, scaled: bool) -> np.ndarray:
         """
         The specific volume of a cell accounts for the dimension reduction and has
         dimensions [m^(Nd - d)].
@@ -125,23 +112,21 @@ class Flow(AbstractModel):
         gb = self.gb
 
         # Set to 0 for steady state
-        compressibility = self.params.fluid.COMPRESSIBILITY * (
+        compressibility: np.ndarray = self.params.fluid.COMPRESSIBILITY * (
             self.params.scalar_scale / pp.PASCAL
         )  # scaled. [1/Pa]
         for g, d in gb:
-            porosity = self.porosity(g)  # Default: 1 [-]
+            porosity: np.ndarray = self.porosity(g)  # Default: 1 [-]
             # specific volume
-            specific_volume = self.specific_volume(g, scaled=True)
+            specific_volume: np.ndarray = self.specific_volume(g, scaled=True)
 
             # Boundary and source conditions
-            bc = self.bc_type_scalar(g)
-            bc_values = self.bc_values_scalar(g)  # Already scaled
-            source_values = self.source_scalar(g)  # Already scaled
+            bc: pp.BoundaryCondition = self.bc_type_scalar(g)
+            bc_values: np.ndarray = self.bc_values_scalar(g)  # Already scaled
+            source_values: np.ndarray = self.source_scalar(g)  # Already scaled
 
             # Mass weight  # TODO: Simplified version of mass_weight?
-            mass_weight = (
-                compressibility * porosity * specific_volume * np.ones(g.num_cells)
-            )
+            mass_weight = compressibility * porosity * specific_volume
 
             # Initialize data
             pp.initialize_data(
@@ -160,11 +145,14 @@ class Flow(AbstractModel):
         # Set permeability on grid, fracture and mortar grids.
         self.set_permeability_from_aperture()
 
-    def permeability(self, g):
-        return 1
+    def permeability(self, g, scaled) -> np.ndarray:
+        k = np.ones(g.num_cells)
+        if scaled:
+            k *= (pp.METER / self.params.length_scale) ** 2
+        return k
 
-    def porosity(self, g):
-        return 1
+    def porosity(self, g) -> np.ndarray:
+        return np.ones(g.num_cells)
 
     def set_permeability_from_aperture(self) -> None:
         """ Set permeability by cubic law in fractures.
@@ -180,8 +168,14 @@ class Flow(AbstractModel):
         )
         for g, d in gb:
             # permeability [m2] (scaled)
-            k = self.permeability(g) * (pp.METER / self.params.length_scale) ** 2
-            logger.info(f"Scaled permeability in dim {g.dim} set to {k:.3e}")
+            k: np.ndarray = self.permeability(g, scaled=True)
+            a = self.aperture(g, scaled=True)
+            logger.info(
+                f"Scaled permeability and aperture in dim {g.dim} have values: "
+                f"min [k={np.min(k):.2e}, a={np.min(a):.2e}]; "
+                f"mean [k={np.mean(k):.2e}, a={np.mean(a):.2e}]; "
+                f"max [k={np.max(k):.2e}, a={np.max(a):.2e}]"
+            )
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -227,7 +221,7 @@ class Flow(AbstractModel):
 
     # --- Primary variables and discretizations ---
 
-    def assign_variables(self) -> None:
+    def assign_scalar_variables(self) -> None:
         """
         Assign primary variables to the nodes and edges of the grid bucket.
         """
@@ -239,7 +233,7 @@ class Flow(AbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.scalar_variable: {"cells": 1},}  # noqa
+                {self.scalar_variable: {"cells": 1},}  # noqa: E231
             )
 
         # Then for the edges
@@ -247,10 +241,10 @@ class Flow(AbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.mortar_scalar_variable: {"cells": 1},}  # noqa
+                {self.mortar_scalar_variable: {"cells": 1},}
             )
 
-    def assign_discretizations(self) -> None:
+    def assign_scalar_discretizations(self) -> None:
         """
         Assign discretizations to the nodes and edges of the grid bucket.
 
@@ -270,7 +264,7 @@ class Flow(AbstractModel):
         source_disc_s = pp.ScalarSource(key_s)
 
         # Assign node discretizations
-        for g, d in gb:
+        for _, d in gb:
             add_nonpresent_dictionary(d, discr_key)
 
             d[discr_key].update(
@@ -312,7 +306,7 @@ class Flow(AbstractModel):
 
     # --- Initial condition ---
 
-    def initial_condition(self) -> None:
+    def initial_scalar_condition(self) -> None:
         """
         Initial guess for Newton iteration, scalar variable and bc_values (for time
         discretization).
@@ -340,11 +334,10 @@ class Flow(AbstractModel):
         """
         self._prepare_grid()
 
-        self.Nd = self.gb.dim_max()
         self.set_scalar_parameters()
-        self.assign_variables()
-        self.assign_discretizations()
-        self.initial_condition()
+        self.assign_scalar_variables()
+        self.assign_scalar_discretizations()
+        self.initial_scalar_condition()
         self.discretize()
         self.initialize_linear_solver()
 
@@ -359,20 +352,19 @@ class Flow(AbstractModel):
         solution: np.ndarray,
         prev_solution: np.ndarray,
         init_solution: np.ndarray,
-        nl_params: Dict = None,
+        nl_params: Dict,
     ):
-
+        # Convergence check for linear problems
         if not self._is_nonlinear_problem():
-            # At least for the default direct solver, scipy.sparse.linalg.spsolve, no
-            # error (but a warning) is raised for singular matrices, but a nan solution
-            # is returned. We check for this.
-            diverged = np.any(np.isnan(solution))
-            converged = not diverged
-            error = np.nan if diverged else 0
-            return error, converged, diverged
+            return super().check_convergence(
+                solution, prev_solution, init_solution, nl_params
+            )
 
         # -- Calculate the scalar error for non-linear simulations --
         # This code will only be executed if called in a coupled problem.
+
+        var_s = self.scalar_variable
+        ss = self.params.scalar_scale
 
         # Extract convergence tolerance
         tol_convergence = nl_params.get("nl_convergence_tol")
@@ -383,14 +375,12 @@ class Flow(AbstractModel):
         # Find indices for pressure variables
         scalar_dof = np.array([], dtype=np.int)
         for g, _ in self.gb:
-            scalar_dof = np.hstack(
-                (scalar_dof, self.assembler.dof_ind(g, self.scalar_variable))
-            )
+            scalar_dof = np.hstack((scalar_dof, self.assembler.dof_ind(g, var_s)))
 
         # Unscaled pressure solutions
-        scalar_now = solution[scalar_dof] * self.params.scalar_scale
-        scalar_prev = prev_solution[scalar_dof] * self.params.scalar_scale
-        scalar_init = init_solution[scalar_dof] * self.params.scalar_scale
+        scalar_now = solution[scalar_dof] * ss
+        scalar_prev = prev_solution[scalar_dof] * ss
+        scalar_init = init_solution[scalar_dof] * ss
 
         # Calculate norms
         # scalar_norm = np.sum(scalar_now ** 2)
@@ -404,7 +394,7 @@ class Flow(AbstractModel):
         ):  # and scalar_norm < tol_convergence
             converged = True
             error_scalar = difference_in_iterates_scalar
-            logger.info(f"pressure converged absolutely")
+            logger.info(f"Pressure converged absolutely")
         else:
             # Relative convergence criterion:
             if (
@@ -412,11 +402,13 @@ class Flow(AbstractModel):
                 < tol_convergence * difference_from_init_scalar
             ):
                 converged = True
-                logger.info(f"pressure converged relatively")
+                logger.info(f"Pressure converged relatively")
 
             error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
 
         logger.info(f"Error in pressure is {error_scalar:.6e}.")
+        if not converged:
+            logger.info(f"Scalar pressure did not converge.")
 
         return error_scalar, converged, diverged
 
@@ -449,38 +441,6 @@ class Flow(AbstractModel):
         else:
             raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
 
-    def assemble_and_solve_linear_system(self, tol):
-        """ Assemble a solve the linear system"""
-
-        A, b = self.assembler.assemble_matrix_rhs()  # noqa
-
-        # Estimate condition number
-        logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")
-        logger.info(
-            f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and "
-            f"min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum."
-        )
-
-        # UMFPACK Estimate of condition number
-        logger.info(
-            f"UMFPACK Condition number estimate: "
-            f"{np.min(np.abs(A.diagonal())) / np.max(np.abs(A.diagonal())) :.2e}"
-        )
-
-        if self.params.linear_solver == "direct":
-            tic = time.time()
-            logger.info("Solve Ax=b using scipy")
-            sol = spla.spsolve(A, b)
-            logger.info(f"Done. Elapsed time {time.time() - tic}")
-            logger.info(f"||b-Ax|| = {np.linalg.norm(b - A * sol)}")
-            logger.info(
-                f"||b-Ax|| / ||b|| = {np.linalg.norm(b - A * sol) / np.linalg.norm(b)}"
-            )
-            return sol
-
-        else:
-            raise ValueError(f"Unknown linear solver {self.params.linear_solver}")
-
     # --- Newton iterations ---
 
     def before_newton_loop(self):
@@ -491,114 +451,38 @@ class Flow(AbstractModel):
         """
         self.set_scalar_parameters()
 
-    def before_newton_iteration(self) -> None:
-        # Re-discretize the nonlinear term
-        # (flow is linear)
-        pass
-
-    def after_newton_iteration(self, solution: np.ndarray) -> None:
-        pass
-
-    def after_newton_convergence(self, solution, errors, iteration_counter):
-        """ Overwrite from parent to export solution steps."""
-        self.assembler.distribute_variable(solution)
-        self.export_step()
-
     def after_simulation(self):
         """ Called after a time-dependent problem
         """
         self.export_pvd()
         logger.info(f"Solution exported to folder \n {self.params.folder_name}")
 
-    def after_newton_failure(self, solution, errors, iteration_counter):
-        """ Instead of raising error on failure, save and return available data.
-        """
-        if self._is_nonlinear_problem():
-            raise ValueError("Newton iterations did not converge")
-        else:
-            raise ValueError("Tried solving singular matrix for the linear problem.")
-
-    # --- Helper methods ---
-
-    def domain_boundary_sides(self, g):
-        """
-        Obtain indices of the faces of a grid that lie on each side of the domain
-        boundaries.
-        """
-        tol = 1e-10
-        box = self.bounding_box
-        east = g.face_centers[0] > box["xmax"] - tol
-        west = g.face_centers[0] < box["xmin"] + tol
-        north = g.face_centers[1] > box["ymax"] - tol
-        south = g.face_centers[1] < box["ymin"] + tol
-        if self.Nd == 2:
-            top = np.zeros(g.num_faces, dtype=bool)
-            bottom = top.copy()
-        else:
-            top = g.face_centers[2] > box["zmax"] - tol
-            bottom = g.face_centers[2] < box["zmin"] + tol
-        all_bf = g.get_boundary_faces()
-        return all_bf, east, west, north, south, top, bottom
-
-    def _nd_grid(self) -> pp.Grid:
-        """ Get the grid of the highest dimension. Assumes self.gb is set.
-        """
-        return self.gb.grids_of_dimension(self.Nd)[0]
-
-    def get_state_vector(self):
-        """ Get a vector of the current state of the variables; with the same ordering
-            as in the assembler.
-
-        Returns:
-            np.array: The current state, as stored in the GridBucket.
-
-        """
-        size = self.assembler.num_dof()
-        state = np.zeros(size)
-        for g, var in self.assembler.block_dof.keys():
-            # Index of
-            ind = self.assembler.dof_ind(g, var)
-
-            if isinstance(g, tuple):
-                values = self.gb.edge_props(g)[pp.STATE][var]
-            else:
-                values = self.gb.node_props(g)[pp.STATE][var]
-            state[ind] = values
-
-        return state
-
-    def _is_nonlinear_problem(self):  # noqa
-        """ flow problems are linear even with fractures """
-        return False
-
     # --- Exporting and visualization ---
 
     def set_viz(self):
         """ Set exporter for visualization """
-        self.viz = pp.Exporter(  # noqa
-            self.gb,
-            file_name=self.params.viz_file_name,
-            folder_name=self.params.folder_name,
-        )
+        super().set_viz()
         # list of time steps to export with visualization.
         self.export_times = []  # noqa
 
         self.p_exp = "p_exp"  # noqa
+        self.aperture_exp = "aperture"  # noqa
 
-        self.export_fields = [  # noqa
-            self.p_exp,
-        ]
+        self.export_fields.extend([self.p_exp, self.aperture_exp])
 
     def export_step(self, write_vtk=True):
         """ Export a step with pressures """
+        super().export_step(write_vtk=False)
         for g, d in self.gb:
+            state = d[pp.STATE]
+            state[self.aperture_exp] = self.aperture(g, scaled=False)
             # Export pressure variable
-            if self.scalar_variable in d[pp.STATE]:
-                d[pp.STATE][self.p_exp] = (
-                    d[pp.STATE][self.scalar_variable].copy() * self.params.scalar_scale
+            if self.scalar_variable in state:
+                state[self.p_exp] = (
+                    state[self.scalar_variable].copy() * self.params.scalar_scale
                 )
             else:
-                d[pp.STATE][self.p_exp] = np.zeros((self.Nd, g.num_cells))
+                state[self.p_exp] = np.zeros((self.Nd, g.num_cells))
 
         if write_vtk:
             self.viz.write_vtk(
@@ -650,7 +534,6 @@ class FlowISC(Flow):
 
         # --- COMPUTATIONAL MESH ---
         self._gb: Optional[pp.GridBucket] = None
-        self.Nd: Optional[int] = None
         self.network = None
 
         # ADJUST TIME STEP WITH PERMEABILITY
@@ -696,7 +579,6 @@ class FlowISC(Flow):
         )
         self.gb = gb
         self.bounding_box = gb.bounding_box(as_dict=True)
-        self.Nd = self.gb.dim_max()
         self.network = network
 
     @property
@@ -711,7 +593,6 @@ class FlowISC(Flow):
         if gb is None:
             return
         pp.contact_conditions.set_projections(self.gb)
-        self.Nd = gb.dim_max()
         self.gb.add_node_props(keys=["name"])  # Add 'name' as node prop to all grids.
 
         # Set the bounding box

@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<VTKFile type="UnstructuredGrid" version="0.1" byte_order="LittleEndian" header_type="UInt32" compressor="vtkZLibDataCompressor">
+  <UnstructuredGrid>
+    <Piece NumberOfPoints="28"                   NumberOfCells="7"                   >
+      <PointData>
+      </PointData>
+      <CellData>
+        <DataArray type="Float64" Name="Fracture_Number" format="appended" RangeMin="1"                    RangeMax="7"                    offset="0"                   />
+      </CellData>
+      <Points>
+        <DataArray type="Float32" Name="Points" NumberOfComponents="3" format="appended" RangeMin="2045.5093209"         RangeMax="8246.2112512"         offset="68"                  />
+      </Points>
+      <Cells>
+        <DataArray type="Int64" Name="connectivity" format="appended" RangeMin=""                     RangeMax=""                     offset="248"                 />
+        <DataArray type="Int64" Name="offsets" format="appended" RangeMin=""                     RangeMax=""                     offset="368"                 />
+        <DataArray type="UInt8" Name="types" format="appended" RangeMin=""                     RangeMax=""                     offset="428"                 />
+      </Cells>
+    </Piece>
+  </UnstructuredGrid>
+  <AppendedData encoding="base64">
+   _AQAAAACAAAA4AAAAHwAAAA==eJxjYACBD/YMEOAAoTigtACUFoHSElBaxgEAX+cDEA==AQAAAACAAABQAQAAcwAAAA==eJxzSo507rZ77+LCq+OStXGPyxwTddcQF22Xx3vaXIQl+F2PP9R2filT5LK7gNPVVK7XiYHh1xEGMKhyRbBBNBA37HZFZVdBMUw9jA1SA2TD1cPY6GaiqcewF8rGMAeLmcSYj+F+KBvD/VA2FvMBETRfaQ==AQAAAACAAAAYAQAARgAAAA==eJxdyTcCwCAQxMDDOeIIOPz/ny6shlUzhcz+HBZYWl6FNTbYyu+wxwFH+RPO6HGRv+KGOx7yTwwYMcm/8MYHX/kfrQgBzw==AQAAAACAAAA4AAAAGwAAAA==eJxjZYAALijND6VFoLQklJaD0spQGgANWACNAQAAAACAAAAHAAAACwAAAA==eJxjZwcDAADLADI=
+  </AppendedData>
+</VTKFile>
