@@ -188,15 +188,15 @@ class GeometryParameters(BaseParameters):
 class MechanicsParameters(GeometryParameters):
     """ Parameters for a mechanics model"""
 
-    stress: np.ndarray
+    stress: np.ndarray = stress_tensor()
     # See "numerics > contact_mechanics > contact_conditions.py > ColoumbContact"
     # for details on dilation angle
-    dilation_angle: float
+    dilation_angle: float = 0
 
     # Parameters for Newton solver
     newton_options = {
         "max_iterations": 40,
-        "nl_convergence_tol": 1e-6,
+        "nl_convergence_tol": 1e-10,
         "nl_divergence_tol": 1e5,
     }
 
@@ -225,7 +225,7 @@ class FlowParameters(GeometryParameters):
     }
 
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
-    injection_rate: float
+    injection_rate: float = 0
 
     # Set transmissivity in fractures
     frac_transmissivity: Union[float, List[float]]
