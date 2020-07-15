@@ -19,14 +19,17 @@ RUN pip install vtk
 
 # Install gmsh by pip (python doesn't find gmsh from conda for unknown reason)
 # Install gmsh system dependencies
-apt install libgl1 libxcursor1 libxft2 libxinerama1
-pip install gmsh
+RUN apt-get install libgl1 libglu1 libxcursor1 libxft2 libxinerama1 -y
+RUN pip install gmsh
 
 # matplotlib dependency
-conda install tornado
+RUN conda install tornado
 
 # Install conda-build to use 'conda develop'
 RUN conda install conda-build
+
+# PyPardiso
+RUN conda install -c haasad pypardiso
 
 # -- Prepare installation of PorePy --
 WORKDIR /home
@@ -46,7 +49,4 @@ RUN git clone --single-branch --branch feat/contact-mechanics-biot \
 	https://github.com/haakon-e/mastersproject.git
 RUN conda develop mastersproject/src
 RUN conda develop mastersproject/src/mastersproject
-
-# PyPardiso
-RUN conda install -c haasad pypardiso
 
