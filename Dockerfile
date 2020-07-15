@@ -41,11 +41,12 @@ RUN mv polyhedron.py poly/robust_point_in_polyhedron.py
 RUN conda develop poly
 
 # porepy
-RUN git clone https://github.com/pmgbergen/porepy.git
+RUN git clone --single-branch --branch develop \
+    https://github.com/pmgbergen/porepy.git
 RUN conda develop porepy/src
 
 # mastersproject
-RUN git clone --single-branch --branch feat/contact-mechanics-biot \
+RUN git clone --single-branch --branch develop \
 	https://github.com/haakon-e/mastersproject.git
 RUN conda develop mastersproject/src
 RUN conda develop mastersproject/src/mastersproject
