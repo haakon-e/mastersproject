@@ -148,7 +148,7 @@ class TestISCBiotContactMechanics:
         data_edge[pp.STATE].update(
             {
                 var_mortar: mortar_u,
-                "previous_iterate": {var_mortar: mortar_u_prev_iter},
+                pp.ITERATE: {var_mortar: mortar_u_prev_iter},
             }
         )
 

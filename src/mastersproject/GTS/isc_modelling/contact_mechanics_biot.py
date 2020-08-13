@@ -318,7 +318,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         matrix_dictionary = d[pp.DISCRETIZATION_MATRICES][self.mechanics_parameter_key]
 
         if previous_iterate:
-            p = d[pp.STATE]["previous_iterate"][self.scalar_variable]
+            p = d[pp.STATE][pp.ITERATE][self.scalar_variable]
         else:
             p = d[pp.STATE][self.scalar_variable]
 
@@ -898,7 +898,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
     #                     initial_displacements = np.zeros(mg.num_cells * self.Nd)
     #                 state = {
     #                     self.mortar_displacement_variable: initial_displacements,
-    #                     "previous_iterate": {
+    #                     pp.ITERATE: {
     #                         self.mortar_displacement_variable: initial_displacements,
     #                     },
     #                 }
