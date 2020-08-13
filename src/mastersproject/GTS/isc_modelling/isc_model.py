@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def __init__(self, params: BiotParameters):
         super().__init__(params)
+        self.params = params
 
         # -- GRAVITY OPTIONS
 

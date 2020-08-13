@@ -4,6 +4,7 @@ import time
 from typing import Optional, Dict, List
 
 import numpy as np
+from pypardiso import spsolve
 
 import porepy as pp
 from GTS.isc_modelling.parameter import BaseParameters
@@ -140,7 +141,6 @@ class CommonAbstractModel(AbstractModel):
     @timer(logger, level="INFO")
     def assemble_and_solve_linear_system(self, tol: float) -> np.ndarray:
         """ Assemble a solve the linear system"""
-        from pypardiso import spsolve
 
         A, b = self.assembler.assemble_matrix_rhs()  # noqa
 

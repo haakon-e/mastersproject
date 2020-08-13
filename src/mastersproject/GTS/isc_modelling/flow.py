@@ -395,6 +395,7 @@ class Flow(CommonAbstractModel):
             converged = True
             error_scalar = difference_in_iterates_scalar
             logger.info(f"Pressure converged absolutely")
+            logger.info(f"Absolute error in pressure is {error_scalar:.6e}.")
         else:
             # Relative convergence criterion:
             if (
@@ -405,8 +406,9 @@ class Flow(CommonAbstractModel):
                 logger.info(f"Pressure converged relatively")
 
             error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
+            logger.info(f"Relative error in pressure is {error_scalar:.6e}. "
+                        f"(absolute error is {difference_in_iterates_scalar:.4e})")
 
-        logger.info(f"Error in pressure is {error_scalar:.6e}.")
         if not converged:
             logger.info(f"Scalar pressure did not converge.")
 
