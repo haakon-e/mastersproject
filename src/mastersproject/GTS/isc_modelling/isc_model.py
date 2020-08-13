@@ -402,7 +402,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
         super().before_newton_iteration()
-        self.assembler.discretize(term_filter=["!grad_p", "!div_u", "!stabilization"])
+        self.assembler.discretize(term_filter=["!grad_p", "!div_u", "!stabilization", "!mpsa"])
         # for g, _ in self.gb:
         #     if g.dim < self.Nd:
         #         self.assembler.discretize(grid=g)
