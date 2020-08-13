@@ -1,11 +1,12 @@
-import pytest
 from pathlib import Path
+
 import numpy as np
+import pytest
 
 import porepy as pp
 from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotBase
-from GTS.isc_modelling.mechanics import Mechanics
 from GTS.isc_modelling.flow import Flow
+from GTS.isc_modelling.mechanics import Mechanics
 from GTS.isc_modelling.parameter import BaseParameters
 from GTS.test.standard_grids import two_intersecting_blocking_fractures
 from porepy.utils.derived_discretizations import implicit_euler
@@ -181,7 +182,7 @@ class TestContactMechanicsBiotBase:
 
             elif g.dim == nd - 1:
                 traction = d[pp.STATE][var_contact]
-                prev_traction = d[pp.STATE]["previous_iterate"][var_contact]
+                prev_traction = d[pp.STATE][pp.ITERATE][var_contact]
                 init_traction = np.vstack(
                     (np.zeros((g.dim, g.num_cells)), -1 * np.ones(g.num_cells))
                 ).ravel(order="F")
@@ -197,7 +198,7 @@ class TestContactMechanicsBiotBase:
             # mechanics
             if mg.dim == nd - 1:
                 mortar_m = d[pp.STATE][var_mortar_m]
-                prev_mortar_m = d[pp.STATE]["previous_iterate"][var_mortar_m]
+                prev_mortar_m = d[pp.STATE][pp.ITERATE][var_mortar_m]
                 assert np.allclose(mortar_m, np.zeros(mg.num_cells * nd))
                 assert np.allclose(prev_mortar_m, np.zeros(mg.num_cells * nd))
 

@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
-import pendulum
 
 import GTS as gts
 import GTS.test.util as test_util
+import pendulum
 import porepy as pp
 from util.logging_util import __setup_logging
 

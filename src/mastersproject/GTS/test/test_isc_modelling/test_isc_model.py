@@ -1,20 +1,20 @@
 import logging
+from pathlib import Path
 from typing import Dict
 
-import pytest
-from pathlib import Path
 import numpy as np
+import pytest
 
 import porepy as pp
 from GTS.isc_modelling.isc_model import ISCBiotContactMechanics
 from GTS.isc_modelling.parameter import (
     BiotParameters,
-    stress_tensor,
-    shearzone_injection_cell,
     GrimselGranodiorite,
-    nd_sides_shearzone_injection_cell,
-    nd_and_shearzone_injection_cell,
     center_of_shearzone_injection_cell,
+    nd_and_shearzone_injection_cell,
+    nd_sides_shearzone_injection_cell,
+    shearzone_injection_cell,
+    stress_tensor,
 )
 
 logger = logging.getLogger(__name__)
@@ -146,10 +146,7 @@ class TestISCBiotContactMechanics:
         ).ravel("F")
 
         data_edge[pp.STATE].update(
-            {
-                var_mortar: mortar_u,
-                "previous_iterate": {var_mortar: mortar_u_prev_iter},
-            }
+            {var_mortar: mortar_u, pp.ITERATE: {var_mortar: mortar_u_prev_iter},}
         )
 
         # Get mechanical aperture

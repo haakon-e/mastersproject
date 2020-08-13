@@ -4,13 +4,13 @@ from pathlib import Path
 from typing import Callable, Dict, List, Mapping, Type, Union
 
 import numpy as np
-import pendulum
-from pydantic import BaseModel
 
 import GTS as gts
+import pendulum
 import porepy as pp
 from mastersproject.util.logging_util import trace
 from porepy.models.contact_mechanics_model import ContactMechanics
+from pydantic import BaseModel
 
 # # Refinement
 # from refinement import gb_coarse_fine_cell_mapping

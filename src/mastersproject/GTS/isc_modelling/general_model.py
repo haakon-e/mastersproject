@@ -1,7 +1,7 @@
 import abc
 import logging
 import time
-from typing import Optional, Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -9,6 +9,7 @@ import porepy as pp
 from GTS.isc_modelling.parameter import BaseParameters
 from mastersproject.util.logging_util import timer
 from porepy.models.abstract_model import AbstractModel
+from pypardiso import spsolve
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +141,6 @@ class CommonAbstractModel(AbstractModel):
     @timer(logger, level="INFO")
     def assemble_and_solve_linear_system(self, tol: float) -> np.ndarray:
         """ Assemble a solve the linear system"""
-        from pypardiso import spsolve
 
         A, b = self.assembler.assemble_matrix_rhs()  # noqa
 

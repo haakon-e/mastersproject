@@ -4,9 +4,8 @@ import os
 from pathlib import Path
 from typing import Type
 
-import pendulum
-
 import GTS as gts
+import pendulum
 from GTS.isc_modelling.mechanics import ContactMechanicsISC
 from mastersproject.util.logging_util import __setup_logging, trace
 

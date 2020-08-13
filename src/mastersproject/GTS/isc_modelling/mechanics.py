@@ -2,12 +2,12 @@ import logging
 from typing import Dict, Tuple
 
 import numpy as np
-import pendulum
 
 import GTS as gts
+import pendulum
 import porepy as pp
-from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.general_model import CommonAbstractModel
+from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.parameter import BaseParameters, GrimselGranodiorite
 from mastersproject.util.logging_util import timer, trace
 from porepy.models.contact_mechanics_model import ContactMechanics
@@ -252,7 +252,7 @@ class Mechanics(CommonAbstractModel):
         The contact pressure is set to zero in the tangential direction,
         and -1 (that is, in contact) in the normal direction.
 
-        We initialize "previous_iterate" for the contact traction and
+        We initialize pp.ITERATE for the contact traction and
         mortar displacement since they are to be updated every Newton
         iteration.
 
@@ -261,7 +261,7 @@ class Mechanics(CommonAbstractModel):
         var_m = self.displacement_variable
         var_contact = self.contact_traction_variable
         var_mortar = self.mortar_displacement_variable
-        state = pp.STATE
+        state, iterate = pp.STATE, pp.ITERATE
 
         for g, d in gb:
             add_nonpresent_dictionary(d, state)
@@ -278,10 +278,7 @@ class Mechanics(CommonAbstractModel):
                     (np.zeros((g.dim, g.num_cells)), -1 * np.ones(g.num_cells))
                 ).ravel(order="F")
                 d[state].update(
-                    {
-                        "previous_iterate": {var_contact: traction},
-                        var_contact: traction,
-                    }
+                    {iterate: {var_contact: traction}, var_contact: traction,}
                 )
 
         for e, d in self.gb.edges():
@@ -291,10 +288,7 @@ class Mechanics(CommonAbstractModel):
             if mg.dim == self.Nd - 1:
                 size = mg.num_cells * self.Nd
                 d[state].update(
-                    {
-                        var_mortar: np.zeros(size),
-                        "previous_iterate": {var_mortar: np.zeros(size)},
-                    }
+                    {var_mortar: np.zeros(size), iterate: {var_mortar: np.zeros(size)},}
                 )
 
     # --- Simulation and solvers ---
@@ -501,7 +495,7 @@ class Mechanics(CommonAbstractModel):
 
         Extract parts of the solution for current iterate.
 
-        The iterate solutions in d[pp.STATE]["previous_iterate"]
+        The iterate solutions in d[pp.STATE][pp.ITERATE]
         are updated for
             - mortar displacements
             - contact traction
@@ -532,14 +526,14 @@ class Mechanics(CommonAbstractModel):
                     if name == var_mortar:
                         mortar_u = (solution_vector[dof[bi] : dof[bi + 1]]).copy()
                         data = self.gb.edge_props(g)
-                        data[pp.STATE]["previous_iterate"][var_mortar] = mortar_u
+                        data[pp.STATE][pp.ITERATE][var_mortar] = mortar_u
                 else:
                     # g is a node/grid (not edge)
                     # For the fractures, update the contact force
                     if (g.dim < self.Nd) and (name == var_contact):
                         contact = (solution_vector[dof[bi] : dof[bi + 1]]).copy()
                         data = self.gb.node_props(g)
-                        data[pp.STATE]["previous_iterate"][var_contact] = contact
+                        data[pp.STATE][pp.ITERATE][var_contact] = contact
 
     def _is_nonlinear_problem(self) -> bool:
         """
@@ -564,7 +558,7 @@ class Mechanics(CommonAbstractModel):
 
         """
         # TODO: Currently 'reconstruct_stress' does not work if 'previous_iterate = True'
-        #  since the displacement variable on Nd-grid is not stored in "previous_iterate".
+        #  since the displacement variable on Nd-grid is not stored in pp.ITERATE.
         if previous_iterate is True:
             raise ValueError("Not yet implemented.")
         g = self._nd_grid()
@@ -576,7 +570,7 @@ class Mechanics(CommonAbstractModel):
         mpsa = pp.Mpsa(self.mechanics_parameter_key)
 
         if previous_iterate:
-            u = d[pp.STATE]["previous_iterate"][var_m]
+            u = d[pp.STATE][pp.ITERATE][var_m]
         else:
             u = d[pp.STATE][var_m]
 
@@ -626,7 +620,7 @@ class Mechanics(CommonAbstractModel):
 
         mg: pp.MortarGrid = data_edge["mortar_grid"]
         if from_iterate:
-            mortar_u = data_edge[pp.STATE]["previous_iterate"][var_mortar]
+            mortar_u = data_edge[pp.STATE][pp.ITERATE][var_mortar]
         else:
             mortar_u = data_edge[pp.STATE][var_mortar]
 
@@ -1266,7 +1260,7 @@ class ContactMechanicsISC(ContactMechanics):
         """
         Extract parts of the solution for current iterate.
 
-        The iterate solutions in d[pp.STATE]["previous_iterate"] are updated for the
+        The iterate solutions in d[pp.STATE][pp.ITERATE] are updated for the
         mortar displacements and contact traction are updated.
         Method is a tailored copy from assembler.distribute_variable.
 
