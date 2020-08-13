@@ -4,9 +4,8 @@ from typing import Dict, Tuple
 import numpy as np
 
 import porepy as pp
-from GTS.isc_modelling.mechanics import ContactMechanicsISC
-from GTS.isc_modelling.mechanics import Mechanics
 from GTS.isc_modelling.flow import Flow
+from GTS.isc_modelling.mechanics import ContactMechanicsISC, Mechanics
 from GTS.isc_modelling.parameter import BaseParameters
 from mastersproject.util.logging_util import timer, trace
 from porepy.models.contact_mechanics_biot_model import ContactMechanicsBiot
@@ -88,7 +87,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         for g, d in gb:
             if g.dim == self.Nd:
                 d[discr_key][var_s].update(
-                    {"stabilization": stabilization_disc_s, }
+                    {"stabilization": stabilization_disc_s,}
                 )
 
                 d[discr_key].update(
@@ -232,15 +231,15 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         self.set_viz()
 
     def check_convergence(
-            self,
-            solution: np.ndarray,
-            prev_solution: np.ndarray,
-            init_solution: np.ndarray,
-            nl_params: Dict,
+        self,
+        solution: np.ndarray,
+        prev_solution: np.ndarray,
+        init_solution: np.ndarray,
+        nl_params: Dict,
     ) -> Tuple[np.ndarray, bool, bool]:
         error_s, converged_s, diverged_s = super(
             ContactMechanicsBiotBase, self
-        ).check_convergence(solution, prev_solution, init_solution, nl_params, )
+        ).check_convergence(solution, prev_solution, init_solution, nl_params,)
         error_m, converged_m, diverged_m = super(Flow, self).check_convergence(
             solution, prev_solution, init_solution, nl_params,
         )
@@ -450,7 +449,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         if self._gravity_bc_p:
             depth = self._depth(g.face_centers[:, all_bf])
             bc_values[all_bf] += (
-                    self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
+                self.fluid.hydrostatic_pressure(depth) / self.scalar_scale
             )
         return bc_values
 
@@ -488,7 +487,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         bh_sz = self.source_scalar_borehole_shearzone
 
         _mask = (df.shearzone == bh_sz["shearzone"]) & (
-                df.borehole == bh_sz["borehole"]
+            df.borehole == bh_sz["borehole"]
         )
 
         # Get the intersection coordinates of the borehole and the shearzone. (unscaled)
@@ -571,8 +570,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
             # permeability [m2] (scaled)
             k = (
-                    self.initial_permeability[shearzone]
-                    * (pp.METER / self.length_scale) ** 2
+                self.initial_permeability[shearzone]
+                * (pp.METER / self.length_scale) ** 2
             )
 
             # Multiply by the volume of the flattened dimension (specific volume)
@@ -592,9 +591,9 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
             # Take trace of and then project specific volumes from g_h
             v_h = (
-                    mg.master_to_mortar_avg()
-                    * np.abs(g_h.cell_faces)
-                    * self.specific_volume(g_h, scaled=True)
+                mg.master_to_mortar_avg()
+                * np.abs(g_h.cell_faces)
+                * self.specific_volume(g_h, scaled=True)
             )
 
             # Get diffusivity from lower-dimensional neighbour
@@ -715,7 +714,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         gb = self.gb
 
         compressibility = self.fluid.COMPRESSIBILITY * (
-                self.scalar_scale / pp.PASCAL
+            self.scalar_scale / pp.PASCAL
         )  # scaled. [1/Pa]
         porosity = self.rock.POROSITY
         for g, d in gb:
@@ -739,10 +738,10 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
                     "bc": bc,
                     "bc_values": bc_values,
                     "mass_weight": (  # TODO: Simplified version off mass_weight?
-                            compressibility
-                            * porosity
-                            * specific_volume
-                            * np.ones(g.num_cells)
+                        compressibility
+                        * porosity
+                        * specific_volume
+                        * np.ones(g.num_cells)
                     ),
                     "biot_alpha": alpha,
                     "source": source_values,
@@ -801,10 +800,10 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
 
             if g.dim == Nd:  # On matrix
                 u = (
-                        d[pp.STATE][self.displacement_variable]
-                        .reshape((Nd, -1), order="F")
-                        .copy()
-                        * ls
+                    d[pp.STATE][self.displacement_variable]
+                    .reshape((Nd, -1), order="F")
+                    .copy()
+                    * ls
                 )
 
                 if g.dim != 3:  # Only called if solving a 2D problem
@@ -1108,10 +1107,10 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         # TODO: Check if scaling of contact variable
         contact_now = solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
         contact_prev = (
-                prev_solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
+            prev_solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
         )
         contact_init = (
-                init_solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
+            init_solution[contact_dof] * self.scalar_scale * self.length_scale ** 2
         )
 
         # Pressure solution
@@ -1165,8 +1164,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         else:
             # Check relative convergence criterion
             if (
-                    difference_in_iterates_mech
-                    < tol_convergence * difference_from_init_mech
+                difference_in_iterates_mech
+                < tol_convergence * difference_from_init_mech
             ):
                 # converged = True
                 converged_u = True
@@ -1180,7 +1179,7 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
             logger.info(f"contact variable converged absolutely")
         else:
             error_contact = (
-                    difference_in_iterates_contact / difference_from_init_contact
+                difference_in_iterates_contact / difference_from_init_contact
             )
 
         # -- Scalar solution --
@@ -1192,8 +1191,8 @@ class ContactMechanicsBiotISC(ContactMechanicsISC, ContactMechanicsBiot):
         else:
             # Relative convergence criterion:
             if (
-                    difference_in_iterates_scalar
-                    < tol_convergence * difference_from_init_scalar
+                difference_in_iterates_scalar
+                < tol_convergence * difference_from_init_scalar
             ):
                 # converged = True
                 converged_p = True

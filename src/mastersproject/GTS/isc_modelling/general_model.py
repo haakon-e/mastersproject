@@ -1,15 +1,15 @@
 import abc
 import logging
 import time
-from typing import Optional, Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
-from pypardiso import spsolve
 
 import porepy as pp
 from GTS.isc_modelling.parameter import BaseParameters
 from mastersproject.util.logging_util import timer
 from porepy.models.abstract_model import AbstractModel
+from pypardiso import spsolve
 
 logger = logging.getLogger(__name__)
 

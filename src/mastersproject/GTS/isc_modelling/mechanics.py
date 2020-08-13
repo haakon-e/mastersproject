@@ -2,12 +2,12 @@ import logging
 from typing import Dict, Tuple
 
 import numpy as np
-import pendulum
 
 import GTS as gts
+import pendulum
 import porepy as pp
-from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.general_model import CommonAbstractModel
+from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.parameter import BaseParameters, GrimselGranodiorite
 from mastersproject.util.logging_util import timer, trace
 from porepy.models.contact_mechanics_model import ContactMechanics
@@ -278,10 +278,7 @@ class Mechanics(CommonAbstractModel):
                     (np.zeros((g.dim, g.num_cells)), -1 * np.ones(g.num_cells))
                 ).ravel(order="F")
                 d[state].update(
-                    {
-                        iterate: {var_contact: traction},
-                        var_contact: traction,
-                    }
+                    {iterate: {var_contact: traction}, var_contact: traction,}
                 )
 
         for e, d in self.gb.edges():
@@ -291,10 +288,7 @@ class Mechanics(CommonAbstractModel):
             if mg.dim == self.Nd - 1:
                 size = mg.num_cells * self.Nd
                 d[state].update(
-                    {
-                        var_mortar: np.zeros(size),
-                        iterate: {var_mortar: np.zeros(size)},
-                    }
+                    {var_mortar: np.zeros(size), iterate: {var_mortar: np.zeros(size)},}
                 )
 
     # --- Simulation and solvers ---

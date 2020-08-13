@@ -5,8 +5,8 @@ from typing import Dict, Optional
 import numpy as np
 
 import porepy as pp
-from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.general_model import CommonAbstractModel
+from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.parameter import BaseParameters, FlowParameters
 from porepy.params.data import add_nonpresent_dictionary
 from porepy.utils.derived_discretizations import implicit_euler
@@ -406,8 +406,10 @@ class Flow(CommonAbstractModel):
                 logger.info(f"Pressure converged relatively")
 
             error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
-            logger.info(f"Relative error in pressure is {error_scalar:.6e}. "
-                        f"(absolute error is {difference_in_iterates_scalar:.4e})")
+            logger.info(
+                f"Relative error in pressure is {error_scalar:.6e}. "
+                f"(absolute error is {difference_in_iterates_scalar:.4e})"
+            )
 
         if not converged:
             logger.info(f"Scalar pressure did not converge.")

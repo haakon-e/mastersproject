@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union
 
 import numpy as np
-import pendulum
-from pydantic import BaseModel, validator
 
+import pendulum
 import porepy as pp
 from GTS import ISCData
+from pydantic import BaseModel, validator
 
 logger = logging.getLogger(__name__)
 

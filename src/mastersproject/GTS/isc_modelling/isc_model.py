@@ -5,11 +5,10 @@ from typing import Dict
 import numpy as np
 
 import porepy as pp
-from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotBase
+from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.parameter import BiotParameters
-
-from mastersproject.util.logging_util import trace, timer
+from mastersproject.util.logging_util import timer, trace
 
 logger = logging.getLogger(__name__)
 
@@ -205,7 +204,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
         return aperture
 
-    def mechanical_aperture(self, g: pp.Grid, scaled: bool, from_iterate: bool) -> np.ndarray:
+    def mechanical_aperture(
+        self, g: pp.Grid, scaled: bool, from_iterate: bool
+    ) -> np.ndarray:
         """ Compute aperture contribution from mechanical opening of fractures
 
         For 3d-matrix: zeros (aperture isn't really defined in 3d)
@@ -266,7 +267,6 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
         # For 2d & 1d, fetch the master grids
         master_grids = gb.node_neighbors(g, only_higher=True)
-        n_edges = len(master_grids)
         de = [gb.edge_props((g, e)) for e in master_grids]
         initialized = np.alltrue([pp.STATE in d for d in de])
         if not initialized:
@@ -309,9 +309,12 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             ]
             # The reshape and max operations implicitly project the aperture to
             # the intersection grid (assuming a conforming mesh).
-            intx_max_apertures = np.max(np.vstack(
-                [mortar_ap.reshape((2, -1)) for mortar_ap in mortar_apertures]
-            ), axis=0)
+            intx_max_apertures = np.max(
+                np.vstack(
+                    [mortar_ap.reshape((2, -1)) for mortar_ap in mortar_apertures]
+                ),
+                axis=0,
+            )
 
             return intx_max_apertures
 
@@ -359,9 +362,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         for g, d in self.gb:
             wells = g.tags["well_cells"]
             if np.sum(np.abs(wells)) > 0:
-                dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
-                loc = np.where(wells != 0)[0]
-                glob_ind = dof_ind[loc]
+                pass
+                # dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
+                # loc = np.where(wells != 0)[0]
+                # glob_ind = dof_ind[loc]
 
     # --- Simulation and solvers ---
 
@@ -377,7 +381,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
         super().before_newton_iteration()
-        self.assembler.discretize(term_filter=["!grad_p", "!div_u", "!stabilization", "!mpsa"])
+        self.assembler.discretize(
+            term_filter=["!grad_p", "!div_u", "!stabilization", "!mpsa"]
+        )
         # for g, _ in self.gb:
         #     if g.dim < self.Nd:
         #         self.assembler.discretize(grid=g)

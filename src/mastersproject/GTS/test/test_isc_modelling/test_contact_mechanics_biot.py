@@ -1,11 +1,12 @@
-import pytest
 from pathlib import Path
+
 import numpy as np
+import pytest
 
 import porepy as pp
 from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotBase
-from GTS.isc_modelling.mechanics import Mechanics
 from GTS.isc_modelling.flow import Flow
+from GTS.isc_modelling.mechanics import Mechanics
 from GTS.isc_modelling.parameter import BaseParameters
 from GTS.test.standard_grids import two_intersecting_blocking_fractures
 from porepy.utils.derived_discretizations import implicit_euler

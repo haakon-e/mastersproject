@@ -1,10 +1,10 @@
 import logging
 
 import numpy as np
-import pendulum
 
 import GTS as gts
 import GTS.test.util as test_util
+import pendulum
 import porepy as pp
 from mastersproject.util.logging_util import trace
 

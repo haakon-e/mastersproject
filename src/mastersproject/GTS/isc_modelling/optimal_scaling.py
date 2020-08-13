@@ -5,10 +5,10 @@ import numpy as np
 import pandas as pd
 
 from GTS import (
-    ISCBiotContactMechanics,
     BiotParameters,
-    stress_tensor,
     GrimselGranodiorite,
+    ISCBiotContactMechanics,
+    stress_tensor,
 )
 
 
