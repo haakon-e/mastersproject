@@ -170,23 +170,18 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         See also specific_volume.
         """
         a_init = self.compute_initial_aperture(g, scaled=scaled)
-        a_mech = self.mechanical_aperture(g, from_iterate=from_iterate)
-        if not scaled:
-            # Mechanical aperture is scaled by default, whereas initial aperture (above)
-            # is not. This "upscaling" ensures they are consistent.
-            a_mech *= self.params.length_scale / pp.METER
+        a_mech = self.mechanical_aperture(g, scaled=scaled, from_iterate=from_iterate)
 
-        # TODO: This is commented out to test effects of aperture variations in injection cell.
-        # # Find the cells that are not injection (or sink) cells
-        # injection_tags = g.tags["well_cells"]
-        # not_injection_cells = 1 - np.abs(injection_tags)
-
-        # Only add the mechanical contribution to non-injection cells:
-        a_total = a_init + a_mech  # * not_injection_cells
+        a_total = a_init + a_mech
         return a_total
 
     def compute_initial_aperture(self, g: pp.Grid, scaled) -> np.ndarray:
-        """ Fetch the initial aperture. See __init__ for details """
+        """ Fetch the initial aperture
+
+        For 3d-matrix: unitary (aperture isn't really defined in 3d)
+        For 2d-fracture: fetch from the parameter dictionary
+        For 1d-intersection: Get the max from the two adjacent fractures
+        """
         aperture = np.ones(g.num_cells)
         nd = self.Nd
         gb = self.gb
@@ -199,13 +194,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             aperture *= self.params.initial_fracture_aperture[shearzone]
         elif g.dim == nd - 2:
             master_grids = gb.node_neighbors(g, only_higher=True)
-            shearzones = (gb.node_props(g_h, "name") for g_h in master_grids)
-            apertures = np.fromiter(
-                (self.params.initial_fracture_aperture[sz] for sz in shearzones),
-                dtype=float,
-                count=len(master_grids),
-            )
-            aperture *= np.mean(apertures)
+            shearzones = [gb.node_props(g_h, "name") for g_h in master_grids]
+            apertures = [self.params.initial_fracture_aperture[sz] for sz in shearzones]
+            aperture *= np.max(apertures)
         else:
             raise ValueError("Not implemented 1d intersection points")
 
@@ -214,13 +205,19 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
         return aperture
 
-    def mechanical_aperture(self, g: pp.Grid, from_iterate: bool) -> np.ndarray:
+    def mechanical_aperture(self, g: pp.Grid, scaled: bool, from_iterate: bool) -> np.ndarray:
         """ Compute aperture contribution from mechanical opening of fractures
+
+        For 3d-matrix: zeros (aperture isn't really defined in 3d)
+        For 2d-fracture: compute from the local displacement jump
+        For 1d-intersection: Get the max from the two adjacent fractures
 
         Parameters
         ----------
         g : pp.Grid
             a grid
+        scaled : bool
+            whether to scale the displacement jump, which has units [m]
         from_iterate : bool
             whether to fetch displacement jump from from iterate or from pp.STATE.
 
@@ -254,25 +251,28 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             normal_jump = np.abs(u_mortar_local[-1, :])
             # tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
 
+            # Mechanical aperture is scaled by default. "Upscale" if necessary.
+            if not scaled:
+                normal_jump *= self.params.length_scale / pp.METER
+
             aperture_contribution = normal_jump
             return aperture_contribution
 
         # -- Computations --
 
-        # No contribution in 3d
+        # No contribution in 3d-matrix
         if g.dim == nd:
             return np.zeros(g.num_cells)
 
+        # For 2d & 1d, fetch the master grids
         master_grids = gb.node_neighbors(g, only_higher=True)
         n_edges = len(master_grids)
         de = [gb.edge_props((g, e)) for e in master_grids]
-        initialized = np.alltrue(
-            np.fromiter((pp.STATE in d for d in de), dtype=bool, count=n_edges)
-        )
+        initialized = np.alltrue([pp.STATE in d for d in de])
         if not initialized:
             return np.zeros(g.num_cells)
 
-        # In fractures
+        # In 2d-fractures
         elif g.dim == nd - 1:
             data_edge = gb.edge_props((g, nd_grid))
             aperture = _aperture_from_edge(data_edge)
@@ -284,42 +284,36 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         elif g.dim == nd - 2:
             # (g is the slave grid.)
             # Fetch edges of g that points to a higher-dimensional grid
-            intx_edges = ((g, g_h) for g_h in master_grids)
-            nd_edges = ((g_h, nd_grid) for g_h in master_grids)
-            cell_faces = (g_h.cell_faces for g_h in master_grids)
+            intx_edges = [(g, g_h) for g_h in master_grids]
+            frac_edges = [(g_h, nd_grid) for g_h in master_grids]
+            frac_cell_faces = [g_h.cell_faces for g_h in master_grids]
 
-            data_edges = (gb.edge_props(edge) for edge in nd_edges)
-            master_apertures = (
+            # get apertures on the adjacent fractures
+            data_edges = [gb.edge_props(edge) for edge in frac_edges]
+            frac_apertures = [
                 _aperture_from_edge(data_edge) for data_edge in data_edges
-            )
+            ]
 
-            # Map parent apertures to faces
-            master_face_apertures = (
+            # Map fracture apertures to internal faces ..
+            frac_face_apertures = [
                 np.abs(cell_face) * parent_aperture
-                for cell_face, parent_aperture in zip(cell_faces, master_apertures)
-            )
+                for cell_face, parent_aperture in zip(frac_cell_faces, frac_apertures)
+            ]
 
-            # .. and project face apertures to slave grid
-            mortar_grids = (gb.edge_props(edge)["mortar_grid"] for edge in intx_edges)
+            # .. then project face apertures to the interfaces and take maximum
+            # Note: for matching grids, avg and int mortar projections are identical.
+            mortar_grids = [gb.edge_props(edge)["mortar_grid"] for edge in intx_edges]
+            mortar_apertures = [
+                mg.master_to_mortar_int() * ap
+                for mg, ap in zip(mortar_grids, frac_face_apertures)
+            ]
+            # The reshape and max operations implicitly project the aperture to
+            # the intersection grid (assuming a conforming mesh).
+            intx_max_apertures = np.max(np.vstack(
+                [mortar_ap.reshape((2, -1)) for mortar_ap in mortar_apertures]
+            ), axis=0)
 
-            # Use _int() here to sum apertures, then we average at the end.
-            master_to_slave_apertures = (
-                mg.mortar_to_slave_int()
-                * mg.master_to_mortar_int()
-                * master_face_aperture
-                for mg, master_face_aperture in zip(mortar_grids, master_face_apertures)
-            )
-
-            # expand the iterator
-            apertures = np.zeros((n_edges, g.num_cells))
-            for i, ap in enumerate(master_to_slave_apertures):
-                apertures[i, :] = ap
-
-            # average the apertures from master to determine the slave aperture
-            avg_aperture = np.mean(
-                apertures, axis=0
-            )  # / 2  <-- divide by 2 for each mortar side???
-            return avg_aperture
+            return intx_max_apertures
 
         else:
             raise ValueError("Not implemented 1d intersection points")
