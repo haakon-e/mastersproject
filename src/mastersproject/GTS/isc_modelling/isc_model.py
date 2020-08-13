@@ -137,7 +137,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     # --- Aperture related methods ---
 
     def specific_volume(
-        self, g: pp.Grid, scaled=False, from_iterate=True
+        self, g: pp.Grid, scaled, from_iterate=True
     ) -> np.ndarray:
         """
         The specific volume of a cell accounts for the dimension reduction and has
@@ -323,7 +323,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     # --- Flow parameter related methods ---
 
-    def permeability(self, g, scaled) -> np.ndarray:
+    def permeability(self, g, scaled, from_iterate=True) -> np.ndarray:
         """ Set (uniform) permeability in a subdomain"""
         # intact rock gets permeability from rock
         if g.dim == self.Nd:
@@ -336,7 +336,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             def cubic_law(a):
                 return np.power(a, 2) / 12
 
-            aperture = self.aperture(g, scaled=scaled, from_iterate=True)
+            aperture = self.aperture(g, scaled=scaled, from_iterate=from_iterate)
             k = cubic_law(aperture)
         return k
 
@@ -379,13 +379,19 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     @timer(logger, level="INFO")
     def before_newton_iteration(self) -> None:
-        # Re-discretize the nonlinear term
+        # Note: All parameters are updated *after* each Newton iteration.
+
+        # Re-discretize the nonlinear term and all terms depending on the aperture
+        # Here,
+        #   !grad_p & !mpsa avoids re-discretizing the (3d) mechanics equation of Biot
+        #   !div_u & !stabilization avoids re-discretizing the displacement term
+        #       of the 3d flow equation.
+        # In other words: We want to update the ..
+        #   .. MPFA terms (k depends on aperture).
+        #   .. Mass terms (depends on specific volume / aperture).
         self.assembler.discretize(
             term_filter=["!grad_p", "!div_u", "!stabilization", "!mpsa"]
         )
-        # for g, _ in self.gb:
-        #     if g.dim < self.Nd:
-        #         self.assembler.discretize(grid=g)
 
     def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
         super().after_newton_iteration(solution_vector)
