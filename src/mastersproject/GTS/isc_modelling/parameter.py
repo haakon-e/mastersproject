@@ -50,8 +50,8 @@ def stress_tensor() -> np.ndarray:
 
 # Define the rock type at Grimsel Test Site
 class GrimselGranodiorite(pp.UnitRock):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, theta_ref=None):
+        super().__init__(theta_ref)
         from porepy.params import rock as pp_rock
 
         self.PERMEABILITY = 1.8e-20
@@ -125,7 +125,7 @@ class BaseParameters(BaseModel):
     fluid: pp.UnitFluid = pp.Water(theta_ref=11)
 
     # Rock parameters
-    rock: pp.UnitRock = pp.Granite(theta_ref=11)
+    rock: pp.UnitRock = GrimselGranodiorite(theta_ref=11)
 
     # --- Validators ---
 
@@ -230,7 +230,7 @@ class FlowParameters(GeometryParameters):
     injection_rate: float = 0
 
     # Set transmissivity in fractures
-    frac_transmissivity: Union[float, List[float]]
+    frac_transmissivity: Union[float, List[float]] = 1
 
     # See 'methods to estimate permeability of shear zones at Grimsel Test Site'
     # in 'Presentasjon til underveismøte' for details on relations between
