@@ -127,6 +127,9 @@ class BaseParameters(BaseModel):
     # Rock parameters
     rock: pp.UnitRock = GrimselGranodiorite(theta_ref=11)
 
+    # Gravity
+    gravity: bool = False
+
     # --- Validators ---
 
     @validator("length_scale", "scalar_scale")
@@ -201,10 +204,6 @@ class MechanicsParameters(GeometryParameters):
         "nl_convergence_tol": 1e-10,
         "nl_divergence_tol": 1e5,
     }
-
-    # Gravity for mechanics
-    gravity_src: bool = False
-    gravity_bc: bool = False
 
     class Config:
         arbitrary_types_allowed = True
