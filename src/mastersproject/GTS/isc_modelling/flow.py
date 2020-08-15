@@ -367,7 +367,7 @@ class Flow(CommonAbstractModel):
         ss = self.params.scalar_scale
 
         # Extract convergence tolerance
-        tol_convergence = nl_params.get("nl_convergence_tol")
+        tol_convergence = nl_params.get("convergence_tol")
 
         converged = False
         diverged = False

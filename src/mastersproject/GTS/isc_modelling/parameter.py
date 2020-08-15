@@ -274,7 +274,7 @@ class MechanicsParameters(GeometryParameters):
     # Parameters for Newton solver
     newton_options = {
         "max_iterations": 40,
-        "nl_convergence_tol": 1e-10,
+        "convergence_tol": 1e-10,
         "nl_divergence_tol": 1e5,
     }
 
