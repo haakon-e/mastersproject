@@ -48,3 +48,6 @@ def validation():
     setup = ISCBiotContactMechanics(biot_params)
 
     time_machine = TimeMachine(setup, newton_params, time_params)
+
+    time_machine.run_simulation()
+    return time_machine
