@@ -106,7 +106,7 @@ class CommonAbstractModel(AbstractModel):
         non_linear_error = "Newton iterations did not converge"
         linear_error = "Tried solving singular matrix for the linear problem."
         error_type = non_linear_error if self._is_nonlinear_problem() else linear_error
-        raise ValueError(error_type)
+        raise NewtonFailure(error_type, solution)
 
     @abc.abstractmethod
     def after_simulation(self):
@@ -230,3 +230,9 @@ class CommonAbstractModel(AbstractModel):
             bottom = g.face_centers[2] < box["zmin"] + tol
         all_bf = g.get_boundary_faces()
         return all_bf, east, west, north, south, top, bottom
+
+
+class NewtonFailure(Exception):
+    def __init__(self, message, solution=None):
+        self.message = message
+        self.solution = solution
