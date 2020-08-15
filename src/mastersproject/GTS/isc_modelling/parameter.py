@@ -49,29 +49,26 @@ def stress_tensor() -> np.ndarray:
 
 
 # Define the rock type at Grimsel Test Site
-class GrimselGranodiorite(pp.UnitRock):
-    def __init__(self, theta_ref=None):
-        super().__init__(theta_ref)
-        from porepy.params import rock as pp_rock
+class UnitRock(BaseModel):
+    """ Default rock model"""
+    PERMEABILITY = 1.0 * (pp.METER ** 2)
+    DENSITY = 1.0 * (pp.KILOGRAM / pp.METER**3)
+    POROSITY = 1.0
+    YOUNG_MODULUS = 1.0 * pp.PASCAL
+    POISSON_RATIO = 1.0 * pp.PASCAL
+    FRICTION_COEFFICIENT = 1.0
 
-        self.PERMEABILITY = 1.8e-20
-        self.THERMAL_EXPANSION = 1
-        self.DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
+    @property
+    def LAMBDA(self):
+        """ Compute Lame parameters from Young's modulus and Poisson's ratio."""
+        e, nu = self.YOUNG_MODULUS, self.POISSON_RATIO
+        return e * nu / ((1 + nu) * (1 - 2 * nu))
 
-        # Lamé parameters
-        self.YOUNG_MODULUS = (
-            40 * pp.GIGA * pp.PASCAL
-        )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
-        self.POISSON_RATIO = (
-            0.25  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
-        )
-
-        self.LAMBDA, self.MU = pp_rock.lame_from_young_poisson(
-            self.YOUNG_MODULUS, self.POISSON_RATIO
-        )
-
-        self.FRICTION_COEFFICIENT = 0.8  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
-        self.POROSITY = 0.7 / 100
+    @property
+    def MU(self):
+        """ Compute Lame parameters from Young's modulus and Poisson's ratio."""
+        e, nu = self.YOUNG_MODULUS, self.POISSON_RATIO
+        return e / (2 * (1 + nu))
 
     def lithostatic_pressure(self, depth):
         """ Lithostatic pressure.
@@ -83,6 +80,77 @@ class GrimselGranodiorite(pp.UnitRock):
         rho = self.DENSITY
         return rho * depth * pp.GRAVITY_ACCELERATION
 
+
+class GrimselGranodiorite(UnitRock):
+    """ Grimsel Granodiorite parameters"""
+    PERMEABILITY = 1.8e-20
+    DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
+    POROSITY = 0.7 / 100
+
+    # Lamé parameters
+    YOUNG_MODULUS = (
+            40 * pp.GIGA * pp.PASCAL
+    )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+    POISSON_RATIO = (
+        0.25  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+    )
+
+    FRICTION_COEFFICIENT = 0.8  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
+
+
+# Fluid
+class UnitFluid(BaseModel):
+    """ Unit fluid at constant temperature"""
+    COMPRESSIBILITY: float = 1 / pp.PASCAL
+    theta_ref: float = 11 * pp.CELSIUS
+
+    @property
+    def BULK(self) -> float:
+        return 1 / self.COMPRESSIBILITY
+
+    @property
+    def density(self) -> float:
+        """ Units: kg / m^3 """
+        return 1.0
+
+    @property
+    def dynamic_viscosity(self) -> float:
+        """Units: Pa s"""
+        return 1.0
+
+    def hydrostatic_pressure(self, depth) -> float:
+        rho = self.density
+        return rho * depth * pp.GRAVITY_ACCELERATION + pp.ATMOSPHERIC_PRESSURE
+
+
+class Water(UnitFluid):
+    """ Water at constant temperature"""
+    COMPRESSIBILITY = 4e-10 / pp.PASCAL  # Moderate dependency on theta
+
+    @property
+    def density(self):
+        """ Units: kg / m^3 """
+        theta = self.theta_ref
+        theta_0 = 10 * pp.CELSIUS
+        rho_0 = 999.8349 * (pp.KILOGRAM / pp.METER ** 3)
+        return rho_0 / (1.0 + self.thermal_expansion(theta - theta_0))
+
+    @property
+    def dynamic_viscosity(self):
+        """Units: Pa s"""
+        theta = self.theta_ref
+        theta = pp.CELSIUS_to_KELVIN(theta)
+        mu_0 = 2.414 * 1e-5 * (pp.PASCAL * pp.SECOND)
+        return mu_0 * np.power(10, 247.8 / (theta - 140))
+
+    @staticmethod
+    def thermal_expansion(delta_theta):
+        """ Units: m^3 / m^3 K, i.e. volumetric """
+        return (
+            0.0002115
+            + 1.32 * 1e-6 * delta_theta
+            + 1.09 * 1e-8 * np.power(delta_theta, 2)
+        )
 
 # --- Models ---
 
@@ -122,10 +190,10 @@ class BaseParameters(BaseModel):
     end_time: float = 1
 
     # Fluid and temperature. Default is ISC temp (11 C).
-    fluid: pp.UnitFluid = pp.Water(theta_ref=11)
+    fluid: UnitFluid = Water(theta_ref=11)
 
     # Rock parameters
-    rock: pp.UnitRock = GrimselGranodiorite(theta_ref=11)
+    rock: UnitRock = GrimselGranodiorite()
 
     # Gravity
     gravity: bool = False
@@ -258,8 +326,8 @@ class FlowParameters(GeometryParameters):
 
     @property
     def rho_g_over_mu(self):
-        mu = self.fluid.dynamic_viscosity()
-        rho = self.fluid.density()
+        mu = self.fluid.dynamic_viscosity
+        rho = self.fluid.density
         g = pp.GRAVITY_ACCELERATION
         return rho * g / mu
 
