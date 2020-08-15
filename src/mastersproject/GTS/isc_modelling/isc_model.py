@@ -124,12 +124,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     # ---- FLOW -----
 
     def biot_alpha(self, g: pp.Grid) -> float:  # noqa
-        # if g.dim == self.Nd:
-        #     return self.params.alpha
-        # else:
-        #     # Set to zero to turn off effects of DivUCoupling in 2d fractures.
-        #     return 0.0
-        return self.params.alpha
+        if g.dim == self.Nd:
+            return self.params.alpha
+        else:
+            return 1.0
 
     def density(self, g: pp.Grid):
         """ Density is an exponential function of pressure
