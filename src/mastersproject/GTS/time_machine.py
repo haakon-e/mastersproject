@@ -105,10 +105,9 @@ class TimeMachine:
         current_time = self.time_params.start_time
         sol = None
 
-        newton_failure = False
-        k_nwtn, k_nwtn_max = 0, 5
-
         while current_time < t_end:
+            newton_failure = False
+            k_nwtn, k_nwtn_max = 0, 5
             k_time += 1
             while True:
                 k_nwtn += 1
@@ -129,14 +128,22 @@ class TimeMachine:
                     newton_failure = True
 
                     # If we have tried too many times. Raise.
-                    if k_nwtn > k_nwtn_max:
-                        raise ValueError(f"Time step failed to converge after {k_nwtn} tries.")
+                    if k_nwtn >= k_nwtn_max:
+                        msg = f"Time step failed to converge after {k_nwtn} tries."
+                        # raise ValueError(msg)
+                        logger.critical(msg)
+                        break
                 else:
                     # If Newton Failure did not occur, we succeeded.
                     break
 
+            if k_nwtn > k_nwtn_max:
+                # For testing
+                break
+
             # Before the next time step, update the current time step size.
             self.current_time_step = time_step
+            current_time = new_time
 
         setup.after_simulation()
 
@@ -164,6 +171,7 @@ class TimeMachine:
         if newton_failure:
             logger.info(f"Newton failure. Reduce time step by 80% and retry time step.")
             current_step_size *= 0.2
+            self.current_time_step = current_step_size
 
         new_time = current_time + current_step_size
 

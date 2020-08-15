@@ -19,7 +19,10 @@ def validation():
         max_time_step=1*pp.MINUTE,
         must_hit_times=[5*pp.MINUTE, 8.5*pp.MINUTE, 10*pp.MINUTE]
     )
-    newton_params = NewtonParameters(convergence_tol=1e-6)
+    newton_params = NewtonParameters(
+        convergence_tol=1e-6,
+        max_iterations=30
+    )
     sz = 6
     biot_params = BiotParameters(
         # BaseParameters
