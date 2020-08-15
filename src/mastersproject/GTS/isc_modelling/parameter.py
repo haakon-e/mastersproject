@@ -51,8 +51,9 @@ def stress_tensor() -> np.ndarray:
 # Define the rock type at Grimsel Test Site
 class UnitRock(BaseModel):
     """ Default rock model"""
+
     PERMEABILITY = 1.0 * (pp.METER ** 2)
-    DENSITY = 1.0 * (pp.KILOGRAM / pp.METER**3)
+    DENSITY = 1.0 * (pp.KILOGRAM / pp.METER ** 3)
     POROSITY = 1.0
     YOUNG_MODULUS = 1.0 * pp.PASCAL
     POISSON_RATIO = 1.0 * pp.PASCAL
@@ -83,13 +84,14 @@ class UnitRock(BaseModel):
 
 class GrimselGranodiorite(UnitRock):
     """ Grimsel Granodiorite parameters"""
+
     PERMEABILITY = 1.8e-20
     DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
     POROSITY = 0.7 / 100
 
     # Lamé parameters
     YOUNG_MODULUS = (
-            40 * pp.GIGA * pp.PASCAL
+        40 * pp.GIGA * pp.PASCAL
     )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
     POISSON_RATIO = (
         0.25  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
@@ -101,6 +103,7 @@ class GrimselGranodiorite(UnitRock):
 # Fluid
 class UnitFluid(BaseModel):
     """ Unit fluid at constant temperature"""
+
     COMPRESSIBILITY: float = 1 / pp.PASCAL
     theta_ref: float = 11 * pp.CELSIUS
 
@@ -125,6 +128,7 @@ class UnitFluid(BaseModel):
 
 class Water(UnitFluid):
     """ Water at constant temperature"""
+
     COMPRESSIBILITY = 4e-10 / pp.PASCAL  # Moderate dependency on theta
 
     @property
@@ -151,6 +155,7 @@ class Water(UnitFluid):
             + 1.32 * 1e-6 * delta_theta
             + 1.09 * 1e-8 * np.power(delta_theta, 2)
         )
+
 
 # --- Models ---
 

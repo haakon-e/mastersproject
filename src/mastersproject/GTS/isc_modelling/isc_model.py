@@ -157,7 +157,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # For reference values, see: Berre et al. (2018):
         # Three-dimensional numberical modelling of fracture
         # reactivation due to fluid injection in geothermal reservoirs
-        rho0 = 1014 * np.ones(g.num_cells) * (pp.KILOGRAM / pp.METER**3)
+        rho0 = 1014 * np.ones(g.num_cells) * (pp.KILOGRAM / pp.METER ** 3)
         p0 = 1 * pp.ATMOSPHERIC_PRESSURE
         p = d[pp.STATE][self.scalar_variable] if pp.STATE in d else p0
 
@@ -166,9 +166,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     # --- Aperture related methods ---
 
-    def specific_volume(
-        self, g: pp.Grid, scaled, from_iterate=True
-    ) -> np.ndarray:
+    def specific_volume(self, g: pp.Grid, scaled, from_iterate=True) -> np.ndarray:
         """
         The specific volume of a cell accounts for the dimension reduction and has
         dimensions [m^(Nd - d)].
@@ -400,7 +398,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         ls, ss = self.params.length_scale, self.params.scalar_scale
         for g, d in gb:
             # minus sign to convert from positive z downward (depth) to positive upward.
-            gravity = - pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
+            gravity = -pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
             vector_source = np.zeros((self.Nd, g.num_cells))
             vector_source[-1, :] = gravity
             d[pp.PARAMETERS][scalar_key]["vector_source"] = vector_source.ravel("F")
@@ -416,7 +414,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             rho_g = mg.slave_to_mortar_avg(self.Nd) * vec_src_l
             # Multiply by (a/2) to "cancel out" the normal gradient of the diffusivity
             # (see also self.set_permeability_from_aperture)
-            gravity = rho_g * (a_l/2)
+            gravity = rho_g * (a_l / 2)
 
             pp.initialize_data(mg, de, scalar_key, {"vector_source": gravity})
 
@@ -575,7 +573,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
             # Lithostatic pressure
             gravity: np.ndarray = self.params.rock.lithostatic_pressure(relative_depths)
-            lithostatic_stress = stress_scaler.dot(np.multiply(outward_normals, gravity))
+            lithostatic_stress = stress_scaler.dot(
+                np.multiply(outward_normals, gravity)
+            )
             lithostatic_bc = lithostatic_stress[:, all_bf]
 
             bc_values[:, all_bf] += lithostatic_bc * (pp.PASCAL / ss)
