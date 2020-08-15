@@ -5,6 +5,7 @@ import numpy as np
 
 from GTS.isc_modelling.general_model import CommonAbstractModel, NewtonFailure
 from pydantic import BaseModel
+from util import timer
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,6 @@ class NewtonParameters(BaseModel):
 class TimeParameters(BaseModel):
     start_time: float = 0
     end_time: float = 1
-    step_type: str = "uniform"
 
     time_step: float = 1                # initial time step
     max_time_step: float = 1            # max step size
@@ -39,6 +39,12 @@ class TimeMachine:
         # Fix the current size of the time step
         self.current_time_step = self.time_params.time_step
 
+    @timer(logger)
+    def iteration(self, tol):
+        sol = self.setup.assemble_and_solve_linear_system(tol)
+        return sol
+
+    @timer(logger)
     def time_iteration(self):
         """ Solve a non-linear system using a Newton Method
 
@@ -64,7 +70,7 @@ class TimeMachine:
 
             # Solve
             lin_tol = np.minimum(1e-4, error_norm)
-            sol = setup.assemble_and_solve_linear_system(lin_tol)
+            sol = self.iteration(lin_tol)
 
             # After iteration
             setup.after_newton_iteration(sol)
@@ -87,6 +93,7 @@ class TimeMachine:
         # If max newton iterations reached without convergence, then:
         setup.after_newton_failure(sol, errors, iteration_counter)
 
+    @timer(logger)
     def run_simulation(self, prepare_simulation=True):
         """ Run time-dependent non-linear simulation"""
         setup = self.setup
