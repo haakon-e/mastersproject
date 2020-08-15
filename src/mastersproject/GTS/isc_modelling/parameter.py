@@ -121,7 +121,7 @@ class UnitFluid(BaseModel):
         """Units: Pa s"""
         return 1.0
 
-    def hydrostatic_pressure(self, depth) -> float:
+    def hydrostatic_pressure(self, depth) -> Union[float, np.ndarray]:
         rho = self.density
         return rho * depth * pp.GRAVITY_ACCELERATION + pp.ATMOSPHERIC_PRESSURE
 
