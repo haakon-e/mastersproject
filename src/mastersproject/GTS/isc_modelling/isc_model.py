@@ -377,6 +377,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         values = flow_rate * g.tags["well_cells"] * self.time_step
         return values
 
+    def intersection_volume_iterate(self, g):
+        if g.dim == self.Nd - 2:
+            V_k = self.specific_volume(g, scaled=True, from_iterate=True)
+            V_n = self.specific_volume(g, scaled=True, from_iterate=False)
+            return (V_k - V_n) * g.cell_volumes
+        else:
+            return np.zeros(g.num_cells)
+
     def vector_source(self):
         """ Set gravity as a vector source term in the fluid flow equations"""
         if not self.params.gravity:
@@ -467,6 +475,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             params.fluid.hydrostatic_pressure(depth) / params.scalar_scale
         )
         return bc_values
+
+    # --- Set flow parameters ---
+
+    def set_scalar_parameters(self):
+        super().set_scalar_parameters()
+        for g, d in self.gb:
+            params: pp.Parameters = d[pp.PARAMETERS]
+            params[self.scalar_parameter_key]["source"] += self.intersection_volume_iterate(g)
 
     # --- MECHANICS ---
 
