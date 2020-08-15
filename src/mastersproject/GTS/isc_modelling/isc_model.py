@@ -18,15 +18,6 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         super().__init__(params)
         self.params = params
 
-        # -- GRAVITY OPTIONS
-
-        # TODO: Add these options to the MechanicsParameters
-        # Turn on/off mechanical gravity term
-        self._gravity_src = params.dict().get("_gravity_src", False)
-
-        # Turn on/off gravitational effects on (Neumann) mechanical boundary conditions
-        self._gravity_bc = params.dict().get("_gravity_bc", False)
-
     # --- Grid methods ---
 
     def create_grid(self):
