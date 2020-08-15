@@ -124,6 +124,12 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if self.params.well_cells:
             self.params.well_cells(self.params, self.gb)
 
+    def depth(self, coords):
+        """ Unscaled depth. We center the domain at 480m below the surface.
+        (See Krietsch et al, 2018a)
+        """
+        return 480.0 * pp.METER - self.params.length_scale * coords[2]
+
     # ---- FLOW -----
 
     def biot_alpha(self, g: pp.Grid) -> float:  # noqa
@@ -134,11 +140,33 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         #     return 0.0
         return self.params.alpha
 
+    def density(self, g: pp.Grid):
+        """ Density is an exponential function of pressure
+
+        rho = rho0 * exp( c * (p - p0) )
+
+        where rho0 and p0 are reference values.
+
+        For reference values, see:
+            Berre et al. (2018): Three-dimensional numerical modelling of fracture
+                       reactivation due to fluid injection in geothermal reservoirs
+        """
+        c = self.params.fluid.COMPRESSIBILITY
+        d = self.gb.node_props(g)
+
+        # For reference values, see: Berre et al. (2018):
+        # Three-dimensional numberical modelling of fracture
+        # reactivation due to fluid injection in geothermal reservoirs
+        rho0 = 1014 * np.ones(g.num_cells) * (pp.KILOGRAM / pp.METER ** 3)
+        p0 = 1 * pp.ATMOSPHERIC_PRESSURE
+        p = d[pp.STATE][self.scalar_variable] if pp.STATE in d else p0
+
+        rho = rho0 * np.exp(c * (p - p0))
+        return rho
+
     # --- Aperture related methods ---
 
-    def specific_volume(
-        self, g: pp.Grid, scaled, from_iterate=True
-    ) -> np.ndarray:
+    def specific_volume(self, g: pp.Grid, scaled, from_iterate=True) -> np.ndarray:
         """
         The specific volume of a cell accounts for the dimension reduction and has
         dimensions [m^(Nd - d)].
@@ -250,13 +278,17 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             )
             # Jump distances in each cell
             normal_jump = np.abs(u_mortar_local[-1, :])
-            # tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
+
+            # Slip induced dilation
+            tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
+            dilation = np.tan(self.params.dilation_angle) * tangential_jump
+
+            aperture_contribution = normal_jump + dilation
 
             # Mechanical aperture is scaled by default. "Upscale" if necessary.
             if not scaled:
-                normal_jump *= self.params.length_scale / pp.METER
+                aperture_contribution *= self.params.length_scale / pp.METER
 
-            aperture_contribution = normal_jump
             return aperture_contribution
 
         # -- Computations --
@@ -356,6 +388,68 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         values = flow_rate * g.tags["well_cells"] * self.time_step
         return values
 
+    def vector_source(self):
+        """ Set gravity as a vector source term in the fluid flow equations"""
+        if not self.params.gravity:
+            return
+
+        gb = self.gb
+        scalar_key = self.scalar_parameter_key
+        ls, ss = self.params.length_scale, self.params.scalar_scale
+        for g, d in gb:
+            # minus sign to convert from positive z downward (depth) to positive upward.
+            gravity = -pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
+            vector_source = np.zeros((self.Nd, g.num_cells))
+            vector_source[-1, :] = gravity
+            d[pp.PARAMETERS][scalar_key]["vector_source"] = vector_source.ravel("F")
+
+        for e, de in gb.edges():
+            mg: pp.MortarGrid = de["mortar_grid"]
+            g_l, _ = gb.nodes_of_edge(e)
+            a_l = mg.slave_to_mortar_avg() * self.aperture(g_l, scaled=True)
+            params_l = gb.node_props(g_l)[pp.PARAMETERS]
+            vec_src_l = params_l[scalar_key]["vector_source"]
+
+            # Take the gravity vector from the slave grid and project to the interface
+            rho_g = mg.slave_to_mortar_avg(self.Nd) * vec_src_l
+            # Multiply by (a/2) to "cancel out" the normal gradient of the diffusivity
+            # (see also self.set_permeability_from_aperture)
+            gravity = rho_g * (a_l / 2)
+
+            pp.initialize_data(mg, de, scalar_key, {"vector_source": gravity})
+
+    def hydrostatic_pressure(self, g: pp.Grid, scaled: bool) -> np.ndarray:
+        """ Hydrostatic pressure in the grid g
+
+        If gravity is active, the hydrostatic pressure depends on depth.
+        Otherwise, we set to atmospheric pressure.
+        """
+        params = self.params
+        if params.gravity:
+            depth = self.depth(g.cell_centers)
+        else:
+            depth = np.zeros(g.num_cells)
+        hydrostatic = params.fluid.hydrostatic_pressure(depth)
+        if scaled:
+            hydrostatic /= params.scalar_scale
+
+        return hydrostatic
+
+    def initial_scalar_condition(self) -> None:
+        """ Hydrostatic initial guess for the Newton iteration
+
+        The pressures are set to hydrostatic in gravity,
+        or atmospheric otherwise.
+        See: self.hydrostatic_pressure()
+
+        The mortar flux is set to zero initially
+        """
+        super().initial_scalar_condition()
+        gb = self.gb
+        for g, d in gb:
+            initial_scalar_value = self.hydrostatic_pressure(g, scaled=True)
+            d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
+
     def source_scalar_pressure(self, pressure):
         """ Pressure-controlled injection"""
         # TODO: Implement implicit pressure-controlled injection
@@ -366,6 +460,169 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 # dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
                 # loc = np.where(wells != 0)[0]
                 # glob_ind = dof_ind[loc]
+
+    def bc_values_scalar(self, g) -> np.array:
+        """ Hydrostatic pressure on the boundaries if gravity is set"""
+        params = self.params
+        # DIRICHLET
+        all_bf, *_ = self.domain_boundary_sides(g)
+        bc_values = np.zeros(g.num_faces)
+
+        # Hydrostatic
+        # Note: for scaled input height, unscaled depth is returned.
+        if params.gravity:
+            depth = self.depth(g.face_centers[:, all_bf])
+        else:
+            depth = self.depth(np.zeros_like(all_bf))
+        bc_values[all_bf] = (
+            params.fluid.hydrostatic_pressure(depth) / params.scalar_scale
+        )
+        return bc_values
+
+    # --- MECHANICS ---
+
+    def faces_to_fix(self, g: pp.Grid):
+        """ Fix some boundary faces to dirichlet to ensure unique solution to problem.
+
+        Identify three boundary faces to fix (u=0). This should allow us to assign
+        Neumann "background stress" conditions on the rest of the boundary faces.
+
+        Credits: Keilegavlen et al (2019) - Source code.
+        """
+
+        all_bf, *_ = self.domain_boundary_sides(g)
+        point = np.array(
+            [
+                [(self.bounding_box["xmin"] + self.bounding_box["xmax"]) / 2],
+                [(self.bounding_box["ymin"] + self.bounding_box["ymax"]) / 2],
+                [self.bounding_box["zmin"]],
+            ]
+        )
+        distances = pp.distances.point_pointset(point, g.face_centers[:, all_bf])
+        indexes = np.argpartition(distances, self.Nd)[: self.Nd]
+        old_indexes = np.argsort(distances)
+        assert np.allclose(
+            np.sort(indexes), np.sort(old_indexes[: self.Nd])
+        )  # Temporary: test new argpartition method
+        faces = all_bf[indexes[: self.Nd]]
+        return faces
+
+    def bc_type_mechanics(self, g: pp.Grid) -> pp.BoundaryConditionVectorial:
+        """ We set Neumann values on all but a few boundary faces.
+        Fracture faces are set to Dirichlet.
+
+        Three boundary faces (see self.faces_to_fix())
+        are set to 0 displacement (Dirichlet).
+        This ensures a unique solution to the problem.
+        Furthermore, the fracture faces are set to 0 displacement (Dirichlet).
+        """
+
+        all_bf, *_ = self.domain_boundary_sides(g)
+        faces = self.faces_to_fix(g)
+        bc = pp.BoundaryConditionVectorial(g, faces, ["dir"] * len(faces))
+        fracture_faces = g.tags["fracture_faces"]
+        bc.is_neu[:, fracture_faces] = False
+        bc.is_dir[:, fracture_faces] = True
+        return bc
+
+    def bc_values_mechanics(self, g: pp.Grid) -> np.ndarray:
+        """ Mechanical stress values as ISC
+
+        All faces are Neumann, except 3 faces fixed
+        by self.faces_to_fix(g), which are Dirichlet.
+
+        If gravity is activated, the stress becomes lithostatic. The provided stress then
+        corresponds to a true depth (here set to domain top, zmax). All stress components,
+        including off-diagonal, are "scaled" by the depth, relative to the true depth.
+        I.e. larger (compressive) stress below the true depth, and smaller above.
+        """
+        ss, ls = self.params.scalar_scale, self.params.length_scale
+        # Retrieve the domain boundary
+        all_bf, *_ = self.domain_boundary_sides(g)
+
+        # Boundary values
+        bc_values = np.zeros((g.dim, g.num_faces))
+
+        # --- mechanical state ---
+        # Get outward facing normal vectors for domain boundary, weighted for face area
+
+        # 1. Get normal vectors on the faces. These are already weighed by face area.
+        bf_normals: np.ndarray = g.face_normals
+        # 2. Adjust direction so they face outwards
+        flip_normal_to_outwards = np.where(g.cell_face_as_dense()[0, :] >= 0, 1, -1)
+        outward_normals: np.ndarray = bf_normals * flip_normal_to_outwards
+        bf_stress = np.dot(self.params.stress, outward_normals[:, all_bf])
+        # Mechanical stress
+        bc_values[:, all_bf] += bf_stress * (pp.PASCAL / ss)
+
+        # --- gravitational forces ---
+        # Boundary stresses are assumed to increase linearly with depth.
+        # We assume all components of the tensor increase linearly, with
+        # a factor relative to the pure vertical stress component.
+        if self.params.gravity:
+            # Set (unscaled) depth where we consider the measured stress exact ..
+            true_stress_depth = self.bounding_box["zmax"] * ls
+            # .. and compute the relative (unscaled) depths in terms this reference depth.
+            relative_depths: np.ndarray = (g.face_centers[2] * ls) - true_stress_depth
+
+            # If the vertical stress is zero, raise.
+            if np.abs(self.params.stress[2, 2]) < 1e-12:
+                raise ValueError("Cannot set gravity if vertical stress is zero")
+            # Each stress component scales relative to the vertical stress.
+            stress_scaler = self.params.stress / self.params.stress[2, 2]
+
+            # Lithostatic pressure
+            gravity: np.ndarray = self.params.rock.lithostatic_pressure(relative_depths)
+            lithostatic_stress = stress_scaler.dot(
+                np.multiply(outward_normals, gravity)
+            )
+            lithostatic_bc = lithostatic_stress[:, all_bf]
+
+            bc_values[:, all_bf] += lithostatic_bc * (pp.PASCAL / ss)
+
+        # DIRICHLET
+        faces = self.faces_to_fix(g)
+        bc_values[:, faces] = 0  # / self.length scale
+
+        return bc_values.ravel("F")
+
+    def source_mechanics(self, g: pp.Grid) -> np.ndarray:
+        """ Gravity term.
+
+        Gravity points downward, but we give the term
+        on the RHS of the equation, thus we take the
+        negative (i.e. the vector given will be
+        pointing upwards)
+        """
+        values = np.zeros((self.Nd, g.num_cells))
+        if self.params.gravity:
+            # Gravity term
+            scaling = self.params.length_scale / self.params.scalar_scale
+            rho = self.params.rock.DENSITY
+            values[2] = rho * pp.GRAVITY_ACCELERATION * scaling * g.cell_volumes
+        return values.ravel("F")
+
+    # --- Set mechanics parameters ---
+
+    def rock_friction_coefficient(self, g: pp.Grid) -> np.ndarray:  # noqa
+        """ The friction coefficient is uniform, and equal to 1.
+
+        Assumes self.set_rock() is called
+        """
+        return np.ones(g.num_cells) * self.params.rock.FRICTION_COEFFICIENT
+
+    def set_mechanics_parameters(self) -> None:
+        """ Set the dilation angle for slip in fractures"""
+        super().set_mechanics_parameters()
+        gb = self.gb
+
+        for g, d in gb:
+            if g.dim == self.Nd - 1:
+                params: pp.Parameters = d[pp.PARAMETERS]
+                mech_params = {"dilation_angle": self.params.dilation_angle}
+                params.update_dictionaries(
+                    [self.mechanics_parameter_key], [mech_params],
+                )
 
     # --- Simulation and solvers ---
 
@@ -483,164 +740,3 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         logger.info(summary_text)
         with summary_path.open(mode="w") as f:
             f.write(summary_text)
-
-    # --- MECHANICS ---
-
-    def faces_to_fix(self, g: pp.Grid):
-        """ Fix some boundary faces to dirichlet to ensure unique solution to problem.
-
-        Identify three boundary faces to fix (u=0). This should allow us to assign
-        Neumann "background stress" conditions on the rest of the boundary faces.
-
-        Credits: Keilegavlen et al (2019) - Source code.
-        """
-
-        all_bf, *_ = self.domain_boundary_sides(g)
-        point = np.array(
-            [
-                [(self.bounding_box["xmin"] + self.bounding_box["xmax"]) / 2],
-                [(self.bounding_box["ymin"] + self.bounding_box["ymax"]) / 2],
-                [self.bounding_box["zmin"]],
-            ]
-        )
-        distances = pp.distances.point_pointset(point, g.face_centers[:, all_bf])
-        indexes = np.argpartition(distances, self.Nd)[: self.Nd]
-        old_indexes = np.argsort(distances)
-        assert np.allclose(
-            np.sort(indexes), np.sort(old_indexes[: self.Nd])
-        )  # Temporary: test new argpartition method
-        faces = all_bf[indexes[: self.Nd]]
-        return faces
-
-    def bc_type_mechanics(self, g: pp.Grid) -> pp.BoundaryConditionVectorial:
-        """ We set Neumann values on all but a few boundary faces.
-        Fracture faces are set to Dirichlet.
-
-        Three boundary faces (see self.faces_to_fix())
-        are set to 0 displacement (Dirichlet).
-        This ensures a unique solution to the problem.
-        Furthermore, the fracture faces are set to 0 displacement (Dirichlet).
-        """
-
-        all_bf, *_ = self.domain_boundary_sides(g)
-        faces = self.faces_to_fix(g)
-        bc = pp.BoundaryConditionVectorial(g, faces, ["dir"] * len(faces))
-        fracture_faces = g.tags["fracture_faces"]
-        bc.is_neu[:, fracture_faces] = False
-        bc.is_dir[:, fracture_faces] = True
-        return bc
-
-    def bc_values_mechanics(self, g: pp.Grid) -> np.ndarray:
-        """ Mechanical stress values as ISC
-
-        All faces are Neumann, except 3 faces fixed
-        by self.faces_to_fix(g), which are Dirichlet.
-        """
-        # Retrieve the domain boundary
-        all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(g)
-
-        # Boundary values
-        bc_values = np.zeros((g.dim, g.num_faces))
-
-        # --- mechanical state ---
-        # Get outward facing normal vectors for domain boundary, weighted for face area
-
-        # 1. Get normal vectors on the faces. These are already weighed by face area.
-        bf_normals = g.face_normals
-        # 2. Adjust direction so they face outwards
-        flip_normal_to_outwards = np.where(g.cell_face_as_dense()[0, :] >= 0, 1, -1)
-        outward_normals = bf_normals * flip_normal_to_outwards
-        bf_stress = np.dot(self.params.stress, outward_normals[:, all_bf])
-        bc_values[:, all_bf] += (
-            bf_stress / self.params.scalar_scale
-        )  # Mechanical stress
-
-        # --- gravitational forces ---
-        # See MechanicsParameters to turn on/off gravity effects (Default: OFF)
-        if self.params.gravity_bc:
-            lithostatic_bc = self._adjust_stress_for_depth(g, outward_normals)
-
-            # NEUMANN
-            bc_values[:, all_bf] += lithostatic_bc[:, all_bf] / self.params.scalar_scale
-
-        # DIRICHLET
-        faces = self.faces_to_fix(g)
-        bc_values[:, faces] = 0  # / self.length scale
-
-        return bc_values.ravel("F")
-
-    def _adjust_stress_for_depth(self, g: pp.Grid, outward_normals):
-        """ Compute a stress tensor purely accounting for depth.
-
-        The true_stress_depth determines at what depth we consider
-        the given stress tensor (self.stress) to be equal to
-        the given value. This can in principle be any number,
-        but will usually be zmin <= true_stress_depth <= zmax
-
-        Need the grid g, and outward_normals (see method above).
-
-        Returns the marginal **traction** for the given face (g.face_centers)
-
-        # TODO This could perhaps be integrated directly in the above method.
-        """
-        # TODO: Only do computations over 'all_bf'.
-        # TODO: Test this method
-        true_stress_depth = self.bounding_box["zmax"] * self.params.length_scale
-
-        # We assume the relative sizes of all stress components scale with sigma_zz.
-        # Except if sigma_zz = 0, then we don't scale.
-        if np.abs(self.params.stress[2, 2]) < 1e-12:
-            logger.critical("The stress scaler is set to 0 since stress[2, 2] = 0")
-            stress_scaler = np.zeros(self.params.stress.shape)
-        else:
-            stress_scaler = self.params.stress / self.params.stress[2, 2]
-
-        # All depths are translated in terms of the assumed depth
-        # of the given stress tensor.
-        relative_depths = (
-            g.face_centers[2] * self.params.length_scale - true_stress_depth
-        )
-        rho_g_h = self.params.rock.lithostatic_pressure(relative_depths)
-        lithostatic_stress = stress_scaler.dot(np.multiply(outward_normals, rho_g_h))
-        return lithostatic_stress
-
-    def source_mechanics(self, g: pp.Grid) -> np.ndarray:
-        """ Gravity term.
-
-        Gravity points downward, but we give the term
-        on the RHS of the equation, thus we take the
-        negative (i.e. the vector given will be
-        pointing upwards)
-        """
-        # See MechanicsParameters to turn on/off gravity effects (Default: OFF)
-        if self.params.gravity_src:
-            # Gravity term
-            values = np.zeros((self.Nd, g.num_cells))
-            scaling = self.params.length_scale / self.params.scalar_scale
-            values[2] = self.params.rock.lithostatic_pressure(g.cell_volumes) * scaling
-            return values.ravel("F")
-        else:
-            # No gravity term
-            return np.zeros(self.Nd * g.num_cells)
-
-    # --- Set mechanics parameters ---
-
-    def rock_friction_coefficient(self, g: pp.Grid) -> np.ndarray:  # noqa
-        """ The friction coefficient is uniform, and equal to 1.
-
-        Assumes self.set_rock() is called
-        """
-        return np.ones(g.num_cells) * self.params.rock.FRICTION_COEFFICIENT
-
-    def set_mechanics_parameters(self) -> None:
-        """ Set the dilation angle for slip in fractures"""
-        super().set_mechanics_parameters()
-        gb = self.gb
-
-        for g, d in gb:
-            if g.dim == self.Nd - 1:
-                params: pp.Parameters = d[pp.PARAMETERS]
-                mech_params = {"dilation_angle": self.params.dilation_angle}
-                params.update_dictionaries(
-                    [self.mechanics_parameter_key], [mech_params],
-                )
