@@ -37,7 +37,6 @@ def simple_validation():
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=15,
-        scalar_scale=10 * pp.GIGA,
         base=Path("/home/haakonervik/mastersproject-data"),
         head="validation_example",
         time=time_params.start_time,
