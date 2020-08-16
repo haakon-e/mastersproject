@@ -60,6 +60,7 @@ def simple_validation():
         alpha=0.8
     )
     setup = ISCBiotContactMechanics(biot_params)
+    setup.gb = gb
 
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 

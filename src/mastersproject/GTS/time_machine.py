@@ -137,7 +137,7 @@ class TimeMachine:
                     # If Newton Failure did not occur, we succeeded.
                     break
 
-            if k_nwtn > self.k_newton_max:
+            if k_nwtn >= self.k_newton_max:
                 # For testing
                 break
 
@@ -220,9 +220,8 @@ class TimeMachinePhasesConstantDt(TimeMachine):
     def determine_time_step(self, *_) -> float:
         """ Constant step size per phase"""
         current_time = self.current_time
-        time_step = self.current_time_step
-        new_time = current_time + time_step
-        self.current_time_step = self.time_params.active_time_step(new_time)
+        delta = 1e-8
+        self.current_time_step = self.time_params.active_time_step(current_time + delta)
 
         # Adjust step size for must-hit times
         current_time_step = self.adjust_time_step_to_must_hit_times()
