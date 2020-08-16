@@ -32,7 +32,8 @@ class TimeMachine:
         self,
         setup: CommonAbstractModel,
         newton_params: NewtonParameters,
-        time_params: TimeParameters,
+        time_params: TimeStepProtocol,
+        max_newton_failure_retries: int = 0,
     ) -> None:
         self.setup = setup
         self.newton_params = newton_params
@@ -40,6 +41,9 @@ class TimeMachine:
 
         # Fix the current size of the time step
         self.current_time_step = self.time_params.time_step
+
+        # Max time iteration attempts
+        self.k_newton_max = max_newton_failure_retries + 1
 
     @timer(logger)
     def iteration(self, tol):
@@ -104,22 +108,23 @@ class TimeMachine:
 
         k_time = 0
         t_end = self.time_params.end_time
-        current_time = self.time_params.start_time
+        current_time = self.current_time
         sol = None
 
         while current_time < t_end:
             newton_failure = False
-            k_nwtn, k_nwtn_max = 0, 5
-            k_time += 1
+            k_nwtn = 0
+            self.k_time += 1
             while True:
                 k_nwtn += 1
-                time_step = self.determine_time_step(current_time, newton_failure, sol)
+                time_step = self.determine_time_step(newton_failure, sol)
                 new_time = current_time + time_step
                 setup.time, setup.time_step = new_time, time_step
 
                 logger.info(
-                    f"Time step {k_time} for time {new_time:.1e}, with "
-                    f"time step {time_step:.1e}. Tries ({k_nwtn}/{k_nwtn_max})."
+                    f"Time step no. {self.k_time}. "
+                    f"From t={current_time:.1e} to t={new_time:.1e}. "
+                    f"dt={time_step:.2e}. Tries ({k_nwtn}/{self.k_newton_max})."
                 )
                 try:
                     sol = self.time_iteration()
@@ -130,7 +135,7 @@ class TimeMachine:
                     newton_failure = True
 
                     # If we have tried too many times. Raise.
-                    if k_nwtn >= k_nwtn_max:
+                    if k_nwtn >= self.k_newton_max:
                         msg = f"Time step failed to converge after {k_nwtn} tries."
                         # raise ValueError(msg)
                         logger.critical(msg)
@@ -139,54 +144,44 @@ class TimeMachine:
                     # If Newton Failure did not occur, we succeeded.
                     break
 
-            if k_nwtn > k_nwtn_max:
+            if k_nwtn > self.k_newton_max:
                 # For testing
                 break
 
             # Before the next time step, update the current time step size.
             self.current_time_step = time_step
-            current_time = new_time
+            self.current_time = new_time
 
         setup.after_simulation()
 
-    def determine_time_step(self, current_time, newton_failure, sol) -> float:
-        """ Constant step size with Newton failure adjustment
-
-        Parameters
-        ----------
-        current_time : float
-            the time *before* a new time step is completed
-        newton_failure : bool
-            indicates whether the previous step failed
-        sol : np.ndarray, Optional
-
-        - The standard is that the new time step equals the old time step.
-        - If the Newton method failed in the previous step attempt, reduce
-            the new step size by 80%.
-        - If the new step exceeds some time value we want to hit, set the
-            new step to exactly hit this value.
-        """
-        # Fetch previous step size
-        current_step_size = self.current_time_step
-
+    def reduce_time_step_on_newton_failure(self, newton_failure) -> None:
+        """ Reduce time step by 80% if previous attempt resulted in Newton failure"""
         # Reduce step size by 80% if Newton loop failed
         if newton_failure:
-            logger.info(f"Newton failure. Reduce time step by 80% and retry time step.")
-            current_step_size *= 0.2
-            self.current_time_step = current_step_size
+            logger.info(f"Newton failure. Reduce time step by 80% and retry time step. "
+                        f"Old time step: {self.current_time_step:.2e}, "
+                        f"new time step: {self.current_time_step * 0.2:.2e}")
+            self.current_time_step *= 0.2
 
-        new_time = current_time + current_step_size
+    def adjust_time_step_to_must_hit_times(self) -> float:
+        """ Make sure the next time step doesn't skip a must-hit time.
 
-        # Check if we skipped a must hit time.
-        must_hit_times = np.array(self.time_params.must_hit_times)
+        This method only *temporarily* changes the step size.
+        """
+        # Fetch previous time and step size
+        current_time = self.current_time
+        current_time_step = self.current_time_step
+        new_time = current_time + current_time_step
+
+        # Adjust step size if we would be skipping a must-hit time.
+        must_hit_times = self.time_params.phase_end_times
         current_bin, new_bin = np.searchsorted(
             must_hit_times, [current_time, new_time], side="left",
         )
         if current_bin < new_bin:
             new_time = must_hit_times[current_bin]
-            current_step_size = new_time - current_time
-
-        return current_step_size
+            current_time_step = new_time - current_time
+        return current_time_step
 
 
 class GrabowskiTimeMachine(TimeMachine):
