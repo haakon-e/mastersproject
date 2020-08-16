@@ -20,9 +20,11 @@ class TimeParameters(BaseModel):
     start_time: float = 0
     end_time: float = 1
 
+    # fmt: off
     time_step: float = 1                # initial time step
     max_time_step: float = 1            # max step size
     must_hit_times: List[float] = [1]   # list of times we must hit exactly
+    # fmt: on
 
 
 class TimeMachine:
@@ -178,9 +180,7 @@ class TimeMachine:
         # Check if we skipped a must hit time.
         must_hit_times = np.array(self.time_params.must_hit_times)
         current_bin, new_bin = np.searchsorted(
-            must_hit_times,
-            [current_time, new_time],
-            side="left",
+            must_hit_times, [current_time, new_time], side="left",
         )
         if current_bin < new_bin:
             new_time = must_hit_times[current_bin]

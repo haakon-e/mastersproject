@@ -482,7 +482,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         super().set_scalar_parameters()
         for g, d in self.gb:
             params: pp.Parameters = d[pp.PARAMETERS]
-            params[self.scalar_parameter_key]["source"] += self.intersection_volume_iterate(g)
+            params[self.scalar_parameter_key][
+                "source"
+            ] += self.intersection_volume_iterate(g)
 
     # --- MECHANICS ---
 
