@@ -365,7 +365,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def source_flow_rate(self) -> float:
         """ Scaled source flow rate """
         injection_rate = (
-            self.params.injection_rate
+            self.params.injection_protocol.active_rate(self.time)
         )  # 10 / 60  # 10 l/min  # injection rate [l / s], unscaled
         return (
             injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd

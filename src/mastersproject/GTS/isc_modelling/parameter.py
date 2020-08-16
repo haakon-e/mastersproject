@@ -10,6 +10,7 @@ import numpy as np
 import pendulum
 import porepy as pp
 from GTS import ISCData
+from GTS.time_protocols import InjectionRateProtocol
 from pydantic import BaseModel, validator
 
 logger = logging.getLogger(__name__)
@@ -299,7 +300,7 @@ class FlowParameters(GeometryParameters):
     }
 
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
-    injection_rate: float = 0
+    injection_protocol: InjectionRateProtocol
 
     # Set transmissivity in fractures
     frac_transmissivity: Union[float, List[float]] = 1
