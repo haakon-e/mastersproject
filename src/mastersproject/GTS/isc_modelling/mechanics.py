@@ -358,7 +358,7 @@ class Mechanics(CommonAbstractModel):
         difference_in_iterates_mech = np.sum((u_mech_now - u_mech_prev) ** 2)
         difference_from_init_mech = np.sum((u_mech_now - u_mech_init) ** 2)
 
-        tol_convergence = nl_params.get("nl_convergence_tol")
+        tol_convergence = nl_params.get("convergence_tol")
 
         converged = False
         diverged = False
@@ -418,7 +418,7 @@ class Mechanics(CommonAbstractModel):
             np.sum((contact_now - contact_init) ** 2) * ss * ls ** 2
         )
 
-        tol_convergence = nl_params["nl_convergence_tol"]
+        tol_convergence = nl_params["convergence_tol"]
 
         converged = False
         diverged = False

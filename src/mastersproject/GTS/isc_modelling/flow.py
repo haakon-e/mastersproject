@@ -163,7 +163,7 @@ class Flow(CommonAbstractModel):
         scalar_key = self.scalar_parameter_key
 
         # Scaled dynamic viscosity
-        viscosity = self.params.fluid.dynamic_viscosity() * (
+        viscosity = self.params.fluid.dynamic_viscosity * (
             pp.PASCAL / self.params.scalar_scale
         )
         for g, d in gb:
@@ -367,7 +367,7 @@ class Flow(CommonAbstractModel):
         ss = self.params.scalar_scale
 
         # Extract convergence tolerance
-        tol_convergence = nl_params.get("nl_convergence_tol")
+        tol_convergence = nl_params.get("convergence_tol")
 
         converged = False
         diverged = False

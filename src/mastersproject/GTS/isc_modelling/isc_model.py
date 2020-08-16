@@ -18,15 +18,6 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         super().__init__(params)
         self.params = params
 
-        # -- GRAVITY OPTIONS
-
-        # TODO: Add these options to the MechanicsParameters
-        # Turn on/off mechanical gravity term
-        self._gravity_src = params.dict().get("_gravity_src", False)
-
-        # Turn on/off gravitational effects on (Neumann) mechanical boundary conditions
-        self._gravity_bc = params.dict().get("_gravity_bc", False)
-
     # --- Grid methods ---
 
     def create_grid(self):
@@ -133,12 +124,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     # ---- FLOW -----
 
     def biot_alpha(self, g: pp.Grid) -> float:  # noqa
-        # if g.dim == self.Nd:
-        #     return self.params.alpha
-        # else:
-        #     # Set to zero to turn off effects of DivUCoupling in 2d fractures.
-        #     return 0.0
-        return self.params.alpha
+        if g.dim == self.Nd:
+            return self.params.alpha
+        else:
+            return 1.0
 
     def density(self, g: pp.Grid):
         """ Density is an exponential function of pressure
@@ -388,6 +377,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         values = flow_rate * g.tags["well_cells"] * self.time_step
         return values
 
+    def intersection_volume_iterate(self, g):
+        if g.dim == self.Nd - 2:
+            V_k = self.specific_volume(g, scaled=True, from_iterate=True)
+            V_n = self.specific_volume(g, scaled=True, from_iterate=False)
+            return (V_k - V_n) * g.cell_volumes
+        else:
+            return np.zeros(g.num_cells)
+
     def vector_source(self):
         """ Set gravity as a vector source term in the fluid flow equations"""
         if not self.params.gravity:
@@ -478,6 +475,16 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             params.fluid.hydrostatic_pressure(depth) / params.scalar_scale
         )
         return bc_values
+
+    # --- Set flow parameters ---
+
+    def set_scalar_parameters(self):
+        super().set_scalar_parameters()
+        for g, d in self.gb:
+            params: pp.Parameters = d[pp.PARAMETERS]
+            params[self.scalar_parameter_key][
+                "source"
+            ] += self.intersection_volume_iterate(g)
 
     # --- MECHANICS ---
 

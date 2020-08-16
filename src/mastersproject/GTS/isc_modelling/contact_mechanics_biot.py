@@ -257,8 +257,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
            Discretize time-dependent quantities etc.
            Update time-dependent parameters (captured by assembly).
         """
-        self.set_scalar_parameters()
-        self.set_mechanics_parameters()
+        self.set_biot_parameters()
 
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term

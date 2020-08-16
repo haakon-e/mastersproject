@@ -121,7 +121,7 @@ class UnitFluid(BaseModel):
         """Units: Pa s"""
         return 1.0
 
-    def hydrostatic_pressure(self, depth) -> float:
+    def hydrostatic_pressure(self, depth) -> Union[float, np.ndarray]:
         rho = self.density
         return rho * depth * pp.GRAVITY_ACCELERATION + pp.ATMOSPHERIC_PRESSURE
 
@@ -274,7 +274,7 @@ class MechanicsParameters(GeometryParameters):
     # Parameters for Newton solver
     newton_options = {
         "max_iterations": 40,
-        "nl_convergence_tol": 1e-10,
+        "convergence_tol": 1e-10,
         "nl_divergence_tol": 1e5,
     }
 
