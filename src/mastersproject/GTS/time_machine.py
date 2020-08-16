@@ -4,6 +4,7 @@ import logging
 import numpy as np
 
 from GTS.isc_modelling.general_model import CommonAbstractModel, NewtonFailure
+from GTS.time_protocols import TimeStepProtocol
 from pydantic import BaseModel
 from util import timer
 
@@ -14,17 +15,6 @@ class NewtonParameters(BaseModel):
     max_iterations: int = 10
     convergence_tol: float = 1e-10
     divergence_tol: float = 1e5
-
-
-class TimeParameters(BaseModel):
-    start_time: float = 0
-    end_time: float = 1
-
-    # fmt: off
-    time_step: float = 1                # initial time step
-    max_time_step: float = 1            # max step size
-    must_hit_times: List[float] = [1]   # list of times we must hit exactly
-    # fmt: on
 
 
 class TimeMachine:
@@ -39,8 +29,12 @@ class TimeMachine:
         self.newton_params = newton_params
         self.time_params = time_params
 
-        # Fix the current size of the time step
-        self.current_time_step = self.time_params.time_step
+        # Initialize current time and time step
+        self.current_time = self.time_params.start_time
+        self.current_time_step = self.time_params.active_time_step(
+            self.current_time
+        )
+        self.k_time = 0
 
         # Max time iteration attempts
         self.k_newton_max = max_newton_failure_retries + 1
@@ -106,7 +100,6 @@ class TimeMachine:
         if prepare_simulation:
             setup.prepare_simulation()
 
-        k_time = 0
         t_end = self.time_params.end_time
         current_time = self.current_time
         sol = None
@@ -154,6 +147,34 @@ class TimeMachine:
 
         setup.after_simulation()
 
+    # Determine the next time step
+
+    def determine_time_step(self, newton_failure, sol) -> float:
+        """ Constant step size with Newton failure adjustment
+
+        Parameters
+        ----------
+        newton_failure : bool
+            indicates whether the previous step failed
+        sol : np.ndarray, Optional
+
+        - The standard is that the new time step equals the old time step.
+        - If the Newton method failed in the previous step attempt, reduce
+            the new step size by 80%.
+        - If the new step exceeds some time value we want to hit, set the
+            new step to exactly hit this value.
+        """
+
+        # Reduce step size by 80% if Newton loop failed
+        self.reduce_time_step_on_newton_failure(newton_failure)
+
+        # Adjust step size for must-hit times
+        current_time_step = self.adjust_time_step_to_must_hit_times()
+
+        return current_time_step
+
+    # --- Common adjustment options ---
+
     def reduce_time_step_on_newton_failure(self, newton_failure) -> None:
         """ Reduce time step by 80% if previous attempt resulted in Newton failure"""
         # Reduce step size by 80% if Newton loop failed
@@ -181,6 +202,31 @@ class TimeMachine:
         if current_bin < new_bin:
             new_time = must_hit_times[current_bin]
             current_time_step = new_time - current_time
+        return current_time_step
+
+
+class TimeMachinePhasesConstantDt(TimeMachine):
+    """ Time machine with constant time step per phase"""
+    def __init__(
+        self,
+        setup: CommonAbstractModel,
+        newton_params: NewtonParameters,
+        time_params: TimeStepProtocol,
+    ):
+        super().__init__(
+            setup, newton_params, time_params, max_newton_failure_retries=0
+        )
+
+    def determine_time_step(self, *_) -> float:
+        """ Constant step size per phase"""
+        current_time = self.current_time
+        time_step = self.current_time_step
+        new_time = current_time + time_step
+        self.current_time_step = self.time_params.active_time_step(new_time)
+
+        # Adjust step size for must-hit times
+        current_time_step = self.adjust_time_step_to_must_hit_times()
+
         return current_time_step
 
 
