@@ -23,7 +23,7 @@ class AbstractPhase(BaseModel):
 
     @validator("end_time")
     def validate_scaling(cls, v, values):  # noqa
-        start_time = values.get("end_time")
+        start_time = values.get("start_time")
         end_time = v
         assert end_time > start_time
         return v

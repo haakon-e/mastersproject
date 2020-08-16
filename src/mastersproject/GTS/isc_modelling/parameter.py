@@ -300,7 +300,9 @@ class FlowParameters(GeometryParameters):
     }
 
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
-    injection_protocol: InjectionRateProtocol
+    injection_protocol: InjectionRateProtocol = (
+        InjectionRateProtocol.create_protocol([0., 1.], [0.])
+    )
 
     # Set transmissivity in fractures
     frac_transmissivity: Union[float, List[float]] = 1
