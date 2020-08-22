@@ -470,7 +470,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if params.gravity:
             depth = self.depth(g.face_centers[:, all_bf])
         else:
-            depth = self.depth(np.zeros_like(all_bf))
+            depth = self.depth(np.zeros_like(g.face_centers[:, all_bf]))
         bc_values[all_bf] = (
             params.fluid.hydrostatic_pressure(depth) / params.scalar_scale
         )
