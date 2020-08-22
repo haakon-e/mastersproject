@@ -14,7 +14,7 @@ class AbstractPhase(BaseModel):
     data: Any = None
 
     metadata: Any = None
-    tol: float = 1e-9
+    tol: float
 
     def time_in_phase(self, t: float) -> bool:
         return self.start_time + self.tol < t < self.end_time + self.tol
@@ -33,10 +33,23 @@ class InjectionRatePhase(AbstractPhase):
     """ Phase to store an injection rate"""
     data: float = 0
 
+    # For injection phases, we consider the data between the
+    # current and the next step. So if we hit a boundary value,
+    # we should pick the *LEFT* value.
+    #   I.e.: tL <= T < tR
+    tol: float = 1e-9
+
 
 class TimeStepPhase(AbstractPhase):
     """ Phase to store a time step"""
     data: float = 0
+
+    # For time step phases, we consider the data at the current
+    # time step. So if we hit a boundary value, we should pick the
+    # *RIGHT* value.
+    #   I.e.: tL < T <= tR
+    # Thus we set the tolerance < 0.
+    tol: float = - 1e-9
 
 
 # --- Protocols ---
@@ -60,8 +73,10 @@ class AbstractProtocol:
         return self.get_active_phase(t).metadata
 
     def get_active_phase(self, t) -> AbstractPhase:
-        if np.isclose(self.phases[0].start_time, t):
+        if np.isclose(self.start_time, t):
             return self.phases[0]
+        elif np.isclose(self.end_time, t):
+            return self.phases[-1]
         active_phases = [p for p in self.phases if p.time_in_phase(t)]
         assert len(active_phases) == 1
         return active_phases[0]
@@ -87,7 +102,9 @@ class AbstractProtocol:
     @property
     def phase_limits(self):
         """ Return union of all phase start and end times."""
-        return [self.start_time].extend(self.phase_end_times)
+        start = [self.start_time]
+        start.extend(self.phase_end_times)
+        return start
 
     # Alternative constructor and checks
 

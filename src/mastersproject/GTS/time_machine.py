@@ -30,7 +30,7 @@ class TimeMachine:
         self.time_params = time_params
 
         # Initialize current time and time step
-        self.current_time = self.time_params.start_time
+        self.current_time: float = self.time_params.start_time
         self.current_time_step = self.time_params.active_time_step(
             self.current_time
         )
@@ -100,24 +100,22 @@ class TimeMachine:
         if prepare_simulation:
             setup.prepare_simulation()
 
-        t_end = self.time_params.end_time
-        current_time = self.current_time
         sol = None
-
-        while current_time < t_end:
+        while self.current_time < self.time_params.end_time:
             newton_failure = False
             k_nwtn = 0
             self.k_time += 1
             while True:
                 k_nwtn += 1
                 time_step = self.determine_time_step(newton_failure, sol)
-                new_time = current_time + time_step
+                new_time = self.current_time + time_step
                 setup.time, setup.time_step = new_time, time_step
 
                 logger.info(
                     f"Time step no. {self.k_time}. "
-                    f"From t={current_time:.1e} to t={new_time:.1e}. "
-                    f"dt={time_step:.2e}. Tries ({k_nwtn}/{self.k_newton_max})."
+                    f"From t={self.current_time:.1e} to t={new_time:.1e}. "
+                    f"dt={time_step:.2e}. End time {self.time_params.end_time:.1e}. "
+                    f"Tries ({k_nwtn}/{self.k_newton_max})."
                 )
                 try:
                     sol = self.time_iteration()
@@ -130,6 +128,8 @@ class TimeMachine:
                     # If we have tried too many times. Raise.
                     if k_nwtn >= self.k_newton_max:
                         msg = f"Time step failed to converge after {k_nwtn} tries."
+
+                        # For testing
                         # raise ValueError(msg)
                         logger.critical(msg)
                         break
@@ -137,13 +137,13 @@ class TimeMachine:
                     # If Newton Failure did not occur, we succeeded.
                     break
 
-            if k_nwtn >= self.k_newton_max:
+            if newton_failure:
                 # For testing
                 break
 
             # Before the next time step, update the current time step size.
-            self.current_time_step = time_step
-            self.current_time = new_time
+            self.current_time_step: float = time_step
+            self.current_time: float = new_time
 
         setup.after_simulation()
 
@@ -197,7 +197,7 @@ class TimeMachine:
         # Adjust step size if we would be skipping a must-hit time.
         must_hit_times = self.time_params.phase_end_times
         current_bin, new_bin = np.searchsorted(
-            must_hit_times, [current_time, new_time], side="left",
+            must_hit_times, [current_time, new_time], side="right",
         )
         if current_bin < new_bin:
             new_time = must_hit_times[current_bin]
@@ -220,8 +220,7 @@ class TimeMachinePhasesConstantDt(TimeMachine):
     def determine_time_step(self, *_) -> float:
         """ Constant step size per phase"""
         current_time = self.current_time
-        delta = 1e-8
-        self.current_time_step = self.time_params.active_time_step(current_time + delta)
+        self.current_time_step = self.time_params.active_time_step(current_time)
 
         # Adjust step size for must-hit times
         current_time_step = self.adjust_time_step_to_must_hit_times()
