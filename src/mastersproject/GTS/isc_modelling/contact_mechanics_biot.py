@@ -6,15 +6,16 @@ import numpy as np
 import porepy as pp
 from GTS.isc_modelling.flow import Flow
 from GTS.isc_modelling.mechanics import Mechanics
-from GTS.isc_modelling.parameter import BaseParameters
+from GTS.isc_modelling.parameter import BiotParameters
 from mastersproject.util.logging_util import timer
 
 logger = logging.getLogger(__name__)
 
 
 class ContactMechanicsBiotBase(Flow, Mechanics):
-    def __init__(self, params: BaseParameters):
+    def __init__(self, params: BiotParameters):
         super().__init__(params)
+        self.params = params
 
         # Whether or not to subtract the fracture pressure contribution for the contact
         # traction. This should be done if the scalar variable is pressure, but not for
