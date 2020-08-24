@@ -596,8 +596,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # We assume all components of the tensor increase linearly, with
         # a factor relative to the pure vertical stress component.
         if self.params.gravity:
-            # Set (unscaled) depth where we consider the measured stress exact ..
-            true_stress_depth = self.bounding_box["zmax"] * ls
+            # Set (unscaled) depth in the local coordinate system of the domain
+            # where we consider the measured stress exact ..
+            true_stress_depth = (self.bounding_box["zmax"] + self.bounding_box["zmin"]) / 2 * ls
             # .. and compute the relative (unscaled) depths in terms this reference depth.
             relative_depths: np.ndarray = (g.face_centers[2] * ls) - true_stress_depth
 
