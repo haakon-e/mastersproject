@@ -189,30 +189,29 @@ class Flow(CommonAbstractModel):
             mg = data_edge["mortar_grid"]
             g_l, g_h = gb.nodes_of_edge(e)  # get the neighbors
 
-            # get aperture data from lower dim neighbour
-            aperture_l = self.aperture(g_l, scaled=True)  # one value per grid cell
+            # get aperture from lower dim neighbour
+            a_l = self.aperture(g_l, scaled=True)  # one value per grid cell
 
-            # Take trace of and then project specific volumes from g_h
-            v_h = (
+            # Take trace of and then project specific volumes from g_h to mg
+            V_h = (
                 mg.master_to_mortar_avg()
                 * np.abs(g_h.cell_faces)
                 * self.specific_volume(g_h, scaled=True)
             )
 
-            # Get diffusivity from lower-dimensional neighbour
-            data_l = gb.node_props(g_l)
-            diffusivity = data_l[pp.PARAMETERS][scalar_key][
-                "second_order_tensor"
-            ].values[0, 0]
+            # Compute diffusivity on g_l
+            diffusivity = self.permeability(g_l, scaled=True) / viscosity
 
             # Division through half the aperture represents taking the (normal) gradient
+            # Then, project to mg.
             normal_diffusivity = mg.slave_to_mortar_int() * np.divide(
-                diffusivity, aperture_l / 2
+                diffusivity, a_l / 2
             )
+
             # The interface flux is to match fluxes across faces of g_h,
             # and therefore need to be weighted by the corresponding
             # specific volumes
-            normal_diffusivity *= v_h
+            normal_diffusivity *= V_h
 
             # Set the data
             pp.initialize_data(
