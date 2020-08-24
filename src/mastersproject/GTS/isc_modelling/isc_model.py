@@ -493,9 +493,22 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         super().set_scalar_parameters()
         for g, d in self.gb:
             params: pp.Parameters = d[pp.PARAMETERS]
-            params[self.scalar_parameter_key][
-                "source"
-            ] += self.intersection_volume_iterate(g)
+            scalar_params: dict = params[self.scalar_parameter_key]
+
+            # Set mass weight for the biot problem
+            #   mw = porosity * c + (alpha - porosity) / K
+            #   Note: alpha and porosity are 1.0 in fractures,
+            #         then mass_weight reduces to 'phi * c'.
+            c = self.params.fluid.COMPRESSIBILITY
+            porosity = self.porosity(g)
+            alpha = self.biot_alpha(g)
+            bulk = self.params.rock.BULK_MODULUS
+            mass_weight = porosity * c + (alpha - porosity) / bulk
+            mass_weight *= self.specific_volume(g, scaled=True)
+            scalar_params["mass_weight"] = mass_weight
+
+            # Set intersection transient source term
+            scalar_params["source"] += self.intersection_volume_iterate(g)
 
     # --- MECHANICS ---
 

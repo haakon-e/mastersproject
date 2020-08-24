@@ -72,6 +72,12 @@ class UnitRock(BaseModel):
         e, nu = self.YOUNG_MODULUS, self.POISSON_RATIO
         return e / (2 * (1 + nu))
 
+    @property
+    def BULK_MODULUS(self):
+        """ Compute bulk modulus from Young's modulus and Poisson's ratio."""
+        e, nu = self.YOUNG_MODULUS, self.POISSON_RATIO
+        return e / (3 * (1 - 2 * nu))
+
     def lithostatic_pressure(self, depth):
         """ Lithostatic pressure.
 
