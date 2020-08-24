@@ -407,7 +407,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         ls, ss = self.params.length_scale, self.params.scalar_scale
         for g, d in gb:
             # minus sign to convert from positive z downward (depth) to positive upward.
-            gravity = -pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
+            gravity = - pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
             vector_source = np.zeros((self.Nd, g.num_cells))
             vector_source[-1, :] = gravity
             d[pp.PARAMETERS][scalar_key]["vector_source"] = vector_source.ravel("F")
@@ -415,15 +415,21 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         for e, de in gb.edges():
             mg: pp.MortarGrid = de["mortar_grid"]
             g_l, _ = gb.nodes_of_edge(e)
-            a_l = mg.slave_to_mortar_avg() * self.aperture(g_l, scaled=True)
-            params_l = gb.node_props(g_l)[pp.PARAMETERS]
-            vec_src_l = params_l[scalar_key]["vector_source"]
+            a_l = self.aperture(g_l, scaled=True)
 
-            # Take the gravity vector from the slave grid and project to the interface
-            rho_g = mg.slave_to_mortar_avg(self.Nd) * vec_src_l
+            # Compute gravity on the slave grid
+            rho_g = - pp.GRAVITY_ACCELERATION * self.density(g_l) * (ls / ss)
+
             # Multiply by (a/2) to "cancel out" the normal gradient of the diffusivity
             # (see also self.set_permeability_from_aperture)
-            gravity = rho_g * (a_l / 2)
+            gravity_l = rho_g * (a_l / 2)
+
+            # Take the gravity from the slave grid and project to the interface
+            gravity_mg = mg.slave_to_mortar_avg() * gravity_l
+
+            vector_source = np.zeros((self.Nd, mg.num_cells))
+            vector_source[-1, :] = gravity_mg
+            gravity = vector_source.ravel("F")
 
             pp.initialize_data(mg, de, scalar_key, {"vector_source": gravity})
 
