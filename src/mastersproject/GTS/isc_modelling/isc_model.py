@@ -129,8 +129,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         else:
             return 1.0
 
-    def density(self, g: pp.Grid):
-        """ Density is an exponential function of pressure
+    def density(self, g: pp.Grid) -> np.ndarray:
+        """ Compute unscaled fluid density
+
+        Either use constant density, or compute as an exponential function of pressure.
+        See also FlowParameters.
 
         rho = rho0 * exp( c * (p - p0) )
 
@@ -141,6 +144,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                        reactivation due to fluid injection in geothermal reservoirs
         """
         c = self.params.fluid.COMPRESSIBILITY
+        ss = self.params.scalar_scale
         d = self.gb.node_props(g)
 
         # For reference values, see: Berre et al. (2018):
@@ -148,9 +152,16 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # reactivation due to fluid injection in geothermal reservoirs
         rho0 = 1014 * np.ones(g.num_cells) * (pp.KILOGRAM / pp.METER ** 3)
         p0 = 1 * pp.ATMOSPHERIC_PRESSURE
-        p = d[pp.STATE][self.scalar_variable] if pp.STATE in d else p0
+
+        if self.params.constant_density:
+            # This sets density to rho0.
+            p = p0
+        else:
+            # Use pressure in STATE to approximate density
+            p = d[pp.STATE][self.scalar_variable] * ss if pp.STATE in d else p0
 
         rho = rho0 * np.exp(c * (p - p0))
+
         return rho
 
     # --- Aperture related methods ---

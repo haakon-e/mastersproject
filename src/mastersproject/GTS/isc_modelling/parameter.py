@@ -307,6 +307,10 @@ class FlowParameters(GeometryParameters):
     # Set transmissivity in fractures
     frac_transmissivity: Union[float, List[float]] = 1
 
+    # Use constant density model (i.e. rho = 1000 kg/m3)
+    # Otherwise, rho = rho0 * exp( c * (p - p0) )
+    constant_density: float = True
+
     # See 'methods to estimate permeability of shear zones at Grimsel Test Site'
     # in 'Presentasjon til underveismøte' for details on relations between
     # aperture, transmissivity, permeability and hydraulic conductivity
