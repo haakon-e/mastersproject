@@ -495,6 +495,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     def set_scalar_parameters(self):
         super().set_scalar_parameters()
+        self.vector_source()  # set gravity source
         for g, d in self.gb:
             params: pp.Parameters = d[pp.PARAMETERS]
             scalar_params: dict = params[self.scalar_parameter_key]
