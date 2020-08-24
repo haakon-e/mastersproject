@@ -123,11 +123,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     # ---- FLOW -----
 
-    def biot_alpha(self, g: pp.Grid) -> float:  # noqa
-        if g.dim == self.Nd:
-            return self.params.alpha
-        else:
-            return 1.0
+    def biot_alpha(self, g: pp.Grid) -> float:
+        return self.params.alpha if g.dim == self.Nd else 1.0
 
     def density(self, g: pp.Grid) -> np.ndarray:
         """ Compute unscaled fluid density
@@ -480,12 +477,15 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         all_bf, *_ = self.domain_boundary_sides(g)
         bc_values = np.zeros(g.num_faces)
 
+        bf_centers = g.face_centers[:, all_bf]
         # Hydrostatic
         # Note: for scaled input height, unscaled depth is returned.
         if params.gravity:
-            depth = self.depth(g.face_centers[:, all_bf])
+            # Set to hydrostatic for depth of each boundary face
+            depth = self.depth(bf_centers)
         else:
-            depth = self.depth(np.zeros_like(g.face_centers[:, all_bf]))
+            # Set to uniform hydrostatic pressure at reference depth of 480 m.
+            depth = self.depth(np.zeros_like(bf_centers))
         bc_values[all_bf] = (
             params.fluid.hydrostatic_pressure(depth) / params.scalar_scale
         )
