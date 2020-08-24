@@ -372,6 +372,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             k = cubic_law(aperture)
         return k
 
+    def porosity(self, g) -> np.ndarray:
+        porosity = self.params.rock.POROSITY if g.dim == self.Nd else 1.0
+        return np.ones(g.num_cells) * porosity
+
     @property
     def source_flow_rate(self) -> float:
         """ Scaled source flow rate """
