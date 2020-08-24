@@ -141,6 +141,7 @@ class Water(UnitFluid):
     @property
     def density(self):
         """ Units: kg / m^3 """
+        # at 11 C: 999.622
         theta = self.theta_ref
         theta_0 = 10 * pp.CELSIUS
         rho_0 = 999.8349 * (pp.KILOGRAM / pp.METER ** 3)
@@ -149,6 +150,7 @@ class Water(UnitFluid):
     @property
     def dynamic_viscosity(self):
         """Units: Pa s"""
+        # at 11 C: 0.001264
         theta = self.theta_ref
         theta = pp.CELSIUS_to_KELVIN(theta)
         mu_0 = 2.414 * 1e-5 * (pp.PASCAL * pp.SECOND)
@@ -299,12 +301,11 @@ class FlowParameters(GeometryParameters):
         A method to tag non-zero injection cells
     injection_rate
     """
-
+    # Injection location, method, and protocol
     source_scalar_borehole_shearzone: Optional[Dict[str, str]] = {
         "shearzone": "S1_2",
         "borehole": "INJ1",
     }
-
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
     injection_protocol: InjectionRateProtocol = (
         InjectionRateProtocol.create_protocol([0., 1.], [0.])

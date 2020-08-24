@@ -24,7 +24,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
 
     # --- Set parameters ---
 
-    def biot_alpha(self, g: pp.Grid) -> float:  # noqa
+    def biot_alpha(self, g: pp.Grid) -> float:
         if g.dim == self.Nd:
             return self.params.alpha
         else:
