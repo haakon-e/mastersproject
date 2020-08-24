@@ -410,7 +410,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             gravity = - pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
             vector_source = np.zeros((self.Nd, g.num_cells))
             vector_source[-1, :] = gravity
-            d[pp.PARAMETERS][scalar_key]["vector_source"] = vector_source.ravel("F")
+            vector_params = {
+                "vector_source": vector_source.ravel("F"),
+                "ambient_dimension": self.Nd,
+            }
+            pp.initialize_data(g, d, scalar_key, vector_params)
 
         for e, de in gb.edges():
             mg: pp.MortarGrid = de["mortar_grid"]
