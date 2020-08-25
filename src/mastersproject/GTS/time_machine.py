@@ -111,6 +111,7 @@ class TimeMachine:
                 new_time = self.current_time + time_step
                 setup.time, setup.time_step = new_time, time_step
 
+                logger.info(" \n ")
                 logger.info(
                     f"Time step no. {self.k_time}. "
                     f"From t={self.current_time:.1e} to t={new_time:.1e}. "

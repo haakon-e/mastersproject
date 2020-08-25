@@ -362,11 +362,13 @@ class Mechanics(CommonAbstractModel):
 
         converged = False
         diverged = False
+        error_type = "relative"
 
         # Check absolute convergence criterion
         if difference_in_iterates_mech < tol_convergence:
             converged = True
             error_mech = difference_in_iterates_mech
+            error_type = "absolute"
 
         else:
             # Check relative convergence criterion
@@ -377,7 +379,7 @@ class Mechanics(CommonAbstractModel):
                 converged = True
             error_mech = difference_in_iterates_mech / difference_from_init_mech
 
-        logger.info(f"Error in matrix displacement is {error_mech:.6e}")
+        logger.info(f"Error in matrix displacement is {error_mech:.6e} ({error_type}).")
         logger.info(
             f"Matrix displacement {'converged' if converged else 'did not converge'}. "
         )
@@ -422,6 +424,7 @@ class Mechanics(CommonAbstractModel):
 
         converged = False
         diverged = False
+        error_type = "relative"
 
         # The if is intended to avoid division through zero
         if (
@@ -430,12 +433,13 @@ class Mechanics(CommonAbstractModel):
         ):
             converged = True
             error_contact = difference_in_iterates_contact
+            error_type = "absolute"
         else:
             error_contact = (
                 difference_in_iterates_contact / difference_from_init_contact
             )
 
-        logger.info(f"Error in contact force is {error_contact:.6e}.\n")
+        logger.info(f"Error in contact force is {error_contact:.6e} ({error_type}).")
         logger.info(
             f"Contact force {'converged' if converged else 'did not converge'}."
         )
