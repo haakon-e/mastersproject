@@ -12,13 +12,18 @@ from GTS import (
 )
 
 
-def best_cond_numb(initial_guess: np.array = None) -> pd.DataFrame:
+def best_cond_numb(
+        assemble_A_method,
+        initial_guess: np.array = None,
+) -> pd.DataFrame:
     """ Find best condition numbers
+
+    assemble_A_method is a method that assembles a matrix
 
     initial_guess = (length_scale, log10(scalar_scale))
         if not set, then default is length_scale=0.05, scalar_scale=1e+9.
     """
-    if not initial_guess:
+    if initial_guess is None:
         initial_guess = np.array([0.05, 6])
     ls_0, log_ss_0 = initial_guess
 
@@ -28,7 +33,7 @@ def best_cond_numb(initial_guess: np.array = None) -> pd.DataFrame:
     results = pd.DataFrame(columns=["ls", "log_ss", "cond_pp", "cond_umfpack"])
     for ls in length_scales:
         for log_ss in log_scalar_scales:
-            A = assemble_isc_matrix(np.array([ls, log_ss]))
+            A = assemble_A_method(np.array([ls, log_ss]))
             try:
                 cond_pp = condition_number_porepy(A)
                 cond_umfpack = condition_number_umfpack(A)
