@@ -10,7 +10,6 @@ from GTS.time_protocols import TimeStepPhase, TimeStepProtocol
 
 
 class TestTimeMachinePhasesConstantDt:
-
     def test_determine_time_step_from_phase(self):
         # Create protocol with two phases.
         phase1 = TimeStepPhase(start_time=0, end_time=1, data=0.5)
@@ -22,7 +21,7 @@ class TestTimeMachinePhasesConstantDt:
         assert tm.current_time == phase1.start_time
 
         # Check that new (right) phase is chosen at boundary
-        tm.current_time = 1.
+        tm.current_time = 1.0
         current_dt = tm.determine_time_step()
         assert current_dt == 0.2
 
@@ -42,8 +41,10 @@ class TestTimeMachinePhasesConstantDt:
         phase_limits = [0, 1]
         steps = [1.2]
         time_params = TimeStepProtocol.create_protocol(phase_limits, steps)
-        setup = Flow(BaseParameters(
-            folder_name=Path(__file__).parent / "results/test_time_machine")
+        setup = Flow(
+            BaseParameters(
+                folder_name=Path(__file__).parent / "results/test_time_machine"
+            )
         )
         newton = NewtonParameters()
         time_machine = TimeMachinePhasesConstantDt(setup, newton, time_params)
@@ -73,8 +74,10 @@ class TestTimeMachinePhasesConstantDt:
         phase_limits = [0, 1, 2]
         steps = [1.2, 0.5]
         time_params = TimeStepProtocol.create_protocol(phase_limits, steps)
-        setup = Flow(BaseParameters(
-            folder_name=Path(__file__).parent / "results/test_time_machine")
+        setup = Flow(
+            BaseParameters(
+                folder_name=Path(__file__).parent / "results/test_time_machine"
+            )
         )
         newton = NewtonParameters()
         time_machine = TimeMachinePhasesConstantDt(setup, newton, time_params)

@@ -1,4 +1,3 @@
-from typing import List
 import logging
 
 import numpy as np
@@ -31,9 +30,7 @@ class TimeMachine:
 
         # Initialize current time and time step
         self.current_time: float = self.time_params.start_time
-        self.current_time_step = self.time_params.active_time_step(
-            self.current_time
-        )
+        self.current_time_step = self.time_params.active_time_step(self.current_time)
         self.k_time = 0
 
         # Max time iteration attempts
@@ -180,9 +177,11 @@ class TimeMachine:
         """ Reduce time step by 80% if previous attempt resulted in Newton failure"""
         # Reduce step size by 80% if Newton loop failed
         if newton_failure:
-            logger.info(f"Newton failure. Reduce time step by 80% and retry time step. "
-                        f"Old time step: {self.current_time_step:.2e}, "
-                        f"new time step: {self.current_time_step * 0.2:.2e}")
+            logger.info(
+                f"Newton failure. Reduce time step by 80% and retry time step. "
+                f"Old time step: {self.current_time_step:.2e}, "
+                f"new time step: {self.current_time_step * 0.2:.2e}"
+            )
             self.current_time_step *= 0.2
 
     def adjust_time_step_to_must_hit_times(self) -> float:
@@ -208,6 +207,7 @@ class TimeMachine:
 
 class TimeMachinePhasesConstantDt(TimeMachine):
     """ Time machine with constant time step per phase"""
+
     def __init__(
         self,
         setup: CommonAbstractModel,

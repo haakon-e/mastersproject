@@ -12,10 +12,7 @@ from GTS import (
 )
 
 
-def best_cond_numb(
-        assemble_A_method,
-        initial_guess: np.array = None,
-) -> pd.DataFrame:
+def best_cond_numb(assemble_A_method, initial_guess: np.array = None,) -> pd.DataFrame:
     """ Find best condition numbers
 
     assemble_A_method is a method that assembles a matrix

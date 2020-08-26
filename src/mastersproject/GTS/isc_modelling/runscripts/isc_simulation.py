@@ -15,16 +15,12 @@ logging.basicConfig(level=logging.INFO)
 
 
 def prepare_setup(
-        length_scale,
-        scalar_scale,
+    length_scale, scalar_scale,
 ) -> Tuple[ISCBiotContactMechanics, NewtonParameters, TimeStepProtocol]:
     """ Validation on the ISC grid"""
     injection_protocol, time_params = isc_dt_and_injection_protocol()
 
-    newton_params = NewtonParameters(
-        convergence_tol=1e-6,
-        max_iterations=30,
-    )
+    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=30,)
     sz = 5
     path = Path(__file__).parent / "isc_simulation/scaling-delete-me"
     biot_params = BiotParameters(
@@ -58,8 +54,7 @@ def prepare_setup(
 
 def validation():
     setup, newton_params, time_params = prepare_setup(
-        length_scale=12.8,
-        scalar_scale=10*pp.GIGA,
+        length_scale=12.8, scalar_scale=10 * pp.GIGA,
     )
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
@@ -71,9 +66,7 @@ def optimal_scaling():
     def assemble_matrix(values):
         ls, log_ss = values
         ss = np.float_power(10, log_ss)
-        setup, newton, time = prepare_setup(
-            length_scale=ls, scalar_scale=ss,
-        )
+        setup, newton, time = prepare_setup(length_scale=ls, scalar_scale=ss,)
         setup.prepare_simulation()
         A, b = setup.assembler.assemble_matrix_rhs()
         return A
@@ -81,7 +74,6 @@ def optimal_scaling():
     initial_guess = np.array([0.05, 6])
     results = best_cond_numb(assemble_matrix, initial_guess)
     return results
-
 
 
 def isc_dt_and_injection_protocol():
@@ -100,7 +92,13 @@ def isc_dt_and_injection_protocol():
     _1min = pp.MINUTE
     _10min = 10 * _1min
     phase_limits = [
-        -1e2 * pp.YEAR, 0, _10min, 2 * _10min, 3 * _10min, 4 * _10min, 7 * _10min
+        -1e2 * pp.YEAR,
+        0,
+        _10min,
+        2 * _10min,
+        3 * _10min,
+        4 * _10min,
+        7 * _10min,
     ]
     rates = [0, 10, 15, 20, 25, 0]
     rates = [r / 60 for r in rates]  # Convert to litres / second

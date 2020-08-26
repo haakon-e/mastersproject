@@ -8,6 +8,7 @@ from pydantic.main import BaseModel
 
 # --- Phases ---
 
+
 class AbstractPhase(BaseModel):
     start_time: float
     end_time: float
@@ -31,6 +32,7 @@ class AbstractPhase(BaseModel):
 
 class InjectionRatePhase(AbstractPhase):
     """ Phase to store an injection rate"""
+
     data: float = 0
 
     # For injection phases, we consider the data between the
@@ -42,6 +44,7 @@ class InjectionRatePhase(AbstractPhase):
 
 class TimeStepPhase(AbstractPhase):
     """ Phase to store a time step"""
+
     data: float = 0
 
     # For time step phases, we consider the data at the current
@@ -49,7 +52,7 @@ class TimeStepPhase(AbstractPhase):
     # *RIGHT* value.
     #   I.e.: tL < T <= tR
     # Thus we set the tolerance < 0.
-    tol: float = - 1e-9
+    tol: float = -1e-9
 
 
 # --- Protocols ---
@@ -121,9 +124,7 @@ class AbstractProtocol:
         ), "All rates must be encapsulated by phase limits"
         phases = [
             phase_type(
-                start_time=phase_limits[i],
-                end_time=phase_limits[i + 1],
-                data=value,
+                start_time=phase_limits[i], end_time=phase_limits[i + 1], data=value,
             )
             for i, value in enumerate(values)
         ]

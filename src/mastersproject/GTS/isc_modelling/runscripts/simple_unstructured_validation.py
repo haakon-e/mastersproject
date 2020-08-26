@@ -3,7 +3,11 @@ from pathlib import Path
 import porepy as pp
 import numpy as np
 from GTS import ISCBiotContactMechanics
-from GTS.isc_modelling.parameter import nd_injection_cell_center, GrimselGranodiorite, BiotParameters
+from GTS.isc_modelling.parameter import (
+    nd_injection_cell_center,
+    GrimselGranodiorite,
+    BiotParameters,
+)
 from GTS.time_machine import TimeMachinePhasesConstantDt, NewtonParameters
 from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
 
@@ -12,7 +16,7 @@ def simple_validation():
     """ Validation on easy setup"""
     path = Path(__file__).parent / "results"
     # Grid
-    mesh_size=20
+    mesh_size = 20
     gb, box, mesh_args = two_intersecting_blocking_fractures(str(path), mesh_size)
 
     # Injection phases and time configuration
@@ -25,10 +29,7 @@ def simple_validation():
     time_params = TimeStepProtocol.create_protocol(phase_limits, phase_time_steps)
 
     # Newton
-    newton_params = NewtonParameters(
-        convergence_tol=1e-6,
-        max_iterations=50,
-    )
+    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=50,)
 
     rock = GrimselGranodiorite()
     rock.FRICTION_COEFFICIENT = 0.2
@@ -57,7 +58,7 @@ def simple_validation():
         injection_protocol=injection_protocol,
         frac_transmissivity=5.17e-3,  # Gives a0=2e-3, which are Ivar's values.
         # BiotParameters
-        alpha=0.8
+        alpha=0.8,
     )
     setup = ISCBiotContactMechanics(biot_params)
     setup.gb = gb
@@ -89,7 +90,11 @@ def two_intersecting_blocking_fractures(folder_name, mesh_size):
     frac2 = pp.Fracture(frac_pts2)
 
     frac_network = pp.FractureNetwork3d([frac1, frac2], domain)
-    mesh_args = {"mesh_size_frac": mesh_size, "mesh_size_min": 2/3*mesh_size, "mesh_size_bound": 2*mesh_size}
+    mesh_args = {
+        "mesh_size_frac": mesh_size,
+        "mesh_size_min": 2 / 3 * mesh_size,
+        "mesh_size_bound": 2 * mesh_size,
+    }
 
     gb = frac_network.mesh(mesh_args, file_name=folder_name + "/gmsh_frac_file")
     return gb, domain, mesh_args

@@ -376,8 +376,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     @property
     def source_flow_rate(self) -> float:
         """ Scaled source flow rate """
-        injection_rate = (
-            self.params.injection_protocol.active_rate(self.time)
+        injection_rate = self.params.injection_protocol.active_rate(
+            self.time
         )  # 10 / 60  # 10 l/min  # injection rate [l / s], unscaled
         return (
             injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
@@ -407,7 +407,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         ls, ss = self.params.length_scale, self.params.scalar_scale
         for g, d in gb:
             # minus sign to convert from positive z downward (depth) to positive upward.
-            gravity = - pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
+            gravity = -pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
             vector_source = np.zeros((self.Nd, g.num_cells))
             vector_source[-1, :] = gravity
             vector_params = {
@@ -422,7 +422,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             a_l = self.aperture(g_l, scaled=True)
 
             # Compute gravity on the slave grid
-            rho_g = - pp.GRAVITY_ACCELERATION * self.density(g_l) * (ls / ss)
+            rho_g = -pp.GRAVITY_ACCELERATION * self.density(g_l) * (ls / ss)
 
             # Multiply by (a/2) to "cancel out" the normal gradient of the diffusivity
             # (see also self.set_permeability_from_aperture)
@@ -608,7 +608,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if self.params.gravity:
             # Set (unscaled) depth in the local coordinate system of the domain
             # where we consider the measured stress exact ..
-            true_stress_depth = (self.bounding_box["zmax"] + self.bounding_box["zmin"]) / 2 * ls
+            true_stress_depth = (
+                (self.bounding_box["zmax"] + self.bounding_box["zmin"]) / 2 * ls
+            )
             # .. and compute the relative (unscaled) depths in terms this reference depth.
             relative_depths: np.ndarray = (g.face_centers[2] * ls) - true_stress_depth
 

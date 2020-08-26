@@ -98,7 +98,7 @@ class GrimselGranodiorite(UnitRock):
 
     # Lamé parameters
     YOUNG_MODULUS = (
-            40 * pp.GIGA * pp.PASCAL
+        40 * pp.GIGA * pp.PASCAL
     )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
     POISSON_RATIO = (
         0.25  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
@@ -160,9 +160,9 @@ class Water(UnitFluid):
     def thermal_expansion(delta_theta):
         """ Units: m^3 / m^3 K, i.e. volumetric """
         return (
-                0.0002115
-                + 1.32 * 1e-6 * delta_theta
-                + 1.09 * 1e-8 * np.power(delta_theta, 2)
+            0.0002115
+            + 1.32 * 1e-6 * delta_theta
+            + 1.09 * 1e-8 * np.power(delta_theta, 2)
         )
 
 
@@ -301,6 +301,7 @@ class FlowParameters(GeometryParameters):
         A method to tag non-zero injection cells
     injection_rate
     """
+
     # Injection location, method, and protocol
     source_scalar_borehole_shearzone: Optional[Dict[str, str]] = {
         "shearzone": "S1_2",
@@ -308,7 +309,7 @@ class FlowParameters(GeometryParameters):
     }
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
     injection_protocol: InjectionRateProtocol = (
-        InjectionRateProtocol.create_protocol([0., 1.], [0.])
+        InjectionRateProtocol.create_protocol([0.0, 1.0], [0.0])
     )
 
     # Set transmissivity in fractures
@@ -429,7 +430,7 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
     # Get the grid to inject to
     injection_grid = gb.get_grids(lambda g: gb.node_props(g, "name") == shearzone)[0]
     assert (
-            injection_grid.dim == gb.dim_max() - 1
+        injection_grid.dim == gb.dim_max() - 1
     ), "Injection grid should be a Nd-1 fracture"
 
     # Tag injection grid with 1 in the injection cell
@@ -437,7 +438,7 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
 
 
 def nd_sides_shearzone_injection_cell(
-        params: FlowParameters, gb: pp.GridBucket, reset_frac_tags: bool = True,
+    params: FlowParameters, gb: pp.GridBucket, reset_frac_tags: bool = True,
 ) -> None:
     """ Tag the Nd cells surrounding a shear zone injection point
 
@@ -486,7 +487,7 @@ def nd_and_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -
 
 
 def center_of_shearzone_injection_cell(
-        params: FlowParameters, gb: pp.GridBucket
+    params: FlowParameters, gb: pp.GridBucket
 ) -> None:
     """ Tag the center cell of the given shear zone with 1 (injection)
 
@@ -509,7 +510,7 @@ def center_of_shearzone_injection_cell(
 
 
 def _tag_injection_cell(
-        gb: pp.GridBucket, g: pp.Grid, pts: np.ndarray, length_scale
+    gb: pp.GridBucket, g: pp.Grid, pts: np.ndarray, length_scale
 ) -> None:
     """ Helper method to tag find closest point on g to pts
 
@@ -541,7 +542,7 @@ def _tag_injection_cell(
 
 
 def _shearzone_borehole_intersection(
-        borehole: str, shearzone: str, length_scale: float
+    borehole: str, shearzone: str, length_scale: float
 ):
     """ Find the cell which is the intersection of a borehole and a shear zone"""
     # Compute the intersections between boreholes and shear zones

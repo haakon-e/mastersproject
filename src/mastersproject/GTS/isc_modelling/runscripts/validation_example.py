@@ -24,14 +24,11 @@ def simple_validation():
     rates = [0, 75, 20]
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
 
-    phase_time_steps = [-start_time, 2.0, 2/3 * pp.HOUR]
+    phase_time_steps = [-start_time, 2.0, 2 / 3 * pp.HOUR]
     time_params = TimeStepProtocol.create_protocol(phase_limits, phase_time_steps)
 
     # Newton
-    newton_params = NewtonParameters(
-        convergence_tol=1e-6,
-        max_iterations=15,
-    )
+    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=15,)
 
     # Model parameters
     biot_params = BiotParameters(
@@ -57,7 +54,7 @@ def simple_validation():
         injection_protocol=injection_protocol,
         frac_transmissivity=5.17e-3,  # Gives a0=2e-3, which are Ivar's values.
         # BiotParameters
-        alpha=0.8
+        alpha=0.8,
     )
     setup = ISCBiotContactMechanics(biot_params)
     setup.gb = gb
@@ -88,13 +85,7 @@ def create_grid() -> Tuple[pp.Grid, dict, dict]:
     )
     # Production
     f_3 = pp.EllipticFracture(
-        np.array([-13, 0, 0]),
-        20,
-        10,
-        0.5,
-        np.pi / 3,
-        np.pi / 1.6,
-        num_points=n_points,
+        np.array([-13, 0, 0]), 20, 10, 0.5, np.pi / 3, np.pi / 1.6, num_points=n_points,
     )
     fractures = [f_1, f_2, f_3]
 
@@ -131,13 +122,7 @@ def _tag_ivar_well_cells(_, gb: pp.GridBucket) -> None:
     for g, d in gb:
         tags = np.zeros(g.num_cells)
         if g.dim < nd:
-            point = np.array(
-                [
-                    [(box["xmin"] + box["xmax"]) / 2],
-                    [box["ymax"]],
-                    [0],
-                ]
-            )
+            point = np.array([[(box["xmin"] + box["xmax"]) / 2], [box["ymax"]], [0],])
             distances = pp.distances.point_pointset(point, g.cell_centers)
             indexes = np.argsort(distances)
             if d["node_number"] == 1:
