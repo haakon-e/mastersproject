@@ -10,6 +10,7 @@ import numpy as np
 import pendulum
 import porepy as pp
 from GTS import ISCData
+from GTS.time_protocols import InjectionRateProtocol
 from pydantic import BaseModel, validator
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,12 @@ class UnitRock(BaseModel):
         """ Compute Lame parameters from Young's modulus and Poisson's ratio."""
         e, nu = self.YOUNG_MODULUS, self.POISSON_RATIO
         return e / (2 * (1 + nu))
+
+    @property
+    def BULK_MODULUS(self):
+        """ Compute bulk modulus from Young's modulus and Poisson's ratio."""
+        e, nu = self.YOUNG_MODULUS, self.POISSON_RATIO
+        return e / (3 * (1 - 2 * nu))
 
     def lithostatic_pressure(self, depth):
         """ Lithostatic pressure.
@@ -134,6 +141,7 @@ class Water(UnitFluid):
     @property
     def density(self):
         """ Units: kg / m^3 """
+        # at 11 C: 999.622
         theta = self.theta_ref
         theta_0 = 10 * pp.CELSIUS
         rho_0 = 999.8349 * (pp.KILOGRAM / pp.METER ** 3)
@@ -142,6 +150,7 @@ class Water(UnitFluid):
     @property
     def dynamic_viscosity(self):
         """Units: Pa s"""
+        # at 11 C: 0.001264
         theta = self.theta_ref
         theta = pp.CELSIUS_to_KELVIN(theta)
         mu_0 = 2.414 * 1e-5 * (pp.PASCAL * pp.SECOND)
@@ -293,16 +302,22 @@ class FlowParameters(GeometryParameters):
     injection_rate
     """
 
+    # Injection location, method, and protocol
     source_scalar_borehole_shearzone: Optional[Dict[str, str]] = {
         "shearzone": "S1_2",
         "borehole": "INJ1",
     }
-
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
-    injection_rate: float = 0
+    injection_protocol: InjectionRateProtocol = (
+        InjectionRateProtocol.create_protocol([0.0, 1.0], [0.0])
+    )
 
     # Set transmissivity in fractures
     frac_transmissivity: Union[float, List[float]] = 1
+
+    # Use constant density model (i.e. rho = 1000 kg/m3)
+    # Otherwise, rho = rho0 * exp( c * (p - p0) )
+    constant_density: float = True
 
     # See 'methods to estimate permeability of shear zones at Grimsel Test Site'
     # in 'Presentasjon til underveismøte' for details on relations between

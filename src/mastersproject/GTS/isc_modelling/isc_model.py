@@ -123,14 +123,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     # ---- FLOW -----
 
-    def biot_alpha(self, g: pp.Grid) -> float:  # noqa
-        if g.dim == self.Nd:
-            return self.params.alpha
-        else:
-            return 1.0
+    def biot_alpha(self, g: pp.Grid) -> float:
+        return self.params.alpha if g.dim == self.Nd else 1.0
 
-    def density(self, g: pp.Grid):
-        """ Density is an exponential function of pressure
+    def density(self, g: pp.Grid) -> np.ndarray:
+        """ Compute unscaled fluid density
+
+        Either use constant density, or compute as an exponential function of pressure.
+        See also FlowParameters.
 
         rho = rho0 * exp( c * (p - p0) )
 
@@ -141,6 +141,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                        reactivation due to fluid injection in geothermal reservoirs
         """
         c = self.params.fluid.COMPRESSIBILITY
+        ss = self.params.scalar_scale
         d = self.gb.node_props(g)
 
         # For reference values, see: Berre et al. (2018):
@@ -148,9 +149,16 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # reactivation due to fluid injection in geothermal reservoirs
         rho0 = 1014 * np.ones(g.num_cells) * (pp.KILOGRAM / pp.METER ** 3)
         p0 = 1 * pp.ATMOSPHERIC_PRESSURE
-        p = d[pp.STATE][self.scalar_variable] if pp.STATE in d else p0
+
+        if self.params.constant_density:
+            # This sets density to rho0.
+            p = p0
+        else:
+            # Use pressure in STATE to approximate density
+            p = d[pp.STATE][self.scalar_variable] * ss if pp.STATE in d else p0
 
         rho = rho0 * np.exp(c * (p - p0))
+
         return rho
 
     # --- Aperture related methods ---
@@ -361,11 +369,15 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             k = cubic_law(aperture)
         return k
 
+    def porosity(self, g) -> np.ndarray:
+        porosity = self.params.rock.POROSITY if g.dim == self.Nd else 1.0
+        return np.ones(g.num_cells) * porosity
+
     @property
     def source_flow_rate(self) -> float:
         """ Scaled source flow rate """
-        injection_rate = (
-            self.params.injection_rate
+        injection_rate = self.params.injection_protocol.active_rate(
+            self.time
         )  # 10 / 60  # 10 l/min  # injection rate [l / s], unscaled
         return (
             injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
@@ -398,20 +410,30 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             gravity = -pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
             vector_source = np.zeros((self.Nd, g.num_cells))
             vector_source[-1, :] = gravity
-            d[pp.PARAMETERS][scalar_key]["vector_source"] = vector_source.ravel("F")
+            vector_params = {
+                "vector_source": vector_source.ravel("F"),
+                "ambient_dimension": self.Nd,
+            }
+            pp.initialize_data(g, d, scalar_key, vector_params)
 
         for e, de in gb.edges():
             mg: pp.MortarGrid = de["mortar_grid"]
             g_l, _ = gb.nodes_of_edge(e)
-            a_l = mg.slave_to_mortar_avg() * self.aperture(g_l, scaled=True)
-            params_l = gb.node_props(g_l)[pp.PARAMETERS]
-            vec_src_l = params_l[scalar_key]["vector_source"]
+            a_l = self.aperture(g_l, scaled=True)
 
-            # Take the gravity vector from the slave grid and project to the interface
-            rho_g = mg.slave_to_mortar_avg(self.Nd) * vec_src_l
+            # Compute gravity on the slave grid
+            rho_g = -pp.GRAVITY_ACCELERATION * self.density(g_l) * (ls / ss)
+
             # Multiply by (a/2) to "cancel out" the normal gradient of the diffusivity
             # (see also self.set_permeability_from_aperture)
-            gravity = rho_g * (a_l / 2)
+            gravity_l = rho_g * (a_l / 2)
+
+            # Take the gravity from the slave grid and project to the interface
+            gravity_mg = mg.slave_to_mortar_avg() * gravity_l
+
+            vector_source = np.zeros((self.Nd, mg.num_cells))
+            vector_source[-1, :] = gravity_mg
+            gravity = vector_source.ravel("F")
 
             pp.initialize_data(mg, de, scalar_key, {"vector_source": gravity})
 
@@ -465,12 +487,15 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         all_bf, *_ = self.domain_boundary_sides(g)
         bc_values = np.zeros(g.num_faces)
 
+        bf_centers = g.face_centers[:, all_bf]
         # Hydrostatic
         # Note: for scaled input height, unscaled depth is returned.
         if params.gravity:
-            depth = self.depth(g.face_centers[:, all_bf])
+            # Set to hydrostatic for depth of each boundary face
+            depth = self.depth(bf_centers)
         else:
-            depth = self.depth(np.zeros_like(all_bf))
+            # Set to uniform hydrostatic pressure at reference depth of 480 m.
+            depth = self.depth(np.zeros_like(bf_centers))
         bc_values[all_bf] = (
             params.fluid.hydrostatic_pressure(depth) / params.scalar_scale
         )
@@ -480,11 +505,25 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     def set_scalar_parameters(self):
         super().set_scalar_parameters()
+        self.vector_source()  # set gravity source
         for g, d in self.gb:
             params: pp.Parameters = d[pp.PARAMETERS]
-            params[self.scalar_parameter_key][
-                "source"
-            ] += self.intersection_volume_iterate(g)
+            scalar_params: dict = params[self.scalar_parameter_key]
+
+            # Set mass weight for the biot problem
+            #   mw = porosity * c + (alpha - porosity) / K
+            #   Note: alpha and porosity are 1.0 in fractures,
+            #         then mass_weight reduces to 'phi * c'.
+            c = self.params.fluid.COMPRESSIBILITY
+            porosity = self.porosity(g)
+            alpha = self.biot_alpha(g)
+            bulk = self.params.rock.BULK_MODULUS
+            mass_weight = porosity * c + (alpha - porosity) / bulk
+            mass_weight *= self.specific_volume(g, scaled=True)
+            scalar_params["mass_weight"] = mass_weight
+
+            # Set intersection transient source term
+            scalar_params["source"] += self.intersection_volume_iterate(g)
 
     # --- MECHANICS ---
 
@@ -567,8 +606,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # We assume all components of the tensor increase linearly, with
         # a factor relative to the pure vertical stress component.
         if self.params.gravity:
-            # Set (unscaled) depth where we consider the measured stress exact ..
-            true_stress_depth = self.bounding_box["zmax"] * ls
+            # Set (unscaled) depth in the local coordinate system of the domain
+            # where we consider the measured stress exact ..
+            true_stress_depth = (
+                (self.bounding_box["zmax"] + self.bounding_box["zmin"]) / 2 * ls
+            )
             # .. and compute the relative (unscaled) depths in terms this reference depth.
             relative_depths: np.ndarray = (g.face_centers[2] * ls) - true_stress_depth
 

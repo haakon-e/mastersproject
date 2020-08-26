@@ -112,11 +112,11 @@ class Flow(CommonAbstractModel):
         gb = self.gb
 
         # Set to 0 for steady state
-        compressibility: np.ndarray = self.params.fluid.COMPRESSIBILITY * (
+        compressibility: float = self.params.fluid.COMPRESSIBILITY * (
             self.params.scalar_scale / pp.PASCAL
         )  # scaled. [1/Pa]
         for g, d in gb:
-            porosity: np.ndarray = self.porosity(g)  # Default: 1 [-]
+            porosity: np.ndarray = self.porosity(g)  # Unit [-]
             # specific volume
             specific_volume: np.ndarray = self.specific_volume(g, scaled=True)
 
@@ -125,7 +125,7 @@ class Flow(CommonAbstractModel):
             bc_values: np.ndarray = self.bc_values_scalar(g)  # Already scaled
             source_values: np.ndarray = self.source_scalar(g)  # Already scaled
 
-            # Mass weight  # TODO: Simplified version of mass_weight?
+            # Mass weight
             mass_weight = compressibility * porosity * specific_volume
 
             # Initialize data
@@ -169,13 +169,13 @@ class Flow(CommonAbstractModel):
         for g, d in gb:
             # permeability [m2] (scaled)
             k: np.ndarray = self.permeability(g, scaled=True)
-            a = self.aperture(g, scaled=True)
-            logger.info(
-                f"Scaled permeability and aperture in dim {g.dim} have values: "
-                f"min [k={np.min(k):.2e}, a={np.min(a):.2e}]; "
-                f"mean [k={np.mean(k):.2e}, a={np.mean(a):.2e}]; "
-                f"max [k={np.max(k):.2e}, a={np.max(a):.2e}]"
-            )
+            # a = self.aperture(g, scaled=True)
+            # logger.info(
+            #     f"Scaled permeability and aperture in dim {g.dim} have values: "
+            #     f"min [k={np.min(k):.2e}, a={np.min(a):.2e}]; "
+            #     f"mean [k={np.mean(k):.2e}, a={np.mean(a):.2e}]; "
+            #     f"max [k={np.max(k):.2e}, a={np.max(a):.2e}]"
+            # )
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -189,30 +189,29 @@ class Flow(CommonAbstractModel):
             mg = data_edge["mortar_grid"]
             g_l, g_h = gb.nodes_of_edge(e)  # get the neighbors
 
-            # get aperture data from lower dim neighbour
-            aperture_l = self.aperture(g_l, scaled=True)  # one value per grid cell
+            # get aperture from lower dim neighbour
+            a_l = self.aperture(g_l, scaled=True)  # one value per grid cell
 
-            # Take trace of and then project specific volumes from g_h
-            v_h = (
+            # Take trace of and then project specific volumes from g_h to mg
+            V_h = (
                 mg.master_to_mortar_avg()
                 * np.abs(g_h.cell_faces)
                 * self.specific_volume(g_h, scaled=True)
             )
 
-            # Get diffusivity from lower-dimensional neighbour
-            data_l = gb.node_props(g_l)
-            diffusivity = data_l[pp.PARAMETERS][scalar_key][
-                "second_order_tensor"
-            ].values[0, 0]
+            # Compute diffusivity on g_l
+            diffusivity = self.permeability(g_l, scaled=True) / viscosity
 
             # Division through half the aperture represents taking the (normal) gradient
+            # Then, project to mg.
             normal_diffusivity = mg.slave_to_mortar_int() * np.divide(
-                diffusivity, aperture_l / 2
+                diffusivity, a_l / 2
             )
+
             # The interface flux is to match fluxes across faces of g_h,
             # and therefore need to be weighted by the corresponding
             # specific volumes
-            normal_diffusivity *= v_h
+            normal_diffusivity *= V_h
 
             # Set the data
             pp.initialize_data(
