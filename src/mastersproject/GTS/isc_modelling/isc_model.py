@@ -525,6 +525,23 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             # Set intersection transient source term
             scalar_params["source"] += self.intersection_volume_iterate(g)
 
+    # --- Other flow related methods ---
+
+    def assign_scalar_discretizations(self) -> None:
+        """ Assign k inverse scaling to the coupling discretization
+
+        From IvaR:
+        For long time steps, scaling the diffusive interface fluxes in the non-default
+        way turns out to actually be beneficial for the condition number.
+        """
+        super().assign_scalar_discretizations()
+
+        for e, d in self.gb.edges():
+            d[pp.COUPLING_DISCRETIZATION][self.scalar_coupling_term][e][
+                1
+            ].kinv_scaling = True
+
+
     # --- MECHANICS ---
 
     def faces_to_fix(self, g: pp.Grid):
