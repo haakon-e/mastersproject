@@ -20,9 +20,10 @@ def prepare_setup(
     """ Validation on the ISC grid"""
     injection_protocol, time_params = isc_dt_and_injection_protocol()
 
-    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=30,)
-    sz = 5
-    path = Path(__file__).parent / "isc_simulation/scaling-delete-me"
+    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=20,)
+    sz = 10
+    # path = Path(__file__).parent / "isc_simulation/scaling-delete-me"
+    path = Path("/home/haakonervik_hotmail_com/mastersproject-data/results/200828/coarse-tests/t1")
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -32,12 +33,12 @@ def prepare_setup(
         folder_name=path,
         time_step=time_params.initial_time_step,
         end_time=time_params.end_time,
-        gravity=True,
+        gravity=False,
         # GeometryParameters
-        shearzone_names=["S1_2", "S3_1"],
+        shearzone_names=["S1_2"],  #, "S1_1"],
         mesh_args={
             "mesh_size_frac": sz,
-            "mesh_size_min": 0.2 * sz,
+            "mesh_size_min": 0.1 * sz,
             "mesh_size_bound": 3 * sz,
         },
         # MechanicsParameters
@@ -46,15 +47,17 @@ def prepare_setup(
         # FlowParameters
         well_cells=shearzone_injection_cell,
         injection_protocol=injection_protocol,
-        frac_transmissivity=[1e-9, 3.7e-7],
+        frac_transmissivity=1e-9,  #[1e-9, 3.7e-7],
     )
     setup = ISCBiotContactMechanics(biot_params)
+    print(path)
     return setup, newton_params, time_params
 
 
 def validation():
     setup, newton_params, time_params = prepare_setup(
-        length_scale=12.8, scalar_scale=10 * pp.GIGA,
+        length_scale=0.01,
+        scalar_scale=1e6,
     )
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
@@ -92,19 +95,33 @@ def isc_dt_and_injection_protocol():
     _1min = pp.MINUTE
     _10min = 10 * _1min
     phase_limits = [
-        -1e2 * pp.YEAR,
+        -10e3 * pp.YEAR,
         0,
         _10min,
-        2 * _10min,
-        3 * _10min,
-        4 * _10min,
-        7 * _10min,
+    #    2 * _10min,
+    #    3 * _10min,
+    #    4 * _10min,
+    #    7 * _10min,
     ]
-    rates = [0, 10, 15, 20, 25, 0]
+    rates = [
+        0, 
+        10, 
+    #    15, 
+    #    20, 
+    #    25, 
+    #    0,
+    ]
     rates = [r / 60 for r in rates]  # Convert to litres / second
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
 
-    time_steps = [1e2 * pp.YEAR / 2, _1min, _1min, _1min, _1min, 3 * _1min]
+    time_steps = [
+        2e3 * pp.YEAR, 
+        1*_1min, 
+    #    _1min, 
+    #    _1min, 
+    #    _1min, 
+    #    3 * _1min,
+    ]
     time_step_protocol = TimeStepProtocol.create_protocol(phase_limits, time_steps)
 
     return injection_protocol, time_step_protocol
