@@ -42,7 +42,7 @@ def prepare_setup(
             "mesh_size_bound": 3 * sz,
         },
         # MechanicsParameters
-        dilation_angle=np.radians(10),
+        dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
         # FlowParameters
         well_cells=shearzone_injection_cell,
