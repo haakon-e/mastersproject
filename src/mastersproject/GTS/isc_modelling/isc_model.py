@@ -275,12 +275,13 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             )
             # Jump distances in each cell
             normal_jump = np.abs(u_mortar_local[-1, :])
-
+            
+            # NOTE: The normal jump already includes the dilation!
             # Slip induced dilation
-            tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
-            dilation = np.tan(self.params.dilation_angle) * tangential_jump
+            #tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
+            #dilation = np.tan(self.params.dilation_angle) * tangential_jump
 
-            aperture_contribution = normal_jump + dilation
+            aperture_contribution = normal_jump #+ dilation
 
             # Mechanical aperture is scaled by default. "Upscale" if necessary.
             if not scaled:
