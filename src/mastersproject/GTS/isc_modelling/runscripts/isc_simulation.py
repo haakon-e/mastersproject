@@ -11,7 +11,7 @@ from GTS.isc_modelling.parameter import shearzone_injection_cell
 from GTS.time_machine import NewtonParameters, TimeMachinePhasesConstantDt
 from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
 
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
 
 
 def prepare_setup(
@@ -20,10 +20,11 @@ def prepare_setup(
     """ Validation on the ISC grid"""
     injection_protocol, time_params = isc_dt_and_injection_protocol()
 
-    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=20,)
+    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=200,)
     sz = 10
     # path = Path(__file__).parent / "isc_simulation/scaling-delete-me"
-    path = Path("/home/haakonervik_hotmail_com/mastersproject-data/results/200828/coarse-tests/t1")
+    root = Path.home()
+    path = root / "mastersproject-data/results/200828/coarse-tests/t1-gravity"
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -33,7 +34,7 @@ def prepare_setup(
         folder_name=path,
         time_step=time_params.initial_time_step,
         end_time=time_params.end_time,
-        gravity=False,
+        gravity=True,
         # GeometryParameters
         shearzone_names=["S1_2"],  #, "S1_1"],
         mesh_args={
@@ -115,7 +116,7 @@ def isc_dt_and_injection_protocol():
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
 
     time_steps = [
-        2e3 * pp.YEAR, 
+        5e3 * pp.YEAR, 
         1*_1min, 
     #    _1min, 
     #    _1min, 
