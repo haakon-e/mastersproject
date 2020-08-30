@@ -493,7 +493,7 @@ class Flow(CommonAbstractModel):
                 state[self.p_exp] = np.zeros((self.Nd, g.num_cells))
 
             # Export injection cells
-            state[self.injection_cells] = self.gb.node_props(g, "well")
+            state[self.injection_cells] = state["well"]
 
         if write_vtk:
             self.viz.write_vtk(
