@@ -6,6 +6,7 @@ import porepy as pp
 import numpy as np
 
 from GTS import ISCBiotContactMechanics, BiotParameters
+from GTS.isc_modelling.isc_box_model import ISCBoxModel
 from GTS.isc_modelling.optimal_scaling import best_cond_numb, condition_number_porepy
 from GTS.isc_modelling.parameter import shearzone_injection_cell
 from GTS.time_machine import NewtonParameters, TimeMachinePhasesConstantDt
@@ -14,9 +15,9 @@ from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
 #logging.basicConfig(level=logging.INFO)
 
 
-def prepare_setup(
+def prepare_params(
     length_scale, scalar_scale,
-) -> Tuple[ISCBiotContactMechanics, NewtonParameters, TimeStepProtocol]:
+) -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
     """ Validation on the ISC grid"""
     injection_protocol, time_params = isc_dt_and_injection_protocol()
 
@@ -50,20 +51,31 @@ def prepare_setup(
         injection_protocol=injection_protocol,
         frac_transmissivity=1e-9,  #[1e-9, 3.7e-7],
     )
-    setup = ISCBiotContactMechanics(biot_params)
-    print(path)
-    return setup, newton_params, time_params
+
+    return biot_params, newton_params, time_params
 
 
 def validation():
-    setup, newton_params, time_params = prepare_setup(
-        length_scale=0.01,
-        scalar_scale=1e6,
+    biot_params, newton_params, time_params = prepare_params(
+        length_scale=0.01, scalar_scale=1e6,
     )
+    setup = ISCBiotContactMechanics(biot_params)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     time_machine.run_simulation()
     return time_machine
+
+
+def box_validation():
+    biot_params, newton_params, time_params = prepare_params(
+        length_scale=0.01, scalar_scale=1e6,
+    )
+    setup = ISCBoxModel(biot_params, lcin=5, lcout=50)
+    time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
+
+    time_machine.run_simulation()
+    return time_machine
+
 
 # --- CONDITION NUMBER ---
 
