@@ -6,7 +6,7 @@ import porepy as pp
 import numpy as np
 
 from GTS import ISCBiotContactMechanics, BiotParameters
-from GTS.isc_modelling.optimal_scaling import best_cond_numb
+from GTS.isc_modelling.optimal_scaling import best_cond_numb, condition_number_porepy
 from GTS.isc_modelling.parameter import shearzone_injection_cell
 from GTS.time_machine import NewtonParameters, TimeMachinePhasesConstantDt
 from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
@@ -65,16 +65,26 @@ def validation():
     time_machine.run_simulation()
     return time_machine
 
+# --- CONDITION NUMBER ---
+
+def cond_num_isc(ls, log_ss):
+    values = np.array([ls, log_ss])
+    A = assemble_matrix(values)
+    cond = condition_number_porepy(A)
+    print(f"cond pp: {cond:.2e}")
+
+
+def assemble_matrix(values):
+    ls, log_ss = values
+    ss = np.float_power(10, log_ss)
+    biot_params, newton, time = prepare_params(length_scale=ls, scalar_scale=ss,)
+    setup = ISCBiotContactMechanics(biot_params)
+    setup.prepare_simulation()
+    A, b = setup.assembler.assemble_matrix_rhs()
+    return A
+
 
 def optimal_scaling():
-    def assemble_matrix(values):
-        ls, log_ss = values
-        ss = np.float_power(10, log_ss)
-        setup, newton, time = prepare_setup(length_scale=ls, scalar_scale=ss,)
-        setup.prepare_simulation()
-        A, b = setup.assembler.assemble_matrix_rhs()
-        return A
-
     initial_guess = np.array([0.05, 6])
     results = best_cond_numb(assemble_matrix, initial_guess)
     return results
