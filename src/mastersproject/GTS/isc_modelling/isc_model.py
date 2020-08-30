@@ -275,12 +275,13 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             )
             # Jump distances in each cell
             normal_jump = np.abs(u_mortar_local[-1, :])
-
+            
+            # NOTE: The normal jump already includes the dilation!
             # Slip induced dilation
-            tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
-            dilation = np.tan(self.params.dilation_angle) * tangential_jump
+            #tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
+            #dilation = np.tan(self.params.dilation_angle) * tangential_jump
 
-            aperture_contribution = normal_jump + dilation
+            aperture_contribution = normal_jump #+ dilation
 
             # Mechanical aperture is scaled by default. "Upscale" if necessary.
             if not scaled:
@@ -524,6 +525,23 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
             # Set intersection transient source term
             scalar_params["source"] += self.intersection_volume_iterate(g)
+
+    # --- Other flow related methods ---
+
+    def assign_scalar_discretizations(self) -> None:
+        """ Assign k inverse scaling to the coupling discretization
+
+        From IvaR:
+        For long time steps, scaling the diffusive interface fluxes in the non-default
+        way turns out to actually be beneficial for the condition number.
+        """
+        super().assign_scalar_discretizations()
+
+        for e, d in self.gb.edges():
+            d[pp.COUPLING_DISCRETIZATION][self.scalar_coupling_term][e][
+                1
+            ].kinv_scaling = True
+
 
     # --- MECHANICS ---
 
