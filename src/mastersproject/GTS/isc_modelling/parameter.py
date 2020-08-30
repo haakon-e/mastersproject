@@ -99,9 +99,9 @@ class GrimselGranodiorite(UnitRock):
     # Lamé parameters
     YOUNG_MODULUS = (
         40 * pp.GIGA * pp.PASCAL
-    )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+    )  # Selvadurai (2019): Biot article --> Table 5., on Pahl et. al (1989)
     POISSON_RATIO = (
-        0.25  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+        0.25  # Selvadurai (2019): Biot article --> Table 5., on Pahl et. al (1989)
     )
 
     FRICTION_COEFFICIENT = 0.8  # TEMPORARY: FRICTION COEFFICIENT TO 0.2

@@ -12,7 +12,8 @@ from GTS.isc_modelling.parameter import shearzone_injection_cell
 from GTS.time_machine import NewtonParameters, TimeMachinePhasesConstantDt
 from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
 
-#logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.INFO)
 
 
 def prepare_params(
@@ -23,9 +24,9 @@ def prepare_params(
 
     newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=200,)
     sz = 10
-    # path = Path(__file__).parent / "isc_simulation/scaling-delete-me"
-    root = Path.home()
-    path = root / "mastersproject-data/results/200828/coarse-tests/t1-gravity"
+    path = Path(__file__).parent / "isc_simulation/200830/box-test/t1-gravity"
+    # root = Path.home()
+    # path = root / "mastersproject-data/results/200828/coarse-tests/t1-gravity"
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -37,19 +38,23 @@ def prepare_params(
         end_time=time_params.end_time,
         gravity=True,
         # GeometryParameters
-        shearzone_names=["S1_2"],  #, "S1_1"],
+        shearzone_names=["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],
         mesh_args={
             "mesh_size_frac": sz,
             "mesh_size_min": 0.1 * sz,
             "mesh_size_bound": 3 * sz,
         },
+        bounding_box=None,
         # MechanicsParameters
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
         # FlowParameters
         well_cells=shearzone_injection_cell,
         injection_protocol=injection_protocol,
-        frac_transmissivity=1e-9,  #[1e-9, 3.7e-7],
+        frac_transmissivity=[5e-8, 1e-9, 5e-10, 3.7e-7, 1e-9],
+        # Initial transmissivites for
+        # ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]:
+        # [5e-8,   1e-9,   5e-10,  3.7e-7, 1e-9]
     )
 
     return biot_params, newton_params, time_params
@@ -121,29 +126,29 @@ def isc_dt_and_injection_protocol():
         -10e3 * pp.YEAR,
         0,
         _10min,
-    #    2 * _10min,
-    #    3 * _10min,
-    #    4 * _10min,
-    #    7 * _10min,
+        # 2 * _10min,
+        # 3 * _10min,
+        # 4 * _10min,
+        # 7 * _10min,
     ]
     rates = [
-        0, 
-        10, 
-    #    15, 
-    #    20, 
-    #    25, 
-    #    0,
+        0,
+        10,
+        # 15,
+        # 20,
+        # 25,
+        # 0,
     ]
     rates = [r / 60 for r in rates]  # Convert to litres / second
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
 
     time_steps = [
-        5e3 * pp.YEAR, 
-        1*_1min, 
-    #    _1min, 
-    #    _1min, 
-    #    _1min, 
-    #    3 * _1min,
+        5e3 * pp.YEAR,
+        _1min,
+        # _1min,
+        # _1min,
+        # _1min,
+        # 3 * _1min,
     ]
     time_step_protocol = TimeStepProtocol.create_protocol(phase_limits, time_steps)
 
