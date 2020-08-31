@@ -279,6 +279,8 @@ class MechanicsParameters(GeometryParameters):
     # See "numerics > contact_mechanics > contact_conditions.py > ColoumbContact"
     # for details on dilation angle
     dilation_angle: float = 0
+    # Cohesion (for numerical stability)
+    cohesion: float = 0.0
 
     # Parameters for Newton solver
     newton_options = {

@@ -683,10 +683,16 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         super().set_mechanics_parameters()
         gb = self.gb
 
+        # Add a little cohesion for numerical stability
+        cohesion = self.params.cohesion / self.params.scalar_scale
+
         for g, d in gb:
             if g.dim == self.Nd - 1:
                 params: pp.Parameters = d[pp.PARAMETERS]
-                mech_params = {"dilation_angle": self.params.dilation_angle}
+                mech_params = {
+                    "dilation_angle": self.params.dilation_angle,
+                    "cohesion": cohesion,
+                }
                 params.update_dictionaries(
                     [self.mechanics_parameter_key], [mech_params],
                 )
