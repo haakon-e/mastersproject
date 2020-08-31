@@ -725,9 +725,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             iterate = d[pp.STATE][pp.ITERATE]
             penetration = iterate['penetration']
             sliding = iterate['sliding']
-            nsliding = np.sum(sliding)
+            nsliding = np.sum(np.logical_and(sliding, penetration))
+            nsticking = np.sum(np.logical_and(np.logical_not(sliding), penetration))
             nopen = np.sum(np.logical_not(penetration))
-            nsticking = np.sum(np.logical_and(penetration,np.logical_not(sliding)))
             msg += f"{sz}: ({nopen}, {nsticking}, {nsliding})/{sliding.size}. "
         logger.info(msg)
 
