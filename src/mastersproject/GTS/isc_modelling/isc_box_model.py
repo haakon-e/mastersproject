@@ -33,13 +33,13 @@ class ISCBoxModel(ISCBiotContactMechanics):
     @timer(logger, "INFO")
     def create_grid(self):
         """ Create GridBucket from fracture box model"""
-        gb, _ = create_grid(
+        gb = create_grid(
             path=self.params.folder_name,
             ls=self.params.length_scale,
             shearzones=self.params.shearzone_names,
             lcin=self.lcin,
             lcout=self.lcout,
-            n_optimize_netgen=1,
+            n_optimize_netgen=2,
         )
         self._gb = gb
         self.bounding_box = gb.bounding_box(as_dict=True)
@@ -111,7 +111,7 @@ def create_grid(
             assert s in all_shearzones, f"The shear zone {s} is not recognized!"
 
     # Constrain the mesh size parameter within the fractured zone
-    lcin = min(5., lcin) / ls
+    lcin =  lcin / ls
     lcout = lcout / ls
 
     # --- Initialize gmsh ----------------------------------------------------------------------------------------------

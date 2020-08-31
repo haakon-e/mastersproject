@@ -24,9 +24,9 @@ def prepare_params(
 
     newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=200,)
     sz = 10
-    path = Path(__file__).parent / "isc_simulation/200830/box-test/t1-gravity"
-    # root = Path.home()
-    # path = root / "mastersproject-data/results/200828/coarse-tests/t1-gravity"
+    # path = Path(__file__).parent / "isc_simulation/200830/box-test/t1-gravity"
+    root = Path.home()
+    path = root / "mastersproject-data/results/200830/5f-50kc/t1"
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -75,7 +75,7 @@ def box_validation():
     biot_params, newton_params, time_params = prepare_params(
         length_scale=0.01, scalar_scale=1e6,
     )
-    setup = ISCBoxModel(biot_params, lcin=5, lcout=50)
+    setup = ISCBoxModel(biot_params, lcin=5*1.5, lcout=50*1.5)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     time_machine.run_simulation()
@@ -122,8 +122,9 @@ def isc_dt_and_injection_protocol():
     """
     _1min = pp.MINUTE
     _10min = 10 * _1min
+    initialization_time = 30e3 * pp.YEAR
     phase_limits = [
-        -10e3 * pp.YEAR,
+        - initialization_time,
         0,
         _10min,
         # 2 * _10min,
@@ -143,7 +144,7 @@ def isc_dt_and_injection_protocol():
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
 
     time_steps = [
-        5e3 * pp.YEAR,
+        initialization_time / 3,
         _1min,
         # _1min,
         # _1min,
