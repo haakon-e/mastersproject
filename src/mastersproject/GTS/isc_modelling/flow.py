@@ -470,12 +470,10 @@ class Flow(CommonAbstractModel):
 
         self.p_exp = "p_exp"  # noqa
         self.aperture_exp = "aperture"  # noqa
-        self.injection_cells = "injection_cells"  # noqa
 
         self.export_fields.extend([
             self.p_exp,
             self.aperture_exp,
-            self.injection_cells,
         ])
 
     def export_step(self, write_vtk=True):
@@ -491,9 +489,6 @@ class Flow(CommonAbstractModel):
                 )
             else:
                 state[self.p_exp] = np.zeros((self.Nd, g.num_cells))
-
-            # Export injection cells
-            state[self.injection_cells] = state["well"]
 
         if write_vtk:
             self.viz.write_vtk(

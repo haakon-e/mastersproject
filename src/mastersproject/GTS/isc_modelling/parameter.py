@@ -471,13 +471,15 @@ def nd_sides_shearzone_injection_cell(
 
     # Set tags on the nd-grid
     nd_grid.tags["well_cells"] = nd_tags
-    gb.set_node_prop(nd_grid, "well", nd_tags)
+    ndd = gb.node_props(nd_grid)
+    pp.set_state(ndd, {"well": tags})
 
     if reset_frac_tags:
         # reset tags on the fracture
         zeros = np.zeros(fracture.num_cells)
         fracture.tags["well_cells"] = zeros
-        gb.set_node_prop(fracture, "well", zeros)
+        d = gb.node_props(fracture)
+        pp.set_state(d, {"well": zeros})
 
 
 def nd_and_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
@@ -531,7 +533,8 @@ def _tag_injection_cell(
     ids, dsts = g.closest_cell(pts, return_distance=True)
     tags[ids] = 1
     g.tags["well_cells"] = tags
-    gb.set_node_prop(g, "well", tags)
+    d = gb.node_props(g)
+    pp.set_state(d, {"well": tags})
 
     # Log information on the injection point
     logger.info(

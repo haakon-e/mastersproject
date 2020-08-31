@@ -109,7 +109,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         for g, d in self.gb:
             tags = np.zeros(g.num_cells)
             g.tags["well_cells"] = tags
-            pp.set_state(d, {"well": tags.copy()})
+            pp.set_state(d, {"well": tags})
 
         # Set injection cells
         if self.params.well_cells:
@@ -736,6 +736,15 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # Update Biot parameters using aperture from iterate
         # (i.e. displacements from iterate)
         self.set_biot_parameters()
+
+    def set_viz(self):
+        super().set_viz()
+
+        # Store well cells
+        # "well" state field defined by well_cells()
+        self.export_fields.extend([
+            "well"
+        ])
 
     # -- For testing --
 
