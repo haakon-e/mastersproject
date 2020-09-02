@@ -93,7 +93,7 @@ class UnitRock(BaseModel):
 class GrimselGranodiorite(UnitRock):
     """ Grimsel Granodiorite parameters"""
 
-    PERMEABILITY = 1.8e-20
+    PERMEABILITY = 1e-21
     DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
     POROSITY = 0.7 / 100
 
@@ -405,7 +405,7 @@ class BiotParameters(FlowParameters, MechanicsParameters):
     """ Parameters for the Biot problem with contact mechanics"""
 
     # Selvadurai (2019): Biot aritcle --> Table 9., on Pahl et. al (1989), mean of aL, aU.
-    alpha: float = 0.57
+    alpha: float = 0.54
 
 
 # --- Flow injection cell taggers ---
