@@ -6,6 +6,7 @@ from GTS.isc_modelling.general_model import CommonAbstractModel, NewtonFailure
 from GTS.time_protocols import TimeStepProtocol
 from pydantic import BaseModel
 from util import timer
+from pypardiso.pardiso_wrapper import PyPardisoError
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,8 @@ class TimeMachine:
                 )
                 try:
                     sol = self.time_iteration()
-                except NewtonFailure:
+                except (NewtonFailure, PyPardisoError) as e:
+                    logger.critical(f"Newton iteration failed. Error: {e}")
                     # If Newton method failed, reset the iterate to STATE variables.
                     init_sol = setup.get_state_vector()
                     setup.update_state(init_sol)
@@ -133,6 +135,7 @@ class TimeMachine:
                         break
                 else:
                     # If Newton Failure did not occur, we succeeded.
+                    newton_failure = False
                     break
 
             if newton_failure:
@@ -215,7 +218,7 @@ class TimeMachinePhasesConstantDt(TimeMachine):
         time_params: TimeStepProtocol,
     ):
         super().__init__(
-            setup, newton_params, time_params, max_newton_failure_retries=0
+            setup, newton_params, time_params, max_newton_failure_retries=1
         )
 
     def determine_time_step(self, *_) -> float:
