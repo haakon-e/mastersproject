@@ -134,7 +134,7 @@ class TimeMachine:
                         logger.critical(msg)
                         break
                 else:
-                    # If Newton Failure did not occur, we succeeded.
+                    # If Newton Failure did not occur, we succeeded. 
                     newton_failure = False
                     break
 

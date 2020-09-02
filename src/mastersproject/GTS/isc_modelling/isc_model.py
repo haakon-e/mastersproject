@@ -214,15 +214,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if g.dim == nd:
             return aperture
         elif g.dim == nd - 1:
-            shearzone = gb.node_props(g, "name")
-            aperture *= self.params.initial_fracture_aperture[shearzone]
+            shear_zone = gb.node_props(g, "name")
+            aperture *= self.params.compute_initial_aperture(g, shear_zone)
         elif g.dim == nd - 2:
             master_grids = gb.node_neighbors(g, only_higher=True)
-            shearzones = [gb.node_props(g_h, "name") for g_h in master_grids]
-            apertures = [self.params.initial_fracture_aperture[sz] for sz in shearzones]
-            aperture *= np.max(apertures)
+            apertures = np.vstack([self.compute_initial_aperture(g, scaled=scaled) for g in master_grids])
+            aperture *= np.max(apertures, axis=0)
         else:
-            raise ValueError("Not implemented 1d intersection points")
+            raise ValueError("Not implemented 0d intersection points")
 
         if scaled:
             aperture *= pp.METER / self.params.length_scale
@@ -273,15 +272,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             u_mortar_local = self.reconstruct_local_displacement_jump(
                 data, from_iterate=from_iterate,
             )
-            # Jump distances in each cell
-            normal_jump = np.abs(u_mortar_local[-1, :])
-            
-            # NOTE: The normal jump already includes the dilation!
-            # Slip induced dilation
-            #tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
-            #dilation = np.tan(self.params.dilation_angle) * tangential_jump
-
-            aperture_contribution = normal_jump #+ dilation
+            # Jump distances in each cell (index, -1, extracts normal component)
+            aperture_contribution = np.abs(u_mortar_local[-1, :])
 
             # Mechanical aperture is scaled by default. "Upscale" if necessary.
             if not scaled:
