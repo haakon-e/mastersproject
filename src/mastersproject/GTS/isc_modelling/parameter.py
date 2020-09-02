@@ -344,8 +344,8 @@ class FlowParameters(GeometryParameters):
 
         # Then, adjust for a heterogeneous permeability near the injection point
         if self.near_injection_t_radius > 0 and shear_zone == injection_shearzone:
-            radius = self.near_injection_t_radius
-            pts = shearzone_borehole_intersection(self)
+            radius = self.near_injection_t_radius / self.length_scale
+            pts = shearzone_borehole_intersection(self)  # already scaled
             cells = g.cell_centers.T
             tree = spatial.cKDTree(cells)
             inside_idx = tree.query_ball_point(pts.T, radius)
