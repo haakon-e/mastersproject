@@ -4,6 +4,7 @@ from __future__ import annotations  # forward reference to not-yet-constructed m
 import logging
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union
+from scipy import spatial
 
 import numpy as np
 
@@ -314,8 +315,13 @@ class FlowParameters(GeometryParameters):
         InjectionRateProtocol.create_protocol([0.0, 1.0], [0.0])
     )
 
-    # Set transmissivity in fractures
+    # Set transmissivity in fractures. List in same order as shearzone_names
     frac_transmissivity: Union[float, List[float]] = 1
+
+    # Different transmissivity near injection point
+    # If radius is set to 0, this is not activated.
+    near_injection_transmissivity: float = 1
+    near_injection_t_radius: float = 0
 
     # Use constant density model (i.e. rho = 1000 kg/m3)
     # Otherwise, rho = rho0 * exp( c * (p - p0) )
@@ -325,26 +331,38 @@ class FlowParameters(GeometryParameters):
     # in 'Presentasjon til underveismøte' for details on relations between
     # aperture, transmissivity, permeability and hydraulic conductivity
 
-    @property
-    def initial_fracture_aperture(self) -> Union[Dict[str, float], None]:
-        """ Initial aperture, computed from initial transmissivity
+    def compute_initial_aperture(self, g: pp.Grid, shear_zone: str) -> np.ndarray:
+        """ Compute initial aperture"""
+        injection_shearzone = self.source_scalar_borehole_shearzone.get("shearzone")
 
-        Assumes uniform transmissivity in each shear zone
-        """
+        # First, get the background aperture.
+        aperture = np.ones(g.num_cells)
 
-        transmissivity: Union[float, List[float]] = self.frac_transmissivity
-        shear_zones: List = self.shearzone_names
-        if shear_zones:
-            n_sz = len(shear_zones)
-            if isinstance(transmissivity, (float, int)):
-                transmissivity = [transmissivity] * n_sz
-            assert len(transmissivity) == len(shear_zones)
-            initial_aperture = {
-                s: self.b_from_T(t) for s, t in zip(shear_zones, transmissivity)
-            }
-            return initial_aperture
+        # Set background aperture
+        background_aperture = self.initial_background_aperture(shear_zone)
+        aperture *= background_aperture
+
+        # Then, adjust for a heterogeneous permeability near the injection point
+        if self.near_injection_t_radius > 0 and shear_zone == injection_shearzone:
+            radius = self.near_injection_t_radius
+            pts = shearzone_borehole_intersection(self)
+            cells = g.cell_centers.T
+            tree = spatial.cKDTree(cells)
+            inside_idx = tree.query_ball_point(pts.T, radius)
+            aperture[inside_idx] = self.b_from_T(self.near_injection_transmissivity)
+
+        return aperture
+
+    def initial_background_aperture(self, shear_zone):
+        """ Compute initial fracture aperture for a given shear zone"""
+        frac_T: Union[float, List[float]] = self.frac_transmissivity
+        if isinstance(frac_T, (float, int)):
+            ft = frac_T
         else:
-            return None
+            # get the transmissivity corresponding to the shear zone name
+            # position in the shearzone_names list.
+            ft = frac_T[self.shearzone_names.index(shear_zone)]
+        return self.b_from_T(ft)
 
     @property
     def rho_g_over_mu(self):
@@ -548,7 +566,7 @@ def _tag_injection_cell(
 
 def _shearzone_borehole_intersection(
     borehole: str, shearzone: str, length_scale: float
-):
+) -> np.ndarray:
     """ Find the cell which is the intersection of a borehole and a shear zone"""
     # Compute the intersections between boreholes and shear zones
     df = ISCData().borehole_plane_intersection()
@@ -560,13 +578,13 @@ def _shearzone_borehole_intersection(
         raise ValueError("No intersection found.")
 
     # Scale the intersection coordinates by length_scale. (scaled)
-    pts = result.to_numpy().T / length_scale
+    pts = result.to_numpy(dtype=float).T / length_scale
     assert pts.shape == (3, 1), "There should only be one intersection"
     return pts
 
 
-def shearzone_borehole_intersection(params: FlowParameters):
-    """ Wrapper to get intersection using FlowParameters class"""
+def shearzone_borehole_intersection(params: FlowParameters) -> np.ndarray:
+    """ Wrapper to get intersection using FlowParameters class. Return shape: (3,1)."""
     borehole = params.source_scalar_borehole_shearzone.get("borehole")
     shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
     length_scale = params.length_scale
