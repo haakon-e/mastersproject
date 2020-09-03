@@ -310,6 +310,7 @@ class FlowParameters(GeometryParameters):
         "shearzone": "S1_2",
         "borehole": "INJ1",
     }
+    isc_data: Optional[ISCData] = ISCData()
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
     injection_protocol: InjectionRateProtocol = (
         InjectionRateProtocol.create_protocol([0.0, 1.0], [0.0])
@@ -565,11 +566,14 @@ def _tag_injection_cell(
 
 
 def _shearzone_borehole_intersection(
-    borehole: str, shearzone: str, length_scale: float
+    borehole: str, shearzone: str, length_scale: float, isc_data=None,
 ) -> np.ndarray:
     """ Find the cell which is the intersection of a borehole and a shear zone"""
     # Compute the intersections between boreholes and shear zones
-    df = ISCData().borehole_plane_intersection()
+    if isc_data is None:
+        df = ISCData().borehole_plane_intersection()
+    else:
+        df = isc_data.borehole_plane_intersection()
 
     # Get the UNSCALED coordinates of the borehole - shearzone intersection.
     _mask = (df.shearzone == shearzone) & (df.borehole == borehole)
@@ -588,7 +592,8 @@ def shearzone_borehole_intersection(params: FlowParameters) -> np.ndarray:
     borehole = params.source_scalar_borehole_shearzone.get("borehole")
     shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
     length_scale = params.length_scale
-    return _shearzone_borehole_intersection(borehole, shearzone, length_scale)
+    isc_data = params.isc_data
+    return _shearzone_borehole_intersection(borehole, shearzone, length_scale, isc_data)
 
 
 # --- other models ---
