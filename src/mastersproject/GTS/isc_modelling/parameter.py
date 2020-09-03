@@ -348,7 +348,7 @@ class FlowParameters(GeometryParameters):
             pts = shearzone_borehole_intersection(self)  # already scaled
             cells = g.cell_centers.T
             tree = spatial.cKDTree(cells)
-            inside_idx = tree.query_ball_point(pts.T, radius)
+            inside_idx = tree.query_ball_point(pts.T, radius)[0]
             aperture[inside_idx] = self.b_from_T(self.near_injection_transmissivity)
 
         return aperture
