@@ -217,10 +217,19 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             shear_zone = gb.node_props(g, "name")
             aperture *= self.params.compute_initial_aperture(g, shear_zone)
         elif g.dim == nd - 2:
+            # Compute initial intersection aperture by projecting apertures from master grids
+            # i.e. fractures. Then take the cell-by-cell maximum.
             master_grids = gb.node_neighbors(g, only_higher=True)
-            # TODO: Do this properly by projecting aperture from master grids to slave grid.
-            apertures = np.hstack([self.compute_initial_aperture(g, scaled=scaled) for g in master_grids])
-            aperture *= np.max(apertures)
+            master_aps = [self.compute_initial_aperture(g, scaled=scaled) for g in master_grids]
+            master_edges = [(g, g_h) for g_h in master_grids]
+            master_cell_faces = [g_h.cell_faces for g_h in master_grids]
+            mortar_grids = [gb.edge_props(edge)["mortar_grid"] for edge in master_edges]
+            projected_aps = [
+                mg.mortar_to_slave_int() * mg.master_to_mortar_int() * np.abs(cell_face) * ap
+                for mg, ap, cell_face in zip(mortar_grids, master_aps, master_cell_faces)
+            ]
+            apertures = np.vstack(projected_aps)
+            aperture *= np.max(apertures, axis=0)
         else:
             raise ValueError("Not implemented 0d intersection points")
 
