@@ -93,7 +93,7 @@ class UnitRock(BaseModel):
 class GrimselGranodiorite(UnitRock):
     """ Grimsel Granodiorite parameters"""
 
-    PERMEABILITY = 1e-21
+    PERMEABILITY = 5e-21
     DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
     POROSITY = 0.7 / 100
 
