@@ -705,17 +705,29 @@ class Mechanics(CommonAbstractModel):
             d[pp.STATE][self.normal_frac_u] = normal_jump
             d[pp.STATE][self.tangential_frac_u] = tangential_jump
 
-    def save_matrix_displacements(self) -> None:
-        """ Save upscaled matrix displacements"""
+    def save_global_displacements(self) -> None:
+        """ Save upscaled global displacements"""
         gb = self.gb
         nd = self.Nd
-        var_m = self.displacement_variable
+        var_m, var_mortar = self.displacement_variable, self.mortar_displacement_variable
         ls = self.params.length_scale
 
         for g, d in gb:
             state = d[pp.STATE]  # type: Dict[str, np.ndarray]
             if g.dim == nd:
                 u_exp = state[var_m].reshape((nd, -1), order="F").copy() * ls
+            elif g.dim == nd - 1:
+                # Save fracture displacements in global coordinates
+                data_edge = gb.edge_props((g, self._nd_grid()))
+                mg = data_edge["mortar_grid"]
+                mortar_u = data_edge[pp.STATE][var_mortar]
+                displacement_jump_global_coord = (
+                        mg.mortar_to_slave_avg(nd=nd) * mg.sign_of_mortar_sides(nd=nd) * mortar_u
+                )
+                u_mortar_global = displacement_jump_global_coord.reshape(
+                    (nd, -1), order="F",
+                )
+                u_exp = u_mortar_global * ls
             else:
                 u_exp = np.zeros((nd, g.num_cells))
             state[self.u_exp] = u_exp
@@ -740,7 +752,7 @@ class Mechanics(CommonAbstractModel):
         """ Export a visualization step"""
         super().export_step(write_vtk=False)
         self.save_frac_jump_data()
-        self.save_matrix_displacements()
+        self.save_global_displacements()
         self.save_contact_traction()
         self.save_matrix_stress()
 
