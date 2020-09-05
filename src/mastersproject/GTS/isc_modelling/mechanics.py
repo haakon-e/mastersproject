@@ -647,6 +647,7 @@ class Mechanics(CommonAbstractModel):
         self.normal_frac_u = "normal_frac_u"  # noqa
         self.tangential_frac_u = "tangential_frac_u"  # noqa
         self.stress_exp = "stress_exp"  # noqa
+        self.fracture_state = "fracture_state"  # noqa
 
         self.export_fields.extend(
             [
@@ -673,6 +674,23 @@ class Mechanics(CommonAbstractModel):
             else:
                 stress_exp = np.zeros((nd, g.num_faces))
             state[self.stress_exp] = stress_exp
+
+    def save_fracture_cell_state(self):
+        """ Save state of fracture cells (open, sticking, gliding)"""
+        gb = self.gb
+        for g, d in gb:
+            state = d[pp.STATE]
+            iterate = state[pp.ITERATE]
+            penetration = iterate['penetration']
+            sliding = iterate['sliding']
+            _sliding = np.logical_and(sliding, penetration)
+            _sticking = np.logical_and(np.logical_not(sliding), penetration)
+            _open = np.logical_not(penetration)
+            fracture_state = np.zeros(g.num_cells)
+            fracture_state[_open] = 0
+            fracture_state[_sticking] = 1
+            fracture_state[_sliding] = 2
+            state[self.fracture_state] = fracture_state
 
     def save_frac_jump_data(self, from_iterate: bool = False) -> None:
         """ Save upscaled normal and tangential jumps to a class attribute
@@ -755,6 +773,7 @@ class Mechanics(CommonAbstractModel):
         self.save_global_displacements()
         self.save_contact_traction()
         self.save_matrix_stress()
+        self.save_fracture_cell_state()
 
         if write_vtk:
             self.viz.write_vtk(data=self.export_fields, time_dependent=False)
