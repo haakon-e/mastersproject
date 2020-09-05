@@ -48,8 +48,6 @@ class ISCBoxModel(ISCBiotContactMechanics):
 
         fgrids = self.gb.get_grids(lambda g: g.dim == self.Nd - 1)
         assert len(fgrids) == self.params.n_frac
-        # # Set the mapping from shear zone names to f.frac_num (for 2d-grids)
-        # self.frac_num_map = frac_num_map
 
     @property
     def gb(self) -> pp.GridBucket:
@@ -65,14 +63,14 @@ class ISCBoxModel(ISCBiotContactMechanics):
 
 
 def create_grid(
-        path: Optional[Path] = None,
-        ls: float = 1,
-        shearzones: Union[str, List[str]] = "all",
-        lcin: float = 5,
-        lcout: float = 50,
-        n_optimize_netgen: int = 1,
-        verbose: bool = False,
-        run_gmsh_gui: bool = False,
+    path: Optional[Path] = None,
+    ls: float = 1,
+    shearzones: Union[str, List[str]] = "all",
+    lcin: float = 5,
+    lcout: float = 50,
+    n_optimize_netgen: int = 1,
+    verbose: bool = False,
+    run_gmsh_gui: bool = False,
 ) -> pp.GridBucket:
     """ Create the ISC domain using the box model method
 
@@ -111,7 +109,7 @@ def create_grid(
             assert s in all_shearzones, f"The shear zone {s} is not recognized!"
 
     # Constrain the mesh size parameter within the fractured zone
-    lcin =  lcin / ls
+    lcin = lcin / ls
     lcout = lcout / ls
 
     # --- Initialize gmsh ----------------------------------------------------------------------------------------------
@@ -125,26 +123,37 @@ def create_grid(
     gmsh.option.setNumber("Geometry.OCCBoundsUseStl", 1)
 
     # Make bounding box for fractured zone
-    xmin, ymin, zmin, xmax, ymax, zmax = -1/ls, 80/ls, -5/ls, 86/ls, 151/ls, 41/ls
-    dx = (xmax - xmin)
-    dy = (ymax - ymin)
-    dz = (zmax - zmin)
+    xmin, ymin, zmin, xmax, ymax, zmax = (
+        -1 / ls,
+        80 / ls,
+        -5 / ls,
+        86 / ls,
+        151 / ls,
+        41 / ls,
+    )
+    dx = xmax - xmin
+    dy = ymax - ymin
+    dz = zmax - zmin
     inner_box = kernel.addBox(xmin, ymin, zmin, dx, dy, dz)
 
     # Produce big bounding box. This has tag 13.
-    outer_box = kernel.addBox(-100/ls, 0/ls, -100/ls, 300/ls, 300/ls, 300/ls)
+    outer_box = kernel.addBox(
+        -100 / ls, 0 / ls, -100 / ls, 300 / ls, 300 / ls, 300 / ls
+    )
 
     # Fragment the outer box with the inner box (to be fractured zone)
+    # fmt: off
     out_volumes, map_volumes = kernel.fragment(
         [(3, outer_box)],
         [(3, inner_box)],
     )
+    # fmt: on
     kernel.synchronize()
 
     if verbose:
         for o, c in zip(["outer_box", "inner_box"], map_volumes):
-            print(f"{o} -> mapped to tags {c}")
-        print('')
+            logger.info(f"{o} -> mapped to tags {c}")
+        logger.info("")
     # The second entry corresponds to the (first) fragment tool, i.e. the inner box (3, inner_box).
     # Fetch the new tag of this entity:
     inner_box = map_volumes[1]
@@ -182,10 +191,12 @@ def create_grid(
         frac_names.append(frac_name)
 
     # Fragment the box along the fracture surface
+    # fmt: off
     out_frac, map_frac = kernel.fragment(
         inner_box,
         fracs,
     )
+    # fmt: on
     kernel.synchronize()
 
     # Now remove all the surfaces (and their bounding entities) that are not on the
@@ -205,17 +216,19 @@ def create_grid(
         else:
             frac_map[entity_name] = frac_tags
         if verbose:
-            print(f"Entity {entity_name} now has {len(frac_tags)} tags: {frac_tags}")
+            logger.info(f"Entity {entity_name} now has {len(frac_tags)} tags: {frac_tags}")
 
     # The boundary between the outer and inner (fragmented) volumes needs to be re-aligned.
     # To do this, we fragment the outer volume with the inner volumes.
     ent3d = gmsh.model.getEntities(3)
     outer_volume = [ent3d[0]]
     inner_volumes = ent3d[1:]
+    # fmt: off
     kernel.fragment(
         outer_volume,
         inner_volumes,
     )
+    # fmt: on
     kernel.synchronize()
 
     # --- Add Physical Groups ------------------------------------------------------------------------------------------
@@ -239,7 +252,9 @@ def create_grid(
         fracnum_fracname[i] = fname
 
     # Constrain the 1D fracture intersections
-    all_frac_lines = gmsh.model.getBoundary(all_frac_surface_dimtags, combined=False, oriented=False)
+    all_frac_lines = gmsh.model.getBoundary(
+        all_frac_surface_dimtags, combined=False, oriented=False
+    )
     count = Counter(all_frac_lines)
     intersection_dimtags = [i for i in count if count[i] > 1]
     intersection_tags = [t[1] for t in intersection_dimtags]
@@ -250,8 +265,7 @@ def create_grid(
             gmsh.model.setPhysicalName(1, igroup, f"FRACTURE_LINE_{index}")
 
         if verbose:
-            print('')
-            print(f"intersection dimtags {intersection_dimtags}")
+            logger.info(f"intersection dimtags {intersection_dimtags}")
 
     # Set a fracture zone physical group for convenience (to view the fracture zone only in gmsh)
     fraczone_tags = [v[1] for v in volume_dimtags]
@@ -288,7 +302,7 @@ def create_grid(
     #      Point           DistMin DistMax
     ithresh = field.add("Threshold")
     field.setNumber(ithresh, "IField", idist)
-    field.setNumber(ithresh, "LcMin", lcin/2)
+    field.setNumber(ithresh, "LcMin", lcin / 2)
     field.setNumber(ithresh, "LcMax", lcout)
     field.setNumber(ithresh, "DistMin", 1 / ls)
     field.setNumber(ithresh, "DistMax", 2 / ls)
@@ -301,7 +315,7 @@ def create_grid(
     # 2. Define a Threshold field
     fthresh = field.add("Threshold")
     field.setNumber(fthresh, "IField", fdist)
-    field.setNumber(fthresh, "LcMin", lcin/2.5)
+    field.setNumber(fthresh, "LcMin", lcin / 2.5)
     field.setNumber(fthresh, "LcMax", lcout)
     field.setNumber(fthresh, "DistMin", 1 / ls)
     field.setNumber(fthresh, "DistMax", 2 / ls)

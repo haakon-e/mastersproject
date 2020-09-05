@@ -220,13 +220,20 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             # Compute initial intersection aperture by projecting apertures from master grids
             # i.e. fractures. Then take the cell-by-cell maximum.
             master_grids = gb.node_neighbors(g, only_higher=True)
-            master_aps = [self.compute_initial_aperture(g, scaled=scaled) for g in master_grids]
+            master_aps = [
+                self.compute_initial_aperture(g, scaled=scaled) for g in master_grids
+            ]
             master_edges = [(g, g_h) for g_h in master_grids]
             master_cell_faces = [g_h.cell_faces for g_h in master_grids]
             mortar_grids = [gb.edge_props(edge)["mortar_grid"] for edge in master_edges]
             projected_aps = [
-                mg.mortar_to_slave_int() * mg.master_to_mortar_int() * np.abs(cell_face) * ap
-                for mg, ap, cell_face in zip(mortar_grids, master_aps, master_cell_faces)
+                mg.mortar_to_slave_int()
+                * mg.master_to_mortar_int()
+                * np.abs(cell_face)
+                * ap
+                for mg, ap, cell_face in zip(
+                    mortar_grids, master_aps, master_cell_faces
+                )
             ]
             apertures = np.vstack(projected_aps)
             aperture *= np.max(apertures, axis=0)
@@ -544,7 +551,6 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 1
             ].kinv_scaling = True
 
-
     # --- MECHANICS ---
 
     def faces_to_fix(self, g: pp.Grid):
@@ -729,10 +735,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         for g, d in self.gb:
             if g.dim != self.Nd - 1:
                 continue
-            sz = d['name']
+            sz = d["name"]
             iterate = d[pp.STATE][pp.ITERATE]
-            penetration = iterate['penetration']
-            sliding = iterate['sliding']
+            penetration = iterate["penetration"]
+            sliding = iterate["sliding"]
             nsliding = np.sum(np.logical_and(sliding, penetration))
             nsticking = np.sum(np.logical_and(np.logical_not(sliding), penetration))
             nopen = np.sum(np.logical_not(penetration))
@@ -750,9 +756,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
         # Store well cells
         # "well" state field defined by well_cells()
-        self.export_fields.extend([
-            "well"
-        ])
+        self.export_fields.extend(["well"])
 
     # -- For testing --
 

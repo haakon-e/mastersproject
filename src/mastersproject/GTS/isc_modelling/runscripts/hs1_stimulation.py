@@ -41,10 +41,7 @@ def prepare_params(
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
         # FlowParameters
-        source_scalar_borehole_shearzone={
-            "shearzone": "S1_3",
-            "borehole": "INJ2",
-        },
+        source_scalar_borehole_shearzone={"shearzone": "S1_3", "borehole": "INJ2",},
         well_cells=shearzone_injection_cell,
         injection_protocol=injection_protocol,
         frac_transmissivity=[5e-8, 1e-9, 5e-10, 3.7e-7, 1e-9],  # [1e-9, 3.7e-7],
@@ -63,7 +60,7 @@ def box_validation():
     biot_params, newton_params, time_params = prepare_params(
         length_scale=0.04, scalar_scale=1e8,
     )
-    setup = ISCBoxModel(biot_params, lcin=5*2, lcout=50*2)
+    setup = ISCBoxModel(biot_params, lcin=5 * 2, lcout=50 * 2)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     time_machine.run_simulation()
@@ -87,7 +84,7 @@ def isc_dt_and_injection_protocol():
     _10min = 10 * _1min
     initialization_time = 30e3 * pp.YEAR
     phase_limits = [
-        - initialization_time,
+        -initialization_time,
         0,
         _10min,
         2 * _10min,

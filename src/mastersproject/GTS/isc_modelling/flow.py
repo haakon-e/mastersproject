@@ -473,11 +473,13 @@ class Flow(CommonAbstractModel):
         self.aperture_exp = "aperture"  # noqa
         self.transmissivity_exp = "transmissivity"  # noqa
 
+        # fmt: off
         self.export_fields.extend([
             self.p_exp,
             self.aperture_exp,
             self.transmissivity_exp,
         ])
+        # fmt: on
 
     def export_step(self, write_vtk=True):
         """ Export a time step step with pressures, apertures and transmissivities"""

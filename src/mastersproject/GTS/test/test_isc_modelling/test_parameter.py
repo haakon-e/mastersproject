@@ -32,13 +32,17 @@ class TestFlowParameters:
         )
         # Check that correct Transmissivity is calculated
         res = np.cbrt(params.mu_over_rho_g * 12)
-        apertures = np.array([params.initial_background_aperture(sz) for sz in shearzones])
+        apertures = np.array(
+            [params.initial_background_aperture(sz) for sz in shearzones]
+        )
         assert np.allclose(res, apertures)
         assert np.isclose(params.mu_over_rho_g, 1 / params.rho_g_over_mu)
 
         # Another test
         params.frac_transmissivity = params.rho_g_over_mu / 12
-        apertures = np.array([params.initial_background_aperture(sz) for sz in shearzones])
+        apertures = np.array(
+            [params.initial_background_aperture(sz) for sz in shearzones]
+        )
         assert np.allclose(1, apertures)
 
     def test_set_increased_aperture_near_injection_point(self, tmpdir, mocker):
@@ -59,7 +63,9 @@ class TestFlowParameters:
         g.compute_geometry()
 
         # Mock the borehole shearzone intersection method
-        method = mocker.patch("GTS.isc_modelling.parameter.shearzone_borehole_intersection")
+        method = mocker.patch(
+            "GTS.isc_modelling.parameter.shearzone_borehole_intersection"
+        )
 
         # Assert we get 4 cells of T=1 each
         method.return_value = np.array([1.5, 1.5, 0])

@@ -681,8 +681,8 @@ class Mechanics(CommonAbstractModel):
         for g, d in gb:
             state = d[pp.STATE]
             iterate = state[pp.ITERATE]
-            penetration = iterate['penetration']
-            sliding = iterate['sliding']
+            penetration = iterate["penetration"]
+            sliding = iterate["sliding"]
             _sliding = np.logical_and(sliding, penetration)
             _sticking = np.logical_and(np.logical_not(sliding), penetration)
             _open = np.logical_not(penetration)
@@ -727,7 +727,10 @@ class Mechanics(CommonAbstractModel):
         """ Save upscaled global displacements"""
         gb = self.gb
         nd = self.Nd
-        var_m, var_mortar = self.displacement_variable, self.mortar_displacement_variable
+        var_m, var_mortar = (
+            self.displacement_variable,
+            self.mortar_displacement_variable,
+        )
         ls = self.params.length_scale
 
         for g, d in gb:
@@ -740,7 +743,9 @@ class Mechanics(CommonAbstractModel):
                 mg = data_edge["mortar_grid"]
                 mortar_u = data_edge[pp.STATE][var_mortar]
                 displacement_jump_global_coord = (
-                        mg.mortar_to_slave_avg(nd=nd) * mg.sign_of_mortar_sides(nd=nd) * mortar_u
+                    mg.mortar_to_slave_avg(nd=nd)
+                    * mg.sign_of_mortar_sides(nd=nd)
+                    * mortar_u
                 )
                 u_mortar_global = displacement_jump_global_coord.reshape(
                     (nd, -1), order="F",

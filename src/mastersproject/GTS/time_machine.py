@@ -119,7 +119,9 @@ class TimeMachine:
                 try:
                     sol = self.time_iteration()
                 except (NewtonFailure, PyPardisoError, ValueError) as e:
-                    logger.critical(f"Newton iteration failed. Error type {type(e)}, msg: {e}")
+                    logger.critical(
+                        f"Newton iteration failed. Error type {type(e)}, msg: {e}"
+                    )
                     # If Newton method failed, reset the iterate to STATE variables.
                     init_sol = setup.get_state_vector()
                     setup.update_state(init_sol)
@@ -134,7 +136,7 @@ class TimeMachine:
                         logger.critical(msg)
                         break
                 else:
-                    # If Newton Failure did not occur, we succeeded. 
+                    # If Newton Failure did not occur, we succeeded.
                     newton_failure = False
                     break
 
