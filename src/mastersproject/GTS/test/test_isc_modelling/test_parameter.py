@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+import porepy as pp
 import pytest
 
 from GTS.isc_modelling.isc_model import ISCBiotContactMechanics
@@ -18,28 +19,70 @@ class TestFlowParameters:
     def test_validate_source_scalar_borehole_shearzone(self):
         assert False
 
-    def test_set_fracture_aperture_from_cubic_law(self, tmp_path):
-        here = tmp_path / "simulations"
+    def test_set_fracture_aperture_from_cubic_law(self, tmpdir):
+        shearzones = ["S1_1", "S1_2"]
         params = FlowParameters(
             # BaseParameters
-            folder_name=here,
+            folder_name=tmpdir,
             # GeometryParameters
-            shearzone_names=["S1_1", "S1_2"],
+            shearzone_names=shearzones,
             # FlowParameters
             injection_rate=1,
             frac_transmissivity=1,
         )
-        assert params.initial_fracture_aperture is not None
         # Check that correct Transmissivity is calculated
         res = np.cbrt(params.mu_over_rho_g * 12)
-        aperture_list = np.array([*params.initial_fracture_aperture.values()])
-        assert np.allclose(res, aperture_list)
+        apertures = np.array(
+            [params.initial_background_aperture(sz) for sz in shearzones]
+        )
+        assert np.allclose(res, apertures)
         assert np.isclose(params.mu_over_rho_g, 1 / params.rho_g_over_mu)
 
         # Another test
         params.frac_transmissivity = params.rho_g_over_mu / 12
-        aperture_list = np.array([*params.initial_fracture_aperture.values()])
-        assert np.allclose(1, aperture_list)
+        apertures = np.array(
+            [params.initial_background_aperture(sz) for sz in shearzones]
+        )
+        assert np.allclose(1, apertures)
+
+    def test_set_increased_aperture_near_injection_point(self, tmpdir, mocker):
+        shearzones = ["S1_2"]
+        near_inj_T = 1
+        params = FlowParameters(
+            # BaseParameters
+            folder_name=tmpdir,
+            # GeometryParameters
+            shearzone_names=shearzones,
+            # FlowParameters
+            injection_rate=1,
+            frac_transmissivity=0,
+            near_injection_transmissivity=near_inj_T,
+            near_injection_t_radius=1,
+        )
+        g = pp.CartGrid(nx=[3, 3])
+        g.compute_geometry()
+
+        # Mock the borehole shearzone intersection method
+        method = mocker.patch(
+            "GTS.isc_modelling.parameter.shearzone_borehole_intersection"
+        )
+
+        # Assert we get 4 cells of T=1 each
+        method.return_value = np.array([1.5, 1.5, 0])
+        aperture = params.compute_initial_aperture(g, shearzones[0])
+        known_aperture = params.b_from_T(near_inj_T)
+        assert np.isclose(np.sum(aperture), known_aperture * 5)
+
+        # Assert the locations of these cells
+        known_idx = [1, 3, 4, 5, 7]
+        ap_idx = np.where(np.isclose(aperture, known_aperture))[0]
+        assert np.allclose(np.sort(ap_idx), known_idx)
+
+        # Assert no transmissivity added if no cells within the radius is found
+        params.near_injection_t_radius = 0.4
+        method.return_value = np.array([2, 2, 0])
+        aperture = params.compute_initial_aperture(g, shearzones[0])
+        assert np.sum(aperture) == 0
 
 
 def test_nd_sides_shearzone_injection_cell():

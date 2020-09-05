@@ -5,106 +5,66 @@ from typing import Tuple
 import porepy as pp
 import numpy as np
 
-from GTS import ISCBiotContactMechanics, BiotParameters
+from GTS import BiotParameters
 from GTS.isc_modelling.isc_box_model import ISCBoxModel
-from GTS.isc_modelling.optimal_scaling import best_cond_numb, condition_number_porepy
 from GTS.isc_modelling.parameter import shearzone_injection_cell
 from GTS.time_machine import NewtonParameters, TimeMachinePhasesConstantDt
 from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
 
 logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.INFO)
 
 
 def prepare_params(
     length_scale, scalar_scale,
 ) -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
-    """ Validation on the ISC grid"""
+    """ Hydro shearing experiment HS1
+
+    HS1 targeted S1.3 through INJ2 at 39.75 - 40.75 m.
+    """
     injection_protocol, time_params = isc_dt_and_injection_protocol()
 
     newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=200,)
-    sz = 10
-    # path = Path(__file__).parent / "isc_simulation/200830/box-test/t1-gravity"
-    root = Path.home()
-    path = root / "mastersproject-data/results/200830/5f-50kc/t1"
+    base = Path.home() / "mastersproject-data"
+    head = "5frac/initialization"
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
         scalar_scale=scalar_scale,
-        # base=Path("/home/haakonervik/mastersproject-data"),
-        # head="validation_example",
-        folder_name=path,
+        base=base,
+        head=head,
         time_step=time_params.initial_time_step,
         end_time=time_params.end_time,
         gravity=True,
         # GeometryParameters
-        shearzone_names=["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],
-        mesh_args={
-            "mesh_size_frac": sz,
-            "mesh_size_min": 0.1 * sz,
-            "mesh_size_bound": 3 * sz,
-        },
-        bounding_box=None,
+        shearzone_names=["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],  # ["S1_2", "S3_1"],
         # MechanicsParameters
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
         # FlowParameters
+        source_scalar_borehole_shearzone={"shearzone": "S1_3", "borehole": "INJ2",},
         well_cells=shearzone_injection_cell,
         injection_protocol=injection_protocol,
-        frac_transmissivity=[5e-8, 1e-9, 5e-10, 3.7e-7, 1e-9],
+        frac_transmissivity=[5e-8, 1e-9, 5e-10, 3.7e-7, 1e-9],  # [1e-9, 3.7e-7],
         # Initial transmissivites for
         # ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]:
         # [5e-8,   1e-9,   5e-10,  3.7e-7, 1e-9]
+        # Note background hydraulic conductivity: 1e-14 m/s
+        near_injection_transmissivity=8.3e-11,
+        near_injection_t_radius=3,
     )
 
     return biot_params, newton_params, time_params
 
 
-def validation():
-    biot_params, newton_params, time_params = prepare_params(
-        length_scale=0.01, scalar_scale=1e6,
-    )
-    setup = ISCBiotContactMechanics(biot_params)
-    time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
-
-    time_machine.run_simulation()
-    return time_machine
-
-
 def box_validation():
     biot_params, newton_params, time_params = prepare_params(
-        length_scale=0.01, scalar_scale=1e6,
+        length_scale=0.04, scalar_scale=1e8,
     )
-    setup = ISCBoxModel(biot_params, lcin=5*1.5, lcout=50*1.5)
+    setup = ISCBoxModel(biot_params, lcin=5 * 2, lcout=50 * 2)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     time_machine.run_simulation()
     return time_machine
-
-
-# --- CONDITION NUMBER ---
-
-def cond_num_isc(ls, log_ss):
-    values = np.array([ls, log_ss])
-    A = assemble_matrix(values)
-    cond = condition_number_porepy(A)
-    print(f"cond pp: {cond:.2e}")
-
-
-def assemble_matrix(values):
-    ls, log_ss = values
-    ss = np.float_power(10, log_ss)
-    biot_params, newton, time = prepare_params(length_scale=ls, scalar_scale=ss,)
-    setup = ISCBiotContactMechanics(biot_params)
-    setup.prepare_simulation()
-    A, b = setup.assembler.assemble_matrix_rhs()
-    return A
-
-
-def optimal_scaling():
-    initial_guess = np.array([0.05, 6])
-    results = best_cond_numb(assemble_matrix, initial_guess)
-    return results
 
 
 def isc_dt_and_injection_protocol():
@@ -124,32 +84,32 @@ def isc_dt_and_injection_protocol():
     _10min = 10 * _1min
     initialization_time = 30e3 * pp.YEAR
     phase_limits = [
-        - initialization_time,
+        -initialization_time,
         0,
         _10min,
-        # 2 * _10min,
-        # 3 * _10min,
-        # 4 * _10min,
-        # 7 * _10min,
+        2 * _10min,
+        3 * _10min,
+        4 * _10min,
+        7 * _10min,
     ]
     rates = [
         0,
         10,
-        # 15,
-        # 20,
-        # 25,
-        # 0,
+        15,
+        20,
+        25,
+        0,
     ]
     rates = [r / 60 for r in rates]  # Convert to litres / second
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
 
     time_steps = [
-        initialization_time / 3,
+        initialization_time / 2,
         _1min,
-        # _1min,
-        # _1min,
-        # _1min,
-        # 3 * _1min,
+        _1min,
+        _1min,
+        _1min,
+        3 * _1min,
     ]
     time_step_protocol = TimeStepProtocol.create_protocol(phase_limits, time_steps)
 

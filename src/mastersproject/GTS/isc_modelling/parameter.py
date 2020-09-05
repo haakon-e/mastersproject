@@ -4,6 +4,7 @@ from __future__ import annotations  # forward reference to not-yet-constructed m
 import logging
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union
+from scipy import spatial
 
 import numpy as np
 
@@ -92,16 +93,16 @@ class UnitRock(BaseModel):
 class GrimselGranodiorite(UnitRock):
     """ Grimsel Granodiorite parameters"""
 
-    PERMEABILITY = 1.8e-20
+    PERMEABILITY = 5e-21
     DENSITY = 2700 * pp.KILOGRAM / (pp.METER ** 3)
     POROSITY = 0.7 / 100
 
     # Lamé parameters
     YOUNG_MODULUS = (
         40 * pp.GIGA * pp.PASCAL
-    )  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+    )  # Selvadurai (2019): Biot article --> Table 5., on Pahl et. al (1989)
     POISSON_RATIO = (
-        0.25  # Selvadurai (2019): Biot aritcle --> Table 5., on Pahl et. al (1989)
+        0.25  # Selvadurai (2019): Biot article --> Table 5., on Pahl et. al (1989)
     )
 
     FRICTION_COEFFICIENT = 0.8  # TEMPORARY: FRICTION COEFFICIENT TO 0.2
@@ -279,6 +280,8 @@ class MechanicsParameters(GeometryParameters):
     # See "numerics > contact_mechanics > contact_conditions.py > ColoumbContact"
     # for details on dilation angle
     dilation_angle: float = 0
+    # Cohesion (for numerical stability)
+    cohesion: float = 0.0
 
     # Parameters for Newton solver
     newton_options = {
@@ -307,13 +310,19 @@ class FlowParameters(GeometryParameters):
         "shearzone": "S1_2",
         "borehole": "INJ1",
     }
+    isc_data: Optional[ISCData] = ISCData()
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
     injection_protocol: InjectionRateProtocol = (
         InjectionRateProtocol.create_protocol([0.0, 1.0], [0.0])
     )
 
-    # Set transmissivity in fractures
+    # Set transmissivity in fractures. List in same order as shearzone_names
     frac_transmissivity: Union[float, List[float]] = 1
+
+    # Different transmissivity near injection point
+    # If radius is set to 0, this is not activated.
+    near_injection_transmissivity: float = 1
+    near_injection_t_radius: float = 0
 
     # Use constant density model (i.e. rho = 1000 kg/m3)
     # Otherwise, rho = rho0 * exp( c * (p - p0) )
@@ -323,26 +332,38 @@ class FlowParameters(GeometryParameters):
     # in 'Presentasjon til underveismøte' for details on relations between
     # aperture, transmissivity, permeability and hydraulic conductivity
 
-    @property
-    def initial_fracture_aperture(self) -> Union[Dict[str, float], None]:
-        """ Initial aperture, computed from initial transmissivity
+    def compute_initial_aperture(self, g: pp.Grid, shear_zone: str) -> np.ndarray:
+        """ Compute initial aperture"""
+        injection_shearzone = self.source_scalar_borehole_shearzone.get("shearzone")
 
-        Assumes uniform transmissivity in each shear zone
-        """
+        # First, get the background aperture.
+        aperture = np.ones(g.num_cells)
 
-        transmissivity: Union[float, List[float]] = self.frac_transmissivity
-        shear_zones: List = self.shearzone_names
-        if shear_zones:
-            n_sz = len(shear_zones)
-            if isinstance(transmissivity, (float, int)):
-                transmissivity = [transmissivity] * n_sz
-            assert len(transmissivity) == len(shear_zones)
-            initial_aperture = {
-                s: self.b_from_T(t) for s, t in zip(shear_zones, transmissivity)
-            }
-            return initial_aperture
+        # Set background aperture
+        background_aperture = self.initial_background_aperture(shear_zone)
+        aperture *= background_aperture
+
+        # Then, adjust for a heterogeneous permeability near the injection point
+        if self.near_injection_t_radius > 0 and shear_zone == injection_shearzone:
+            radius = self.near_injection_t_radius / self.length_scale
+            pts = shearzone_borehole_intersection(self)  # already scaled
+            cells = g.cell_centers.T
+            tree = spatial.cKDTree(cells)
+            inside_idx = tree.query_ball_point(pts.T, radius)[0]
+            aperture[inside_idx] = self.b_from_T(self.near_injection_transmissivity)
+
+        return aperture
+
+    def initial_background_aperture(self, shear_zone):
+        """ Compute initial fracture aperture for a given shear zone"""
+        frac_T: Union[float, List[float]] = self.frac_transmissivity
+        if isinstance(frac_T, (float, int)):
+            ft = frac_T
         else:
-            return None
+            # get the transmissivity corresponding to the shear zone name
+            # position in the shearzone_names list.
+            ft = frac_T[self.shearzone_names.index(shear_zone)]
+        return self.b_from_T(ft)
 
     @property
     def rho_g_over_mu(self):
@@ -385,7 +406,7 @@ class BiotParameters(FlowParameters, MechanicsParameters):
     """ Parameters for the Biot problem with contact mechanics"""
 
     # Selvadurai (2019): Biot aritcle --> Table 9., on Pahl et. al (1989), mean of aL, aU.
-    alpha: float = 0.57
+    alpha: float = 0.54
 
 
 # --- Flow injection cell taggers ---
@@ -471,13 +492,15 @@ def nd_sides_shearzone_injection_cell(
 
     # Set tags on the nd-grid
     nd_grid.tags["well_cells"] = nd_tags
-    gb.set_node_prop(nd_grid, "well", nd_tags)
+    ndd = gb.node_props(nd_grid)
+    pp.set_state(ndd, {"well": tags})
 
     if reset_frac_tags:
         # reset tags on the fracture
         zeros = np.zeros(fracture.num_cells)
         fracture.tags["well_cells"] = zeros
-        gb.set_node_prop(fracture, "well", zeros)
+        d = gb.node_props(fracture)
+        pp.set_state(d, {"well": zeros})
 
 
 def nd_and_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
@@ -531,7 +554,8 @@ def _tag_injection_cell(
     ids, dsts = g.closest_cell(pts, return_distance=True)
     tags[ids] = 1
     g.tags["well_cells"] = tags
-    gb.set_node_prop(g, "well", tags)
+    d = gb.node_props(g)
+    pp.set_state(d, {"well": tags})
 
     # Log information on the injection point
     logger.info(
@@ -542,11 +566,14 @@ def _tag_injection_cell(
 
 
 def _shearzone_borehole_intersection(
-    borehole: str, shearzone: str, length_scale: float
-):
+    borehole: str, shearzone: str, length_scale: float, isc_data=None,
+) -> np.ndarray:
     """ Find the cell which is the intersection of a borehole and a shear zone"""
     # Compute the intersections between boreholes and shear zones
-    df = ISCData().borehole_plane_intersection()
+    if isc_data is None:
+        df = ISCData().borehole_plane_intersection()
+    else:
+        df = isc_data.borehole_plane_intersection()
 
     # Get the UNSCALED coordinates of the borehole - shearzone intersection.
     _mask = (df.shearzone == shearzone) & (df.borehole == borehole)
@@ -555,17 +582,18 @@ def _shearzone_borehole_intersection(
         raise ValueError("No intersection found.")
 
     # Scale the intersection coordinates by length_scale. (scaled)
-    pts = result.to_numpy().T / length_scale
+    pts = result.to_numpy(dtype=float).T / length_scale
     assert pts.shape == (3, 1), "There should only be one intersection"
     return pts
 
 
-def shearzone_borehole_intersection(params: FlowParameters):
-    """ Wrapper to get intersection using FlowParameters class"""
+def shearzone_borehole_intersection(params: FlowParameters) -> np.ndarray:
+    """ Wrapper to get intersection using FlowParameters class. Return shape: (3,1)."""
     borehole = params.source_scalar_borehole_shearzone.get("borehole")
     shearzone = params.source_scalar_borehole_shearzone.get("shearzone")
     length_scale = params.length_scale
-    return _shearzone_borehole_intersection(borehole, shearzone, length_scale)
+    isc_data = params.isc_data
+    return _shearzone_borehole_intersection(borehole, shearzone, length_scale, isc_data)
 
 
 # --- other models ---

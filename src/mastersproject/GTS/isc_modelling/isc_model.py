@@ -109,7 +109,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         for g, d in self.gb:
             tags = np.zeros(g.num_cells)
             g.tags["well_cells"] = tags
-            pp.set_state(d, {"well": tags.copy()})
+            pp.set_state(d, {"well": tags})
 
         # Set injection cells
         if self.params.well_cells:
@@ -214,15 +214,31 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if g.dim == nd:
             return aperture
         elif g.dim == nd - 1:
-            shearzone = gb.node_props(g, "name")
-            aperture *= self.params.initial_fracture_aperture[shearzone]
+            shear_zone = gb.node_props(g, "name")
+            aperture *= self.params.compute_initial_aperture(g, shear_zone)
         elif g.dim == nd - 2:
+            # Compute initial intersection aperture by projecting apertures from master grids
+            # i.e. fractures. Then take the cell-by-cell maximum.
             master_grids = gb.node_neighbors(g, only_higher=True)
-            shearzones = [gb.node_props(g_h, "name") for g_h in master_grids]
-            apertures = [self.params.initial_fracture_aperture[sz] for sz in shearzones]
-            aperture *= np.max(apertures)
+            master_aps = [
+                self.compute_initial_aperture(g, scaled=scaled) for g in master_grids
+            ]
+            master_edges = [(g, g_h) for g_h in master_grids]
+            master_cell_faces = [g_h.cell_faces for g_h in master_grids]
+            mortar_grids = [gb.edge_props(edge)["mortar_grid"] for edge in master_edges]
+            projected_aps = [
+                mg.mortar_to_slave_int()
+                * mg.master_to_mortar_int()
+                * np.abs(cell_face)
+                * ap
+                for mg, ap, cell_face in zip(
+                    mortar_grids, master_aps, master_cell_faces
+                )
+            ]
+            apertures = np.vstack(projected_aps)
+            aperture *= np.max(apertures, axis=0)
         else:
-            raise ValueError("Not implemented 1d intersection points")
+            raise ValueError("Not implemented 0d intersection points")
 
         if scaled:
             aperture *= pp.METER / self.params.length_scale
@@ -273,15 +289,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             u_mortar_local = self.reconstruct_local_displacement_jump(
                 data, from_iterate=from_iterate,
             )
-            # Jump distances in each cell
-            normal_jump = np.abs(u_mortar_local[-1, :])
-            
-            # NOTE: The normal jump already includes the dilation!
-            # Slip induced dilation
-            #tangential_jump = np.linalg.norm(u_mortar_local[:-1, :], axis=0)
-            #dilation = np.tan(self.params.dilation_angle) * tangential_jump
-
-            aperture_contribution = normal_jump #+ dilation
+            # Jump distances in each cell (index, -1, extracts normal component)
+            aperture_contribution = np.abs(u_mortar_local[-1, :])
 
             # Mechanical aperture is scaled by default. "Upscale" if necessary.
             if not scaled:
@@ -542,7 +551,6 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 1
             ].kinv_scaling = True
 
-
     # --- MECHANICS ---
 
     def faces_to_fix(self, g: pp.Grid):
@@ -683,10 +691,16 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         super().set_mechanics_parameters()
         gb = self.gb
 
+        # Add a little cohesion for numerical stability
+        cohesion = self.params.cohesion / self.params.scalar_scale
+
         for g, d in gb:
             if g.dim == self.Nd - 1:
                 params: pp.Parameters = d[pp.PARAMETERS]
-                mech_params = {"dilation_angle": self.params.dilation_angle}
+                mech_params = {
+                    "dilation_angle": self.params.dilation_angle,
+                    "cohesion": cohesion,
+                }
                 params.update_dictionaries(
                     [self.mechanics_parameter_key], [mech_params],
                 )
@@ -716,12 +730,33 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         self.assembler.discretize(
             term_filter=["!grad_p", "!div_u", "!stabilization", "!mpsa"]
         )
+        # Report on cells sticking, sliding, etc.:
+        msg = "(Open,Sticking,Gliding)/Total: "
+        for g, d in self.gb:
+            if g.dim != self.Nd - 1:
+                continue
+            sz = d["name"]
+            iterate = d[pp.STATE][pp.ITERATE]
+            penetration = iterate["penetration"]
+            sliding = iterate["sliding"]
+            nsliding = np.sum(np.logical_and(sliding, penetration))
+            nsticking = np.sum(np.logical_and(np.logical_not(sliding), penetration))
+            nopen = np.sum(np.logical_not(penetration))
+            msg += f"{sz}: ({nopen}, {nsticking}, {nsliding})/{sliding.size}. "
+        logger.info(msg)
 
     def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
         super().after_newton_iteration(solution_vector)
         # Update Biot parameters using aperture from iterate
         # (i.e. displacements from iterate)
         self.set_biot_parameters()
+
+    def set_viz(self):
+        super().set_viz()
+
+        # Store well cells
+        # "well" state field defined by well_cells()
+        self.export_fields.extend(["well"])
 
     # -- For testing --
 

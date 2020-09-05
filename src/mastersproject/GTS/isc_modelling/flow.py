@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class Flow(CommonAbstractModel):
     """ General flow model for time-dependent Darcy Flow for fractured porous media"""
 
-    def __init__(self, params: BaseParameters):
+    def __init__(self, params: FlowParameters):
         """ General flow model for time-dependent Darcy Flow
 
         Parameters
@@ -26,6 +26,7 @@ class Flow(CommonAbstractModel):
         params : BaseParameters
         """
         super().__init__(params)
+        self.params = params
 
         # Time (must be kept for compatibility with pp.run_time_dependent_model)
         self.time = self.params.time
@@ -470,15 +471,27 @@ class Flow(CommonAbstractModel):
 
         self.p_exp = "p_exp"  # noqa
         self.aperture_exp = "aperture"  # noqa
+        self.transmissivity_exp = "transmissivity"  # noqa
 
-        self.export_fields.extend([self.p_exp, self.aperture_exp])
+        # fmt: off
+        self.export_fields.extend([
+            self.p_exp,
+            self.aperture_exp,
+            self.transmissivity_exp,
+        ])
+        # fmt: on
 
     def export_step(self, write_vtk=True):
-        """ Export a step with pressures """
+        """ Export a time step step with pressures, apertures and transmissivities"""
         super().export_step(write_vtk=False)
         for g, d in self.gb:
             state = d[pp.STATE]
-            state[self.aperture_exp] = self.aperture(g, scaled=False)
+            # Export aperture
+            aperture = self.aperture(g, scaled=False)
+            state[self.aperture_exp] = aperture
+            # Export transmissivity
+            transmissivity = self.params.T_from_b(aperture)
+            state[self.transmissivity_exp] = transmissivity
             # Export pressure variable
             if self.scalar_variable in state:
                 state[self.p_exp] = (
