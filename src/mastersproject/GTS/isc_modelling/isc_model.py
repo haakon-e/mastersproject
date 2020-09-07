@@ -751,12 +751,35 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # (i.e. displacements from iterate)
         self.set_biot_parameters()
 
+    # --- Exporting and visualization ---
+
+    def export_step(self, write_vtk=True):
+
+        # Export the pressure perturbation
+        for g, d in self.gb:
+            state = d[pp.STATE]
+            initial_pressure = self.hydrostatic_pressure(g, scaled=False)
+            if self.scalar_variable in state:
+                p = state[self.scalar_variable] * self.params.scalar_scale
+                p_perturb = p - initial_pressure
+                state[self.p_perturb] = p_perturb
+            else:
+                state[self.p_perturb] = np.zeros((self.Nd, g.num_cells))
+
+        # Export all other data
+        super().export_step(write_vtk=True)
+
     def set_viz(self):
         super().set_viz()
 
+        # Store pressure perturbation
+        self.p_perturb = "p_perturb"  # noqa
+
         # Store well cells
         # "well" state field defined by well_cells()
-        self.export_fields.extend(["well"])
+        self.export_fields.extend(
+            ["well", self.p_perturb,]
+        )
 
     # -- For testing --
 
