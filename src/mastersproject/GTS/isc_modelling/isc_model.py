@@ -145,7 +145,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         d = self.gb.node_props(g)
 
         # For reference values, see: Berre et al. (2018):
-        # Three-dimensional numberical modelling of fracture
+        # Three-dimensional numerical modelling of fracture
         # reactivation due to fluid injection in geothermal reservoirs
         rho0 = 1014 * np.ones(g.num_cells) * (pp.KILOGRAM / pp.METER ** 3)
         p0 = 1 * pp.ATMOSPHERIC_PRESSURE
@@ -457,7 +457,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if params.gravity:
             depth = self.depth(g.cell_centers)
         else:
-            depth = np.zeros(g.num_cells)
+            depth = self.depth(np.zeros(g.num_cells))
         hydrostatic = params.fluid.hydrostatic_pressure(depth)
         if scaled:
             hydrostatic /= params.scalar_scale
@@ -764,7 +764,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 p_perturb = p - initial_pressure
                 state[self.p_perturb] = p_perturb
             else:
-                state[self.p_perturb] = np.zeros((self.Nd, g.num_cells))
+                state[self.p_perturb] = np.zeros(g.num_cells)
 
         # Export all other data
         super().export_step(write_vtk=True)
