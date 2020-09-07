@@ -655,6 +655,7 @@ class Mechanics(CommonAbstractModel):
                 self.traction_exp,
                 self.normal_frac_u,
                 self.tangential_frac_u,
+                self.fracture_state,
                 # Cannot save variables that are defined on faces:
                 # self.stress_exp,
             ]
@@ -680,16 +681,19 @@ class Mechanics(CommonAbstractModel):
         gb = self.gb
         for g, d in gb:
             state = d[pp.STATE]
-            iterate = state[pp.ITERATE]
-            penetration = iterate["penetration"]
-            sliding = iterate["sliding"]
-            _sliding = np.logical_and(sliding, penetration)
-            _sticking = np.logical_and(np.logical_not(sliding), penetration)
-            _open = np.logical_not(penetration)
-            fracture_state = np.zeros(g.num_cells)
-            fracture_state[_open] = 0
-            fracture_state[_sticking] = 1
-            fracture_state[_sliding] = 2
+            if g.dim == self.Nd - 1:
+                iterate = state[pp.ITERATE]
+                penetration = iterate["penetration"]
+                sliding = iterate["sliding"]
+                _sliding = np.logical_and(sliding, penetration)
+                _sticking = np.logical_and(np.logical_not(sliding), penetration)
+                _open = np.logical_not(penetration)
+                fracture_state = np.zeros(g.num_cells)
+                fracture_state[_open] = 0
+                fracture_state[_sticking] = 1
+                fracture_state[_sliding] = 2
+            else:
+                fracture_state = np.zeros(g.num_cells)
             state[self.fracture_state] = fracture_state
 
     def save_frac_jump_data(self, from_iterate: bool = False) -> None:
