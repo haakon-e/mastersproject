@@ -24,8 +24,9 @@ def prepare_params(
     injection_protocol, time_params = isc_dt_and_injection_protocol()
 
     newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=200,)
-    base = Path.home() / "mastersproject-data"
-    head = "5frac/initialization"
+    base = Path.home() / "mastersproject-data/hs1"
+    #head = "test-biot-effects/4frac-dt10min-nograv-nodil-coarse-k_1e-20"
+    head = "4frac-dt10min-nograv-3degdil"
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -34,9 +35,9 @@ def prepare_params(
         head=head,
         time_step=time_params.initial_time_step,
         end_time=time_params.end_time,
-        gravity=True,
+        gravity=False,
         # GeometryParameters
-        shearzone_names=["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],  # ["S1_2", "S3_1"],
+        shearzone_names=["S1_1", "S1_2", "S1_3", "S3_1"],  # "S3_2"],  # ["S1_2", "S3_1"],
         # MechanicsParameters
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
@@ -44,7 +45,7 @@ def prepare_params(
         source_scalar_borehole_shearzone={"shearzone": "S1_3", "borehole": "INJ2",},
         well_cells=shearzone_injection_cell,
         injection_protocol=injection_protocol,
-        frac_transmissivity=[5e-8, 1e-9, 5e-10, 3.7e-7, 1e-9],  # [1e-9, 3.7e-7],
+        frac_transmissivity= [5e-8, 1e-9, 5e-12, 3.7e-7, 1e-9],  # set background s13 T artificially low. 
         # Initial transmissivites for
         # ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]:
         # [5e-8,   1e-9,   5e-10,  3.7e-7, 1e-9]
@@ -56,14 +57,21 @@ def prepare_params(
     return biot_params, newton_params, time_params
 
 
-def box_validation():
+def box_runscript(run=True):
     biot_params, newton_params, time_params = prepare_params(
         length_scale=0.04, scalar_scale=1e8,
     )
-    setup = ISCBoxModel(biot_params, lcin=5 * 2, lcout=50 * 2)
+    # *2 gives ~25kc on 4fracs.
+    # l=0.3, lcin 5*5*l, lcout 50*10*l
+    # lcin = 5*10 lcout = 50*20
+    
+    # For 4frac setups:
+    # lcin=5*1.4, lcout=50*1.4 --> 44k*3d + 5k*2d + 50*1d
+    setup = ISCBoxModel(biot_params, lcin=5*1.4, lcout=50*1.4)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
-
-    time_machine.run_simulation()
+    
+    if run:
+        time_machine.run_simulation()
     return time_machine
 
 
@@ -90,10 +98,11 @@ def isc_dt_and_injection_protocol():
         2 * _10min,
         3 * _10min,
         4 * _10min,
-        7 * _10min,
+        8 * _10min,
     ]
     rates = [
         0,
+        #17.5,
         10,
         15,
         20,
@@ -105,11 +114,11 @@ def isc_dt_and_injection_protocol():
 
     time_steps = [
         initialization_time / 2,
-        _1min,
-        _1min,
-        _1min,
-        _1min,
-        3 * _1min,
+        10 * _1min,
+        10 * _1min,
+        10 * _1min,
+        10 * _1min,
+        40 * _1min,
     ]
     time_step_protocol = TimeStepProtocol.create_protocol(phase_limits, time_steps)
 
