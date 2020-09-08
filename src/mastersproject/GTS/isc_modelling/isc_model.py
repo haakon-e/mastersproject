@@ -119,6 +119,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         """ Unscaled depth. We center the domain at 480m below the surface.
         (See Krietsch et al, 2018a)
         """
+        assert np.atleast_2d(coords).shape[0] == self.Nd
         return 480.0 * pp.METER - self.params.length_scale * coords[2]
 
     # ---- FLOW -----
@@ -457,7 +458,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if params.gravity:
             depth = self.depth(g.cell_centers)
         else:
-            depth = self.depth(np.zeros(g.num_cells))
+            depth = self.depth(np.zeros((self.Nd, g.num_cells)))
         hydrostatic = params.fluid.hydrostatic_pressure(depth)
         if scaled:
             hydrostatic /= params.scalar_scale
