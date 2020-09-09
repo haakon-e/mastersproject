@@ -39,7 +39,9 @@ class InjectionRatePhase(AbstractPhase):
     # current and the next step. So if we hit a boundary value,
     # we should pick the *LEFT* value.
     #   I.e.: tL <= T < tR
-    tol: float = 1e-9
+    tol: float = 1.0
+
+    # ^^ time steps are on the order of minutes, so tol can be 1.0
 
 
 class TimeStepPhase(AbstractPhase):
@@ -52,7 +54,9 @@ class TimeStepPhase(AbstractPhase):
     # *RIGHT* value.
     #   I.e.: tL < T <= tR
     # Thus we set the tolerance < 0.
-    tol: float = -1e-9
+    tol: float = -1.0
+
+    # ^^ time steps are on the order of minutes, so tol can be -1.0
 
 
 # --- Protocols ---
