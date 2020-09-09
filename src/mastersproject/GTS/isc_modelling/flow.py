@@ -411,6 +411,9 @@ class Flow(CommonAbstractModel):
                 f"(absolute error is {difference_in_iterates_scalar:.4e})"
             )
 
+        if difference_in_iterates_scalar > 1e+30:
+            diverged = True
+
         if not converged:
             logger.info(f"Scalar pressure did not converge.")
 
