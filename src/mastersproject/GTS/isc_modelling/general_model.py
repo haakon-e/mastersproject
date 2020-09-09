@@ -138,11 +138,19 @@ class CommonAbstractModel(AbstractModel):
                 "Convergence check for non-linear problems is not yet implemented"
             )
 
+    def assemble_matrix_rhs(self):
+        """ Wrapper for assembler.assemble_matrix_rhs
+
+        Wrap the assembler method so it can be overwritten elsewhere.
+        """
+        A, b = self.assembler.assemble_matrix_rhs()
+        return A, b
+
     @timer(logger, level="INFO")
     def assemble_and_solve_linear_system(self, tol: float) -> np.ndarray:
         """ Assemble a solve the linear system"""
 
-        A, b = self.assembler.assemble_matrix_rhs()  # noqa
+        A, b = self.assemble_matrix_rhs()
 
         # Estimate condition number
         logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")

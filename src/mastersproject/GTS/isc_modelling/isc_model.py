@@ -5,7 +5,7 @@ from typing import Dict
 import numpy as np
 
 import porepy as pp
-from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotBase
+from GTS import ContactMechanicsBiotBase
 from GTS.isc_modelling.ISCGrid import create_grid
 from GTS.isc_modelling.parameter import BiotParameters
 from mastersproject.util.logging_util import timer, trace
@@ -480,17 +480,6 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             initial_scalar_value = self.hydrostatic_pressure(g, scaled=True)
             d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
 
-    def source_scalar_pressure(self, pressure):
-        """ Pressure-controlled injection"""
-        # TODO: Implement implicit pressure-controlled injection
-        for g, d in self.gb:
-            wells = g.tags["well_cells"]
-            if np.sum(np.abs(wells)) > 0:
-                pass
-                # dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
-                # loc = np.where(wells != 0)[0]
-                # glob_ind = dof_ind[loc]
-
     def bc_values_scalar(self, g) -> np.array:
         """ Hydrostatic pressure on the boundaries if gravity is set"""
         params = self.params
@@ -511,6 +500,107 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             params.fluid.hydrostatic_pressure(depth) / params.scalar_scale
         )
         return bc_values
+
+    # --- Constant pressure in tunnel cells ---
+
+    def assemble_matrix_rhs(self):
+        """ Modify global assembly to get constant pressure in tunnels"""
+        A, b = self.assembler.assemble_matrix_rhs(matrix_format="csr")
+
+        # Start of tunnel equilibration
+        if self.time > -self.params.tunnel_equilibrium_time:
+            pressure = self.params.tunnel_pressure * (
+                pp.PASCAL / self.params.scalar_scale
+            )
+            rows_to_zero = self.inds_tunnel_scalar()
+            # Modify global matrix and rhs
+            self.csr_zero_rows(A, rows_to_zero)
+            for glob_ind in rows_to_zero:
+                A[glob_ind, glob_ind] = 1
+                b[glob_ind] = pressure
+
+        return A, b
+
+    def inds_tunnel_scalar(self):
+        """ Find scalar indices to zero out corresponding to tunnel cells"""
+        glob_inds = []
+        for g, d in self.gb:
+            tunnels = g.tags["tunnel_cells"]  # type: np.ndarray[bool]
+            if np.any(tunnels):
+                dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
+                glob_ind = dof_ind[tunnels]
+                glob_inds.append(glob_ind)
+        rows_to_zero = np.hstack(glob_inds)
+        return rows_to_zero
+
+    def csr_zero_rows(self, csr, rows_to_zero):
+        """ Efficient way to set csr sparse matrix row to zero.
+
+        https://stackoverflow.com/questions/19784868/
+        what-is-most-efficient-way-of-setting-row-to-zeros-for-a-sparse-scipy-matrix/
+        19800305#19800305 """
+        rows, cols = csr.shape
+        mask = np.ones((rows,), dtype=np.bool)
+        mask[rows_to_zero] = False
+        nnz_per_row = np.diff(csr.indptr)
+
+        mask = np.repeat(mask, nnz_per_row)
+        nnz_per_row[rows_to_zero] = 0
+        csr.data = csr.data[mask]
+        csr.indices = csr.indices[mask]
+        csr.indptr[1:] = np.cumsum(nnz_per_row)
+
+    def tag_tunnel_cells(self):
+        """ Tag tunnel-shearzone intersections
+
+        Compute the nearest cell for each shear zone that intersects each of the
+        tunnels.
+
+        tunnel_sz is the following table:
+
+            borehole   x_gts    y_gts   z_gts shearzone
+        591       AU  72.625  125.321  33.436      S1_1
+        592       VE   9.735   88.360  35.419      S1_1
+        593       AU  74.565  135.311  33.858      S1_2
+        594       VE  10.917   95.617  34.431      S1_2
+        595       AU  74.839  143.317  33.611      S1_3
+        596       VE  18.560  107.674  34.916      S1_3
+        597       AU  72.094  106.617  32.813      S3_1
+        598       VE  22.420  113.208  33.608      S3_1
+        599       AU  72.185  110.025  33.639      S3_2
+        600       VE  25.125  118.238  33.762      S3_2
+        """
+        tunnel_cells_key = "tunnel_cells"
+        shearzones = self.params.shearzone_names
+        tunnels = ["AU", "VE"]
+        # Fetch tunnel-shearzone intersections
+        isc_data = self.params.isc_data
+        df = isc_data.structures
+        _mask = df["borehole"].isin(tunnels) & df["shearzone"].isin(shearzones)
+        t_sz = df[_mask]
+        keepcols = ["borehole", "x_gts", "y_gts", "z_gts", "shearzone"]
+        tunnel_sz = t_sz[keepcols].reset_index(drop=True)
+
+        gb = self.gb
+        for g, d in gb:
+            g.tags[tunnel_cells_key] = np.zeros(g.num_cells, dtype=bool)
+            pp.set_state(d, {tunnel_cells_key: np.zeros(g.num_cells, dtype=bool)})
+
+        def _tag_intersection_cell(row):
+            _coord = (
+                row[["x_gts", "y_gts", "z_gts"]].to_numpy(dtype=float).reshape((3, -1))
+            )
+            coord = _coord * (pp.METER / self.params.length_scale)
+            shearzone = row["shearzone"]
+            grid: pp.Grid = self.grids_by_name(shearzone)[0]
+            data = gb.node_props(grid)
+            tags = np.zeros(grid.num_cells, dtype=bool)
+            ids, dsts = grid.closest_cell(coord, return_distance=True)
+            tags[ids] = True
+            grid.tags[tunnel_cells_key] |= tags
+            data[pp.STATE][tunnel_cells_key] |= tags
+
+        tunnel_sz.apply(_tag_intersection_cell, axis=1)
 
     # --- Set flow parameters ---
 
@@ -715,6 +805,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if self.gb is None:
             super()._prepare_grid()
         self.well_cells()  # tag well cells
+        self.tag_tunnel_cells()  # tag tunnel cells
 
     @timer(logger, level="INFO")
     def before_newton_iteration(self) -> None:
@@ -776,10 +867,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # Store pressure perturbation
         self.p_perturb = "p_perturb"  # noqa
 
-        # Store well cells
+        # Store well cells and tunnel cells
         # "well" state field defined by well_cells()
+        # "tunnel_cells" state field defined by tag_tunnel_cells()
         self.export_fields.extend(
-            ["well", self.p_perturb,]
+            ["well", "tunnel_cells", self.p_perturb,]
         )
 
     # -- For testing --

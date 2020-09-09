@@ -31,7 +31,7 @@ class ISCBoxModel(ISCBiotContactMechanics):
     # --- Grid methods ---
 
     @timer(logger, "INFO")
-    def create_grid(self):
+    def create_grid(self, n_optimize=2, use_logger=True):
         """ Create GridBucket from fracture box model"""
         gb = create_grid(
             path=self.params.folder_name,
@@ -39,7 +39,8 @@ class ISCBoxModel(ISCBiotContactMechanics):
             shearzones=self.params.shearzone_names,
             lcin=self.lcin,
             lcout=self.lcout,
-            n_optimize_netgen=2,
+            n_optimize_netgen=n_optimize,
+            use_logger=use_logger,
         )
         self._gb = gb
         self.bounding_box = gb.bounding_box(as_dict=True)
@@ -71,6 +72,7 @@ def create_grid(
     n_optimize_netgen: int = 1,
     verbose: bool = False,
     run_gmsh_gui: bool = False,
+    use_logger: bool = True,
 ) -> pp.GridBucket:
     """ Create the ISC domain using the box model method
 
@@ -91,6 +93,8 @@ def create_grid(
         For debugging purposes: report on gmsh tags.
     run_gmsh_gui : bool
         For debugging purposes: display the mesh in gmsh gui.
+    use_logger : bool
+        Show output of grid generation log
     """
     if path is None:
         tempdir: bool = True
@@ -115,9 +119,10 @@ def create_grid(
     # --- Initialize gmsh ----------------------------------------------------------------------------------------------
 
     gmsh.initialize()
-    gmsh.option.setNumber("General.Terminal", 1)
     gmsh.model.add("isc-geometry")
-    gmsh.logger.start()
+    if use_logger:
+        gmsh.option.setNumber("General.Terminal", 1)
+        gmsh.logger.start()
     kernel = gmsh.model.occ
     # Ask OpenCASCADE to compute more accurate bounding boxes of entities using the STL mesh:
     gmsh.option.setNumber("Geometry.OCCBoundsUseStl", 1)
@@ -351,6 +356,8 @@ def create_grid(
     if run_gmsh_gui:
         gmsh.fltk.run()
 
+    if use_logger:
+        gmsh.logger.stop()
     gmsh.finalize()
 
     # Tag each grid with the shear zone name

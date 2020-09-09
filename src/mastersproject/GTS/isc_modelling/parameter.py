@@ -316,6 +316,13 @@ class FlowParameters(GeometryParameters):
         InjectionRateProtocol.create_protocol([0.0, 1.0], [0.0])
     )
 
+    # Set constant pressure value in tunnel - shear zone intersections
+    # See e.g. assemble_matrix_rhs() in isc_model.py
+    tunnel_pressure: float = pp.ATMOSPHERIC_PRESSURE
+    # Set time for tunnel equilibration
+    # NOTE: To "turn off" this effect, set value to a negative value larger than end_time.
+    tunnel_equilibrium_time: float = 30 * pp.YEAR
+
     # Set transmissivity in fractures. List in same order as shearzone_names
     frac_transmissivity: Union[float, List[float]] = 1
 
