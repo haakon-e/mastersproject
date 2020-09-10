@@ -21,12 +21,15 @@ def prepare_params(
 
     HS1 targeted S1.3 through INJ2 at 39.75 - 40.75 m.
     """
-    injection_protocol, time_params = isc_dt_and_injection_protocol()
+    tunnel_equilibration_time = 30 * pp.YEAR
+    injection_protocol, time_params = isc_dt_and_injection_protocol(
+        tunnel_equilibration_time
+    )
 
     newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=200,)
     base = Path.home() / "mastersproject-data/hs1"
-    #head = "test-biot-effects/4frac-dt10min-nograv-nodil-coarse-k_1e-20"
-    head = "4frac-dt10min-nograv-3degdil"
+    # head = "test-biot-effects/4frac-dt10min-nograv-nodil-coarse-k_1e-20"
+    head = "4f-dt10m-nograv-3degdil"
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -37,21 +40,33 @@ def prepare_params(
         end_time=time_params.end_time,
         gravity=False,
         # GeometryParameters
-        shearzone_names=["S1_1", "S1_2", "S1_3", "S3_1"],  # "S3_2"],  # ["S1_2", "S3_1"],
+        shearzone_names=[
+            "S1_1",
+            "S1_2",
+            "S1_3",
+            "S3_1",
+        ],  # "S3_2"],  # ["S1_2", "S3_1"],
         # MechanicsParameters
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
         # FlowParameters
         source_scalar_borehole_shearzone={"shearzone": "S1_3", "borehole": "INJ2",},
         well_cells=shearzone_injection_cell,
+        tunnel_equilibrium_time=tunnel_equilibration_time,
         injection_protocol=injection_protocol,
-        frac_transmissivity= [5e-8, 1e-9, 5e-12, 3.7e-7, 1e-9],  # set background s13 T artificially low. 
+        frac_transmissivity=[
+            5e-8,
+            1e-9,
+            8.3e-11,  # Pre-stimulation T during HS1, observed in S1.3-INJ2.
+            3.7e-7,
+            1e-9,
+        ],
         # Initial transmissivites for
         # ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]:
         # [5e-8,   1e-9,   5e-10,  3.7e-7, 1e-9]
         # Note background hydraulic conductivity: 1e-14 m/s
-        near_injection_transmissivity=8.3e-11,
-        near_injection_t_radius=3,
+        # near_injection_transmissivity=8.3e-11,
+        # near_injection_t_radius=3,
     )
 
     return biot_params, newton_params, time_params
@@ -64,18 +79,18 @@ def box_runscript(run=True):
     # *2 gives ~25kc on 4fracs.
     # l=0.3, lcin 5*5*l, lcout 50*10*l
     # lcin = 5*10 lcout = 50*20
-    
+
     # For 4frac setups:
     # lcin=5*1.4, lcout=50*1.4 --> 44k*3d + 5k*2d + 50*1d
-    setup = ISCBoxModel(biot_params, lcin=5*1.4, lcout=50*1.4)
+    setup = ISCBoxModel(biot_params, lcin=5 * 4, lcout=50 * 4)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
-    
+
     if run:
         time_machine.run_simulation()
     return time_machine
 
 
-def isc_dt_and_injection_protocol():
+def isc_dt_and_injection_protocol(tunnel_time: float):
     """ Stimulation protocol for the rate-controlled phase of the ISC experiment
 
     Here, we consider Doetsch et al (2018) [see e.g. p. 78/79 or App. J]
@@ -87,12 +102,19 @@ def isc_dt_and_injection_protocol():
                 - Venting was foreseen at 20 minutes
 
             For this setup, we only consider Injection Cycle 3.
+
+    Parameters
+    ----------
+        tunnel_time : float
+            AU, VE tunnels were constructed 30 years ago.
     """
+    assert tunnel_time > 0
     _1min = pp.MINUTE
     _10min = 10 * _1min
     initialization_time = 30e3 * pp.YEAR
     phase_limits = [
         -initialization_time,
+        -tunnel_time,
         0,
         _10min,
         2 * _10min,
@@ -102,7 +124,8 @@ def isc_dt_and_injection_protocol():
     ]
     rates = [
         0,
-        #17.5,
+        0,
+        # 17.5,
         10,
         15,
         20,
@@ -114,6 +137,7 @@ def isc_dt_and_injection_protocol():
 
     time_steps = [
         initialization_time / 2,
+        tunnel_time / 2,
         10 * _1min,
         10 * _1min,
         10 * _1min,
