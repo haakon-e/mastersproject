@@ -46,6 +46,14 @@ def prepare_params(
             "S1_3",
             "S3_1",
         ],  # "S3_2"],  # ["S1_2", "S3_1"],
+        fraczone_bounding_box={
+            "xmin": -1,
+            "ymin": 80,
+            "zmin": -5,
+            "xmax": 86,
+            "ymax": 151,
+            "zmax": 41,
+        },
         # MechanicsParameters
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),

@@ -260,6 +260,8 @@ class GeometryParameters(BaseParameters):
         "zmin": -100,
         "zmax": 200,
     }
+    # Set bounding box for fractured zone (only applicable for isc_box_model).
+    fraczone_bounding_box: Optional[Dict[str, float]] = None
 
     _sz = 20
     mesh_args: Optional[Dict[str, float]] = {

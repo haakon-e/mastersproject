@@ -39,6 +39,7 @@ class ISCBoxModel(ISCBiotContactMechanics):
             shearzones=self.params.shearzone_names,
             lcin=self.lcin,
             lcout=self.lcout,
+            fraczone_bounding_box=self.params.fraczone_bounding_box,
             n_optimize_netgen=n_optimize,
             use_logger=use_logger,
         )
@@ -69,6 +70,7 @@ def create_grid(
     shearzones: Union[str, List[str]] = "all",
     lcin: float = 5,
     lcout: float = 50,
+    fraczone_bounding_box: dict = None,
     n_optimize_netgen: int = 1,
     verbose: bool = False,
     run_gmsh_gui: bool = False,
@@ -87,6 +89,8 @@ def create_grid(
         Which shearzones to mesh
     lcin, lcout : float
         mesh size parameters within, and outside the fractured zone, respectively
+    fraczone_bounding_box : dict
+        dictionary of 'xmin', 'ymin', 'zmin', 'xmax', 'ymax', 'zmax'
     n_optimize_netgen : int
         number of times to optimize with the Netgen optimizer
     verbose : bool
@@ -128,14 +132,14 @@ def create_grid(
     gmsh.option.setNumber("Geometry.OCCBoundsUseStl", 1)
 
     # Make bounding box for fractured zone
-    xmin, ymin, zmin, xmax, ymax, zmax = (
-        -1 / ls,
-        80 / ls,
-        -5 / ls,
-        86 / ls,
-        151 / ls,
-        41 / ls,
-    )
+    fraczone_bounding_box = fraczone_bounding_box or {}
+    xmin: float = fraczone_bounding_box.get("xmin") / ls
+    ymin: float = fraczone_bounding_box.get("ymin") / ls
+    zmin: float = fraczone_bounding_box.get("zmin") / ls
+    xmax: float = fraczone_bounding_box.get("xmax") / ls
+    ymax: float = fraczone_bounding_box.get("ymax") / ls
+    zmax: float = fraczone_bounding_box.get("zmax") / ls
+
     dx = xmax - xmin
     dy = ymax - ymin
     dz = zmax - zmin
