@@ -7,7 +7,7 @@ import numpy as np
 
 from GTS import BiotParameters
 from GTS.isc_modelling.isc_box_model import ISCBoxModel
-from GTS.isc_modelling.parameter import shearzone_injection_cell
+from GTS.isc_modelling.parameter import shearzone_injection_cell, GrimselGranodiorite
 from GTS.time_machine import NewtonParameters, TimeMachinePhasesConstantDt
 from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
 
@@ -26,10 +26,10 @@ def prepare_params(
         tunnel_equilibration_time
     )
 
-    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=200,)
+    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=300,)
     base = Path.home() / "mastersproject-data/hs1"
     # head = "test-biot-effects/4frac-dt10min-nograv-nodil-coarse-k_1e-20"
-    head = "4f-dt10m-nograv-3degdil"
+    head = "final/new-protocol/test/4f-nograv-3degdil-dt2.5min"  # _extended_fraczone__high_k"
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -38,6 +38,9 @@ def prepare_params(
         head=head,
         time_step=time_params.initial_time_step,
         end_time=time_params.end_time,
+        rock = GrimselGranodiorite(
+            PERMEABILITY=5e-21,  # low k: 5e-21 -- high k: 2 * 5e-21
+        ),
         gravity=False,
         # GeometryParameters
         shearzone_names=[
@@ -49,10 +52,10 @@ def prepare_params(
         fraczone_bounding_box={
             "xmin": -1,
             "ymin": 80,
-            "zmin": -5,
-            "xmax": 86,
-            "ymax": 151,
-            "zmax": 41,
+            "zmin": -5,   # -5, # Extended frac zone boundary box test
+            "xmax": 86,   # +10,
+            "ymax": 151,  # +5,
+            "zmax": 41,   # +5,
         },
         # MechanicsParameters
         dilation_angle=np.radians(3),
@@ -67,7 +70,7 @@ def prepare_params(
             1e-9,
             8.3e-11,  # Pre-stimulation T during HS1, observed in S1.3-INJ2.
             3.7e-7,
-            1e-9,
+            # 1e-9,
         ],
         # Initial transmissivites for
         # ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]:
@@ -90,7 +93,11 @@ def box_runscript(run=True):
 
     # For 4frac setups:
     # lcin=5*1.4, lcout=50*1.4 --> 44k*3d + 5k*2d + 50*1d
-    setup = ISCBoxModel(biot_params, lcin=5 * 4, lcout=50 * 4)
+    # lcin=5*10.3, lcout=50*10.4 --> 3k*3d + 200*2d + 9*1d
+    # lcin=5*5.4, lcout=50*5.4 --> 6k*3d + 500*2d + 15*1d
+    # lcin=5*3, lcout=50*3 --> 12k*3d + 1.2k*2d + 27*1d
+    # lcin=5*2, lcout=50*2 --> 22k*3d, 2.5k*2d + 39*1d
+    setup = ISCBoxModel(biot_params, lcin=5*2, lcout=50*2)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     if run:
@@ -118,27 +125,31 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
     """
     assert tunnel_time > 0
     _1min = pp.MINUTE
+    _5min = 5 * _1min
     _10min = 10 * _1min
     initialization_time = 30e3 * pp.YEAR
     phase_limits = [
         -initialization_time,
         -tunnel_time,
         0,
-        _10min,
-        2 * _10min,
-        3 * _10min,
-        4 * _10min,
-        8 * _10min,
+        1 * _5min,    # 5 min
+        2 * _5min,    # 5 min
+        3 * _5min,    # 5 min
+        4 * _5min,    # 5 min
+        7 * _5min,    # 15 min
+        81 * _1min,   # 46 min
+        11 * _10min,  # 29 min
     ]
     rates = [
-        0,
-        0,
-        # 17.5,
-        10,
-        15,
-        20,
-        25,
-        0,
+        0,   # initialization
+        0,   # tunnel calibration
+        15,  # C3, step 1
+        20,  # C3, step 2
+        25,  # C3, step 3
+        30,  # C3, step 4
+        35,  # C3, step 5
+        0,   # shut-in
+        0,   # venting (currently modelled as: shut-in)
     ]
     rates = [r / 60 for r in rates]  # Convert to litres / second
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
@@ -146,11 +157,13 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
     time_steps = [
         initialization_time / 2,
         tunnel_time / 2,
+        5 * _1min,  # try longer first injection step
+        2.5 * _1min,
+        2.5 * _1min,
+        2.5 * _1min,
+        2.5 * _1min,
         10 * _1min,
         10 * _1min,
-        10 * _1min,
-        10 * _1min,
-        40 * _1min,
     ]
     time_step_protocol = TimeStepProtocol.create_protocol(phase_limits, time_steps)
 
