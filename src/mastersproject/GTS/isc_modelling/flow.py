@@ -473,16 +473,26 @@ class Flow(CommonAbstractModel):
         self.export_times = []  # noqa
 
         self.p_exp = "p_exp"  # noqa
+        self.p_perturbation = "p_perturb_from_t0"  # noqa
         self.aperture_exp = "aperture"  # noqa
         self.transmissivity_exp = "transmissivity"  # noqa
 
         # fmt: off
         self.export_fields.extend([
             self.p_exp,
+            self.p_perturbation,
             self.aperture_exp,
             self.transmissivity_exp,
         ])
         # fmt: on
+
+    def export_pressure_perturbation(self, d: dict):
+        """ Export pressure perturbation relative to pressure at t=0"""
+        p = d[pp.STATE][self.scalar_variable]
+        if np.isclose(self.time, 0):
+            d[pp.STATE]["p_ref"] = np.copy(p)
+        p_ref = d[pp.STATE].get("p_ref", np.zeros_like(p))
+        return (p - p_ref) * self.params.scalar_scale
 
     def export_step(self, write_vtk=True):
         """ Export a time step step with pressures, apertures and transmissivities"""
@@ -502,6 +512,9 @@ class Flow(CommonAbstractModel):
                 )
             else:
                 state[self.p_exp] = np.zeros((self.Nd, g.num_cells))
+
+            # Export pressure perturbation
+            state[self.p_perturbation] = self.export_pressure_perturbation(d)
 
         if write_vtk:
             self.viz.write_vtk(
