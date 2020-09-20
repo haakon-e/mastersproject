@@ -648,6 +648,9 @@ class Mechanics(CommonAbstractModel):
         self.tangential_frac_u = "tangential_frac_u"  # noqa
         self.stress_exp = "stress_exp"  # noqa
         self.fracture_state = "fracture_state"  # noqa
+        self.tangential_frac_traction = "tangential_frac_traction"  # noqa
+        self.normal_frac_traction = "normal_frac_traction"  # noqa
+        self.slip_tendency = "slip_tendency"  # noqa
 
         self.export_fields.extend(
             [
@@ -656,6 +659,9 @@ class Mechanics(CommonAbstractModel):
                 self.normal_frac_u,
                 self.tangential_frac_u,
                 self.fracture_state,
+                self.tangential_frac_traction,
+                self.normal_frac_traction,
+                self.slip_tendency,
                 # Cannot save variables that are defined on faces:
                 # self.stress_exp,
             ]
@@ -765,15 +771,33 @@ class Mechanics(CommonAbstractModel):
         var_contact = self.contact_traction_variable
         ls = self.params.length_scale
         ss = self.params.scalar_scale
+        scale = ss * (ls ** 2)
 
         for g, d in gb:
             state = d[pp.STATE]  # type: Dict[str, np.ndarray]
             if g.dim == self.Nd - 1:
+                # Traction is already in local coordinates.
                 traction = state[var_contact].reshape((self.Nd, -1), order="F")
-                traction_exp = traction * ss * (ls ** 2)
+                traction_exp = traction * scale
+                # Extract norms of normal and tangential components
+                tangential_traction_exp = np.linalg.norm(traction_exp[:-1, :], axis=0)
+                normal_traction_exp = np.abs(traction_exp[-1, :])
+
             else:
                 traction_exp = np.zeros((self.Nd, g.num_cells))
+                tangential_traction_exp = np.zeros(g.num_cells)
+                normal_traction_exp = np.zeros(g.num_cells)
             state[self.traction_exp] = traction_exp
+            state[self.tangential_frac_traction] = tangential_traction_exp
+            state[self.normal_frac_traction] = normal_traction_exp
+            slip_tendency = np.divide(
+                tangential_traction_exp,
+                normal_traction_exp,
+                out=np.zeros_like(tangential_traction_exp),
+                where=normal_traction_exp != 0,
+            )
+
+            state[self.slip_tendency] = slip_tendency
 
     def export_step(self, write_vtk: bool = True) -> None:
         """ Export a visualization step"""
