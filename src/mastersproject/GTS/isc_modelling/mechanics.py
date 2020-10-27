@@ -651,6 +651,7 @@ class Mechanics(CommonAbstractModel):
         self.tangential_frac_traction = "tangential_frac_traction"  # noqa
         self.normal_frac_traction = "normal_frac_traction"  # noqa
         self.slip_tendency = "slip_tendency"  # noqa
+        self.cell_volumes = "cell_volumes" # noqa
 
         self.export_fields.extend(
             [
@@ -662,6 +663,7 @@ class Mechanics(CommonAbstractModel):
                 self.tangential_frac_traction,
                 self.normal_frac_traction,
                 self.slip_tendency,
+                self.cell_volumes,
                 # Cannot save variables that are defined on faces:
                 # self.stress_exp,
             ]
@@ -807,6 +809,11 @@ class Mechanics(CommonAbstractModel):
         self.save_contact_traction()
         self.save_matrix_stress()
         self.save_fracture_cell_state()
+
+        # Export cell volumes
+        for g, d in self.gb:
+            volume_scale = self.params.length_scale ** self.Nd
+            d[pp.STATE][self.cell_volumes] = g.cell_volumes * volume_scale
 
         if write_vtk:
             self.viz.write_vtk(data=self.export_fields, time_dependent=False)
