@@ -3,7 +3,7 @@ Master of Science Thesis in Applied and Computational Mathematics
 
 Link to thesis [coming]
 
-To run the code, clone the repository and add the `GTS` folder to importable modules.
+To run the code, clone the repository, install all dependencies, and add the `GTS` folder to importable modules.
 Access the python console and run
 
 ```python
