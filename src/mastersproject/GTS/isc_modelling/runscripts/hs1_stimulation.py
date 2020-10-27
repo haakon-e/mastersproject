@@ -26,10 +26,10 @@ def prepare_params(
         tunnel_equilibration_time
     )
 
-    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=300,)
+    newton_params = NewtonParameters(convergence_tol=5e-5, max_iterations=300,)
     base = Path.home() / "mastersproject-data/hs1"
     # head = "test-biot-effects/4frac-dt10min-nograv-nodil-coarse-k_1e-20"
-    head = "final/new-protocol/test/4f-nograv-3degdil-dt2.5min"  # _extended_fraczone__high_k"
+    head = "final/initialization-only-normal_fraczone-low_k-slip_tendency"
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -38,7 +38,7 @@ def prepare_params(
         head=head,
         time_step=time_params.initial_time_step,
         end_time=time_params.end_time,
-        rock = GrimselGranodiorite(
+        rock=GrimselGranodiorite(
             PERMEABILITY=5e-21,  # low k: 5e-21 -- high k: 2 * 5e-21
         ),
         gravity=False,
@@ -85,7 +85,7 @@ def prepare_params(
 
 def box_runscript(run=True):
     biot_params, newton_params, time_params = prepare_params(
-        length_scale=0.04, scalar_scale=1e8,
+        length_scale=1.0, scalar_scale=1e11,
     )
     # *2 gives ~25kc on 4fracs.
     # l=0.3, lcin 5*5*l, lcout 50*10*l
@@ -97,7 +97,7 @@ def box_runscript(run=True):
     # lcin=5*5.4, lcout=50*5.4 --> 6k*3d + 500*2d + 15*1d
     # lcin=5*3, lcout=50*3 --> 12k*3d + 1.2k*2d + 27*1d
     # lcin=5*2, lcout=50*2 --> 22k*3d, 2.5k*2d + 39*1d
-    setup = ISCBoxModel(biot_params, lcin=5*2, lcout=50*2)
+    setup = ISCBoxModel(biot_params, lcin=5*3, lcout=50*3)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     if run:
@@ -132,13 +132,20 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
         -initialization_time,
         -tunnel_time,
         0,
-        1 * _5min,    # 5 min
-        2 * _5min,    # 5 min
-        3 * _5min,    # 5 min
-        4 * _5min,    # 5 min
-        7 * _5min,    # 15 min
-        81 * _1min,   # 46 min
-        11 * _10min,  # 29 min
+        # S1,       5 min
+        1 * _5min,
+        # S2,       5 min
+        2 * _5min,
+        # S3,       5 min
+        3 * _5min,
+        # S4,       5 min
+        4 * _5min,
+        # S5,       15 min
+        7 * _5min,
+        # shut-in,  46 min
+        81 * _1min,
+        # Venting,  29 min
+        11 * _10min,
     ]
     rates = [
         0,   # initialization
@@ -157,13 +164,13 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
     time_steps = [
         initialization_time / 2,
         tunnel_time / 2,
-        5 * _1min,  # try longer first injection step
-        2.5 * _1min,
-        2.5 * _1min,
-        2.5 * _1min,
-        2.5 * _1min,
-        10 * _1min,
-        10 * _1min,
+        1 * _1min,      # S1, 5min
+        5 * _1min,      # S2, 5min
+        5 * _1min,      # S3, 5min
+        5 * _1min,      # S4, 5min
+        15 * _1min,     # S5, 15min
+        16 * _1min,     # shut-in, 46min
+        15 * _1min,     # venting
     ]
     time_step_protocol = TimeStepProtocol.create_protocol(phase_limits, time_steps)
 
