@@ -226,7 +226,9 @@ def create_grid(
         else:
             frac_map[entity_name] = frac_tags
         if verbose:
-            logger.info(f"Entity {entity_name} now has {len(frac_tags)} tags: {frac_tags}")
+            logger.info(
+                f"Entity {entity_name} now has {len(frac_tags)} tags: {frac_tags}"
+            )
 
     # The boundary between the outer and inner (fragmented) volumes needs to be re-aligned.
     # To do this, we fragment the outer volume with the inner volumes.

@@ -20,7 +20,7 @@ def _hs1_protocols_optimal_scaling():
     _5min = 5 * _1min
     phase_limits = [
         0,
-        1 * _5min,    # 5 min
+        1 * _5min,  # 5 min
     ]
     rates = [
         15,  # C3, step 1
@@ -66,10 +66,10 @@ def prepare_params(
         fraczone_bounding_box={
             "xmin": -1,
             "ymin": 80,
-            "zmin": -5,   # -5, # Extended frac zone boundary box test
-            "xmax": 86,   # +10,
+            "zmin": -5,  # -5, # Extended frac zone boundary box test
+            "xmax": 86,  # +10,
             "ymax": 151,  # +5,
-            "zmax": 41,   # +5,
+            "zmax": 41,  # +5,
         },
         # MechanicsParameters
         dilation_angle=np.radians(3),
@@ -101,7 +101,7 @@ def assemble_matrix(log_ls, log_ss, gb=None):
     ls = np.float_power(10, log_ls)
     ss = np.float_power(10, log_ss)
     biot_params, *_ = prepare_params(ls, ss)
-    setup = ISCBoxModel(biot_params, lcin=5*2, lcout=50*2)
+    setup = ISCBoxModel(biot_params, lcin=5 * 2, lcout=50 * 2)
     if gb:
         logger.info(f"Using existing grid")
         setup.gb = gb
@@ -119,7 +119,7 @@ def condition_number_porepy(A):
 
 
 def find_best_cond_num_neighbour(
-        log_ls0, log_ss0, has_searched=None, ls_gb=None,
+    log_ls0, log_ss0, has_searched=None, ls_gb=None,
 ):
     """ Find optimal conditioning for the HS1 experiment"""
 
@@ -158,7 +158,9 @@ def find_best_cond_num_neighbour(
         has_searched.append(pair)  # Add search to has_searched list.
         print(f"appended to has_searched: {has_searched}")
 
-        logger.info(f"Cond results for log_ls={log_ls}, log_ss={log_ss}: cond_pp={cond_pp:.2e}\n")
+        logger.info(
+            f"Cond results for log_ls={log_ls}, log_ss={log_ss}: cond_pp={cond_pp:.2e}\n"
+        )
 
         # Add GridBucket to list if a new one was constructed in this iteration
         if gb is None:
@@ -187,7 +189,9 @@ def search_best_cond_num(log_ls0, log_ss0):
 
         # Find optimal scaling around this neighbour
         print(f"has_searched before: {has_searched}")
-        agg_res, has_searched, ls_gb = find_best_cond_num_neighbour(log_ls, log_ss, has_searched, ls_gb)
+        agg_res, has_searched, ls_gb = find_best_cond_num_neighbour(
+            log_ls, log_ss, has_searched, ls_gb
+        )
         print(f"has_searched after: {has_searched}")
 
         if len(agg_res) > 0:
@@ -206,12 +210,3 @@ def search_best_cond_num(log_ls0, log_ss0):
     results = do_iterative_search(results, _has_searched, _ls_gb)
 
     return results
-
-
-
-
-
-
-
-
-

@@ -75,7 +75,7 @@ def box_validation():
     biot_params, newton_params, time_params = prepare_params(
         length_scale=0.01, scalar_scale=1e6,
     )
-    setup = ISCBoxModel(biot_params, lcin=5*1.5, lcout=50*1.5)
+    setup = ISCBoxModel(biot_params, lcin=5 * 1.5, lcout=50 * 1.5)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     time_machine.run_simulation()
@@ -83,6 +83,7 @@ def box_validation():
 
 
 # --- CONDITION NUMBER ---
+
 
 def cond_num_isc(ls, log_ss):
     values = np.array([ls, log_ss])
@@ -124,7 +125,7 @@ def isc_dt_and_injection_protocol():
     _10min = 10 * _1min
     initialization_time = 30e3 * pp.YEAR
     phase_limits = [
-        - initialization_time,
+        -initialization_time,
         0,
         _10min,
         # 2 * _10min,

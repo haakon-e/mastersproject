@@ -52,10 +52,10 @@ def prepare_params(
         fraczone_bounding_box={
             "xmin": -1,
             "ymin": 80,
-            "zmin": -5,   # -5, # Extended frac zone boundary box test
-            "xmax": 86,   # +10,
+            "zmin": -5,  # -5, # Extended frac zone boundary box test
+            "xmax": 86,  # +10,
             "ymax": 151,  # +5,
-            "zmax": 41,   # +5,
+            "zmax": 41,  # +5,
         },
         # MechanicsParameters
         dilation_angle=np.radians(3),
@@ -97,7 +97,7 @@ def box_runscript(run=True):
     # lcin=5*5.4, lcout=50*5.4 --> 6k*3d + 500*2d + 15*1d
     # lcin=5*3, lcout=50*3 --> 12k*3d + 1.2k*2d + 27*1d
     # lcin=5*2, lcout=50*2 --> 22k*3d, 2.5k*2d + 39*1d
-    setup = ISCBoxModel(biot_params, lcin=5*3, lcout=50*3)
+    setup = ISCBoxModel(biot_params, lcin=5 * 3, lcout=50 * 3)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     if run:
@@ -148,15 +148,15 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
         11 * _10min,
     ]
     rates = [
-        0,   # initialization
-        0,   # tunnel calibration
+        0,  # initialization
+        0,  # tunnel calibration
         15,  # C3, step 1
         20,  # C3, step 2
         25,  # C3, step 3
         30,  # C3, step 4
         35,  # C3, step 5
-        0,   # shut-in
-        0,   # venting (currently modelled as: shut-in)
+        0,  # shut-in
+        0,  # venting (currently modelled as: shut-in)
     ]
     rates = [r / 60 for r in rates]  # Convert to litres / second
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
@@ -164,13 +164,13 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
     time_steps = [
         initialization_time / 2,
         tunnel_time / 2,
-        1 * _1min,      # S1, 5min
-        5 * _1min,      # S2, 5min
-        5 * _1min,      # S3, 5min
-        5 * _1min,      # S4, 5min
-        15 * _1min,     # S5, 15min
-        16 * _1min,     # shut-in, 46min
-        15 * _1min,     # venting
+        1 * _1min,  # S1, 5min
+        5 * _1min,  # S2, 5min
+        5 * _1min,  # S3, 5min
+        5 * _1min,  # S4, 5min
+        15 * _1min,  # S5, 15min
+        16 * _1min,  # shut-in, 46min
+        15 * _1min,  # venting
     ]
     time_step_protocol = TimeStepProtocol.create_protocol(phase_limits, time_steps)
 

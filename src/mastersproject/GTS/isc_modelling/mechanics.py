@@ -651,7 +651,7 @@ class Mechanics(CommonAbstractModel):
         self.tangential_frac_traction = "tangential_frac_traction"  # noqa
         self.normal_frac_traction = "normal_frac_traction"  # noqa
         self.slip_tendency = "slip_tendency"  # noqa
-        self.cell_volumes = "cell_volumes" # noqa
+        self.cell_volumes = "cell_volumes"  # noqa
 
         self.export_fields.extend(
             [

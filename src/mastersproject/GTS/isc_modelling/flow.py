@@ -411,7 +411,7 @@ class Flow(CommonAbstractModel):
                 f"(absolute error is {difference_in_iterates_scalar:.4e})"
             )
 
-        if difference_in_iterates_scalar > 1e+30:
+        if difference_in_iterates_scalar > 1e30:
             diverged = True
 
         if not converged:
