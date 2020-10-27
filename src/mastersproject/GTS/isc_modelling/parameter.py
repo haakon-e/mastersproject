@@ -190,6 +190,7 @@ class BaseParameters(BaseModel):
     scalar_scale: float = 1  # > 0
 
     # Directories
+    use_temp_path: bool = False  # Create a temporary path
     base: Path = Path("C:/Users/haako/mastersproject-data")
     head: Optional[str] = None
     folder_name: Optional[Path] = None
@@ -223,6 +224,13 @@ class BaseParameters(BaseModel):
     @validator("folder_name", always=True)
     def construct_absolute_path(cls, p: Optional[Path], values):  # noqa
         """ Construct a valid path, either from 'folder_name' or 'head'."""
+        use_temp_path: bool = values["use_temp_path"]
+        if use_temp_path:
+            return None
+            # path = TemporaryDirectory()
+            # # Use path.cleanup() to remove directory and contents
+            # return path
+
         head: str = values["head"]
         base: Path = values["base"]
         if not bool(head) ^ bool(p):  # XOR operator

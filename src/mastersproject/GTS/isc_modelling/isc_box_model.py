@@ -58,10 +58,11 @@ class ISCBoxModel(ISCBiotContactMechanics):
     @gb.setter
     def gb(self, gb: pp.GridBucket):
         """ Set a grid bucket to the class"""
-        if gb is None:
-            self._gb = None
-        else:
-            raise ValueError("Use create_grid instead")
+        self._gb = gb
+        if gb is not None:
+            self.bounding_box = gb.bounding_box(as_dict=True)
+        # else:
+        #     raise ValueError("Use create_grid instead")
 
 
 def create_grid(
