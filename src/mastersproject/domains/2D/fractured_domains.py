@@ -1,6 +1,6 @@
-import porepy as pp
 import numpy as np
-import scipy.sparse as sps
+
+import porepy as pp
 
 
 def fractured_domain_2d(domain, mesh_args, fracs_coords, fracs):

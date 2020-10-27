@@ -1,32 +1,15 @@
 import logging
-from typing import (  # noqa
-    Any,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
 import os
 from pathlib import Path
+from typing import List
 
-import porepy as pp
 import numpy as np
-from porepy.models.contact_mechanics_model import ContactMechanics
-import pendulum
 
 import GTS as gts
-from .test_create_grid import test_create_grid
-
+import GTS.test.util as test_util
+import pendulum
+import porepy as pp
 from util.logging_util import __setup_logging
-import src.mastersproject.GTS.test.util as test_util
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +20,8 @@ def test_biot_parameter_scaling(**kw):
     No methods are solved. The parameters are simply checked
     for consistency
     """
-    # --- THIS METHOD NO LONGER WORKS OVER A GRID BECAUSE LENGTH SCALING GIVES SLIGHTLY DIFFERENT MESHES ---
+    # --- THIS METHOD NO LONGER WORKS OVER A GRID BECAUSE LENGTH
+    # SCALING GIVES SLIGHTLY DIFFERENT MESHES ---
     _this_file = Path(os.path.abspath(__file__)).parent
     _results_path = _this_file / "results/test_biot_parameter_scaling/default"
     _results_path.mkdir(parents=True, exist_ok=True)  # Create path if not exists
@@ -112,7 +96,8 @@ def test_biot_parameter_scaling(**kw):
     logger.info("------------------------------------------")
     logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")
     logger.info(
-        f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum."
+        f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and "
+        f"min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum."
     )
 
     # Find the new parameter dictionaries
@@ -185,7 +170,8 @@ def test_biot_parameter_scaling(**kw):
     assert np.allclose(lmbda / ss, lmbda_scl)
 
     # Mechanics source [Pa m2] (integrated over 3D volume)
-    #   In the code: ms_scl = ms * length_scale / scalar_scale (assuming integration is scaled)
+    #   In the code: ms_scl = ms * length_scale / scalar_scale
+    #       (assuming integration is scaled)
     #   ms_scl = ms / (scalar_scale * length_scale ** 2)
     ms = mech["source"].reshape((3, -1), order="F")
     ms_scl = scaled_mech["source"].reshape((3, -1), order="F")
@@ -195,7 +181,8 @@ def test_biot_parameter_scaling(**kw):
 
     # Boundary conditions (MECHANICS)
     #   Neumann [Pa m2] (integrated across 2D surfaces)
-    #   Note: In the code, we divide by scalar_scale. length_scale**2 is incorporated by pre-scaled grid.
+    #   Note: In the code, we divide by scalar_scale.
+    #       length_scale**2 is incorporated by pre-scaled grid.
     #   mn_scl = mn / ( scalar_scale * length_scale**(dim-1) )
     mn = mech["bc_values"].reshape((3, -1), order="F")
     mn_scl = scaled_mech["bc_values"].reshape((3, -1), order="F")
@@ -255,10 +242,12 @@ def test_biot_condition_number(
     logger.info("------------------------------------------")
     logger.info(f"Max element in A {np.max(np.abs(A)):.2e}")
     logger.info(
-        f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum."
+        f"Max {np.max(np.sum(np.abs(A), axis=1)):.2e} and "
+        f"min {np.min(np.sum(np.abs(A), axis=1)):.2e} A sum."
     )
     logger.info(
-        f"Length scale: {setup.length_scale:.1e}. Scalar scale: {setup.scalar_scale:.1e}."
+        f"Length scale: {setup.length_scale:.1e}. "
+        f"Scalar scale: {setup.scalar_scale:.1e}."
     )
     return setup
 
@@ -370,6 +359,4 @@ def test_param_scaling_on_regular_grid():
         prepare_simulation=False,
         setup_loggers=True,
     )
-
-
-#    gb =
+    print(setup)

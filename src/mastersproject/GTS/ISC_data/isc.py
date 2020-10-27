@@ -1,3 +1,4 @@
+# flake8: noqa
 """ This is a python implementation of the matlab ISC data manipulation script.
 
 Citation:
@@ -8,9 +9,9 @@ DOI: 10.3929/ethz-b-000243199
 link: https://doi.org/10.3929/ethz-b-000243199
 
 """
-from pathlib import Path
-import os
 import logging
+import os
+from pathlib import Path
 
 import numpy as np
 import pandas as pd

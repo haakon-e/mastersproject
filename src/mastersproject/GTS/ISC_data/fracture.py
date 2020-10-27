@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 Methods for assembling fractures from isc data and construct a discrete fracture network.
 
@@ -15,10 +16,10 @@ import os
 from pathlib import Path
 
 import pandas as pd
-import porepy as pp
 
+import porepy as pp
+from GTS.fit_plane import convex_hull, plane_from_points
 from GTS.ISC_data import ISCData
-from GTS.fit_plane import plane_from_points, convex_hull
 
 logger = logging.getLogger(__name__)
 

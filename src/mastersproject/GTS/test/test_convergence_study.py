@@ -1,37 +1,10 @@
 import logging
-from typing import (  # noqa
-    Any,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
-import os
-from pathlib import Path
 
-import porepy as pp
 import numpy as np
-from porepy.models.contact_mechanics_biot_model import ContactMechanicsBiot
-from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotISC
-import pendulum
 
 import GTS as gts
-from src.mastersproject.util.logging_util import (
-    __setup_logging,
-    timer,
-    trace,
-)
-from refinement import gb_coarse_fine_cell_mapping
-from refinement.convergence import grid_error
-import GTS.test.util as test_util
+import porepy as pp
+from mastersproject.util.logging_util import trace
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +17,7 @@ def test_unit_convergence_study():
     """
 
     # 1. Prepare parameters
-    stress = gts.isc_modelling.stress_tensor()
+    stress = gts.stress_tensor()
     hydrostatic = np.mean(np.diag(stress)) * np.ones(stress.shape[0])
     stress = np.diag(hydrostatic)
 

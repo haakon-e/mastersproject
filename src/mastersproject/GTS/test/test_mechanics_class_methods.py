@@ -1,34 +1,12 @@
 import logging
-from typing import (  # noqa
-    Any,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
-import os
-from pathlib import Path
 
-import porepy as pp
 import numpy as np
-from porepy.models.contact_mechanics_model import ContactMechanics
-import pendulum
 
 import GTS as gts
-from src.mastersproject.util.logging_util import (
-    __setup_logging,
-    timer,
-    trace,
-)
 import GTS.test.util as test_util
+import pendulum
+import porepy as pp
+from mastersproject.util.logging_util import trace
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +83,8 @@ def test_decomposition_of_stress(setup="normal_shear"):
     B: 1. Get the stress tensor and split in hydrostatic and deviatoric components.
     --
     2. Acquire solutions for each split tensor and the full tensor separately (3 cases).
-    3. Compare solutions quantitatively (linearity of solution) and qualitatively (Paraview)
+    3. Compare solutions quantitatively (linearity of solution)
+        and qualitatively (Paraview)
 
     Parameters
     ----------
@@ -116,7 +95,7 @@ def test_decomposition_of_stress(setup="normal_shear"):
     """
 
     # Import stress tensor
-    stress = gts.isc_modelling.stress_tensor()
+    stress = gts.stress_tensor()
 
     if setup == "normal_shear":
         # Get normal and shear stresses
@@ -156,7 +135,8 @@ def test_decomposition_of_stress(setup="normal_shear"):
     setup.create_grid()
 
     # -- Safely copy the grid generated above --
-    # Ensures the implicit in-place variable changes across grid_buckets (gb.copy() is insufficient)
+    # Ensures the implicit in-place variable changes
+    #   across grid_buckets (gb.copy() is insufficient)
     # Get the grid_bucket .msh path
     path_to_gb_msh = f"{setup.viz_folder_name}/gmsh_frac_file.msh"
     # Re-create the grid buckets

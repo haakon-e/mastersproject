@@ -1,13 +1,15 @@
 # --- LOGGING UTIL ---
+import functools
 import logging
 import time
-import functools
 
 default_logger = logging.getLogger("GTS.OVERWRITE_ME")
 
 
 def timer(logger=default_logger, level="INFO"):
-    """ Credits: https://realpython.com/primer-on-python-decorators/#decorators-with-arguments"""
+    """ Credits:
+    https://realpython.com/primer-on-python-decorators/#decorators-with-arguments
+    """
 
     def decorator_timer(func):
         """ Print the runtime of the decorated function"""
@@ -34,7 +36,9 @@ def timer(logger=default_logger, level="INFO"):
 
 
 def trace(logger=default_logger, timeit=True, level="INFO"):
-    """ Credits: https://realpython.com/primer-on-python-decorators/#decorators-with-arguments"""
+    """ Credits:
+    https://realpython.com/primer-on-python-decorators/#decorators-with-arguments
+    """
 
     def decorator_trace(func):
         """ Print the function signature and return value.

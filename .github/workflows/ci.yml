@@ -40,13 +40,17 @@ jobs:
       run: poetry install
 
     - name: black
+      if: ${{ always() }}
       run: poetry run black --check src
 
     - name: flake8
+      if: ${{ always() }}
       run: poetry run flake8 src 
 
     - name: mypy
+      if: ${{ always() }}
       run: poetry run mypy src
 
     - name: isort
+      if: ${{ always() }}
       run: poetry run isort --check-only

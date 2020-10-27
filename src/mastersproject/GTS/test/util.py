@@ -1,34 +1,13 @@
 """ Common util methods for tests"""
 import logging
-from typing import (  # noqa
-    Any,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
 import os
 from pathlib import Path
-
-from porepy.models.contact_mechanics_model import ContactMechanics
-from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotISC
-from GTS.isc_modelling.mechanics import ContactMechanicsISC
-import pendulum
+from typing import Type
 
 import GTS as gts
-from src.mastersproject.util.logging_util import (
-    __setup_logging,
-    timer,
-    trace,
-)
+import pendulum
+from GTS.isc_modelling.mechanics import ContactMechanicsISC
+from mastersproject.util.logging_util import __setup_logging, trace
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +109,7 @@ def prepare_params(path_head: str, params: dict, setup_loggers: bool,) -> dict:
             "shearzone": "S1_2",
             "borehole": "INJ1",
         },
-        "stress": gts.isc_modelling.stress_tensor(),
+        "stress": gts.stress_tensor(),
         "length_scale": 1,
         "scalar_scale": 1,
     }

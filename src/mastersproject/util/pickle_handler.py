@@ -13,7 +13,8 @@ def write_pickle(obj, path):
     """
 
     path = Path(path)
-    # path.mkdir(parents=True, exist_ok=False)  # Don't overwrite existing files
+    # Don't overwrite existing files
+    # path.mkdir(parents=True, exist_ok=False)
     raw = pickle.dumps(obj)
     with open(path, "wb") as f:
         raw = f.write(raw)

@@ -1,36 +1,13 @@
 import logging
-from typing import (  # noqa
-    Any,
-    Coroutine,
-    Generator,
-    Generic,
-    Iterable,
-    List,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
-import os
-from pathlib import Path
 
-import porepy as pp
 import numpy as np
-from porepy.models.contact_mechanics_model import ContactMechanics
-from porepy.models.contact_mechanics_biot_model import ContactMechanicsBiot
-from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotISC
-import pendulum
 
 import GTS as gts
-from src.mastersproject.util.logging_util import (
-    __setup_logging,
-    timer,
-    trace,
-)
 import GTS.test.util as test_util
+import pendulum
+import porepy as pp
+from GTS.isc_modelling.contact_mechanics_biot import ContactMechanicsBiotISC
+from mastersproject.util.logging_util import trace
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +22,7 @@ def test_compare_run_mech_and_run_mech_by_filter_term():
     are the same.
     """
     # 1. Prepare parameters
-    stress = gts.isc_modelling.stress_tensor()
+    stress = gts.stress_tensor()
     # We set up hydrostatic stress
     hydrostatic = np.mean(np.diag(stress)) * np.ones(stress.shape[0])
     stress = np.diag(hydrostatic)
@@ -121,7 +98,7 @@ def test_run_mechanics_term_by_filter():
     """
 
     # 1. Prepare parameters
-    stress = gts.isc_modelling.stress_tensor()
+    stress = gts.stress_tensor()
     # We set up hydrostatic stress
     hydrostatic = np.mean(np.diag(stress)) * np.ones(stress.shape[0])
     stress = np.diag(hydrostatic)
@@ -166,7 +143,7 @@ def test_run_flow_term_by_filter():
     """
 
     # 1. Prepare parameters
-    stress = gts.isc_modelling.stress_tensor()
+    stress = gts.stress_tensor()
     # # We set up hydrostatic stress
     # hydrostatic = np.mean(np.diag(stress)) * np.ones(stress.shape[0])
     # stress = np.diag(hydrostatic)
@@ -219,7 +196,7 @@ def test_run_biot_term_by_term(test_name: str):
     """
 
     # 1. Prepare parameters
-    stress = gts.isc_modelling.stress_tensor()
+    stress = gts.stress_tensor()
     # We set up hydrostatic stress
     hydrostatic = np.mean(np.diag(stress)) * np.ones(stress.shape[0])
     stress = np.diag(hydrostatic)
@@ -311,7 +288,7 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
         # Calculate errors
 
         # Pressure scalar error
-        scalar_norm = np.sum(p_scalar_now ** 2)
+        # scalar_norm = np.sum(p_scalar_now ** 2)
         difference_in_iterates_scalar = np.sum((p_scalar_now - p_scalar_prev) ** 2)
         difference_from_init_scalar = np.sum((p_scalar_now - p_scalar_init) ** 2)
         logger.info(f"diff iter scalar = {difference_in_iterates_scalar:.6e}")
@@ -332,7 +309,7 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
         if difference_in_iterates_scalar < tol_convergence:
             converged_p = True
             error_scalar = difference_in_iterates_scalar
-            logger.info(f"pressure converged absolutely")
+            logger.info("pressure converged absolutely")
         else:
             # Relative convergence criterion:
             if (
@@ -341,7 +318,7 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
             ):
                 # converged = True
                 converged_p = True
-                logger.info(f"pressure converged relatively")
+                logger.info("pressure converged relatively")
 
             error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
 
@@ -359,9 +336,9 @@ class BiotReduceToFlow(ContactMechanicsBiotISC):
         subtract the fracture pressure contribution for the contact traction. This
         should not be done if the scalar variable is temperature.
         """
-        from porepy.utils.derived_discretizations import (
-            implicit_euler as IE_discretizations,
-        )
+        # from porepy.utils.derived_discretizations import (
+        #     implicit_euler as IE_discretizations,
+        # )
 
         # Shorthand
         key_s = self.scalar_parameter_key

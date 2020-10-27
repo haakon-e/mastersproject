@@ -1,10 +1,10 @@
-import GTS as gts
-from GTS.isc_modelling.setup import run_abstract_model, _prepare_params
-import porepy as pp
+import logging
+
 import numpy as np
 import pandas as pd
 
-import logging
+import GTS as gts
+from GTS.isc_modelling.setup import _prepare_params
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,8 @@ def test_conditioning(*, length_scales, scalar_scales, **kwargs):
 
 
 def test_condition_number(**kwargs):
-    # TODO: Rename this method (and dependent notebooks usages) to something more suitable
+    # TODO: Rename this method (and dependent notebooks usages)
+    #  to something more suitable
     """ Method to create a mesh and discretize equations.
 
     Parameters
