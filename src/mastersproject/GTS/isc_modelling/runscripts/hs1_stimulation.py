@@ -1,3 +1,12 @@
+""" Simulation script for HS1 stimulation experiment at Grimsel Test Site
+Author: Haakon Ludvig Langeland Ervik
+
+Instructions:
+To run a simulation with configuration same as in the thesis, run
+the method "box_runscript" with the parameter 'case' as "A1", "A2", "B1" or "B2".
+
+"""
+
 import logging
 from pathlib import Path
 from typing import Tuple
@@ -14,8 +23,47 @@ from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
 logger = logging.getLogger(__name__)
 
 
+def prepare_params_thesis_cases(case: str, length_scale, scalar_scale):
+    """ Prepare parameters corresponding to the runcases in the thesis"""
+    small_bounding_box = {
+        "xmin": -1,
+        "ymin": 80,
+        "zmin": -5,  # -5, # Extended frac zone boundary box test
+        "xmax": 86,  # +10,
+        "ymax": 151,  # +5,
+        "zmax": 41,  # +5,
+    }
+    large_bounding_box = {
+        "xmin": -1,
+        "ymin": 80,
+        "zmin": -5 - 5,
+        "xmax": 86 + 10,
+        "ymax": 151 + 5,
+        "zmax": 41 + 5,
+    }
+    small_k = 1e-21
+    large_k = 5e-21
+
+    if case == "A1":
+        k = small_k
+        box = small_bounding_box
+    elif case == "A2":
+        k = large_k
+        box = small_bounding_box
+    elif case == "B1":
+        k = small_k
+        box = large_bounding_box
+    elif case == "B2":
+        k = large_k
+        box = large_bounding_box
+    else:
+        raise ValueError("Unknown simulation case")
+
+    return prepare_params(length_scale, scalar_scale, k, box, case)
+
+
 def prepare_params(
-    length_scale, scalar_scale,
+    length_scale, scalar_scale, k, box, case=None,
 ) -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
     """ Hydro shearing experiment HS1
 
@@ -28,8 +76,7 @@ def prepare_params(
 
     newton_params = NewtonParameters(convergence_tol=5e-5, max_iterations=300,)
     base = Path.home() / "mastersproject-data/hs1"
-    # head = "test-biot-effects/4frac-dt10min-nograv-nodil-coarse-k_1e-20"
-    head = "final/initialization-only-normal_fraczone-low_k-slip_tendency"
+    head = f"final/case_{case or '0'}"
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -38,9 +85,7 @@ def prepare_params(
         head=head,
         time_step=time_params.initial_time_step,
         end_time=time_params.end_time,
-        rock=GrimselGranodiorite(
-            PERMEABILITY=5e-21,  # low k: 5e-21 -- high k: 2 * 5e-21
-        ),
+        rock=GrimselGranodiorite(PERMEABILITY=k,),  # low k: 5e-21 -- high k: 2 * 5e-21
         gravity=False,
         # GeometryParameters
         shearzone_names=[
@@ -49,14 +94,7 @@ def prepare_params(
             "S1_3",
             "S3_1",
         ],  # "S3_2"],  # ["S1_2", "S3_1"],
-        fraczone_bounding_box={
-            "xmin": -1,
-            "ymin": 80,
-            "zmin": -5,  # -5, # Extended frac zone boundary box test
-            "xmax": 86,  # +10,
-            "ymax": 151,  # +5,
-            "zmax": 41,  # +5,
-        },
+        fraczone_bounding_box=box,
         # MechanicsParameters
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
@@ -83,9 +121,9 @@ def prepare_params(
     return biot_params, newton_params, time_params
 
 
-def box_runscript(run=True):
-    biot_params, newton_params, time_params = prepare_params(
-        length_scale=1.0, scalar_scale=1e11,
+def box_runscript(case, run=True):
+    biot_params, newton_params, time_params = prepare_params_thesis_cases(
+        case, length_scale=1.0, scalar_scale=1e11,
     )
     # *2 gives ~25kc on 4fracs.
     # l=0.3, lcin 5*5*l, lcout 50*10*l
@@ -97,7 +135,7 @@ def box_runscript(run=True):
     # lcin=5*5.4, lcout=50*5.4 --> 6k*3d + 500*2d + 15*1d
     # lcin=5*3, lcout=50*3 --> 12k*3d + 1.2k*2d + 27*1d
     # lcin=5*2, lcout=50*2 --> 22k*3d, 2.5k*2d + 39*1d
-    setup = ISCBoxModel(biot_params, lcin=5 * 3, lcout=50 * 3)
+    setup = ISCBoxModel(biot_params, lcin=5 * 2, lcout=50 * 2)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     if run:
