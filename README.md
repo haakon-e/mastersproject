@@ -4,6 +4,7 @@ Master of Science Thesis in Applied and Computational Mathematics
 Link to thesis [coming]
 
 To run the code, clone the repository, install all dependencies, and add the `GTS` folder to importable modules.
+Install PorePy by following the instructions on their [GitHub page](https://github.com/pmgbergen/porepy/tree/1.2.1). Currently, [PorePy version 1.2.1](https://github.com/pmgbergen/porepy/releases/tag/1.2.1) is supported.
 Access the python console and run
 
 ```python
