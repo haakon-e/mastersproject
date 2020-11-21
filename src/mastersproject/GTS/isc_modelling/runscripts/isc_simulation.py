@@ -5,7 +5,7 @@ from typing import Tuple
 import porepy as pp
 import numpy as np
 
-from GTS import ISCBiotContactMechanics, BiotParameters
+from GTS import ISCBiotContactMechanics, BiotParameters, stress_tensor
 from GTS.isc_modelling.isc_box_model import ISCBoxModel
 from GTS.isc_modelling.optimal_scaling import best_cond_numb, condition_number_porepy
 from GTS.isc_modelling.parameter import shearzone_injection_cell
@@ -46,6 +46,7 @@ def prepare_params(
         },
         bounding_box=None,
         # MechanicsParameters
+        stress=stress_tensor(),
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
         # FlowParameters

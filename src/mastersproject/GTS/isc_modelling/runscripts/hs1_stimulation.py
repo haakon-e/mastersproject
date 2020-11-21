@@ -14,7 +14,7 @@ from typing import Tuple
 import porepy as pp
 import numpy as np
 
-from GTS import BiotParameters
+from GTS import BiotParameters, stress_tensor
 from GTS.isc_modelling.isc_box_model import ISCBoxModel
 from GTS.isc_modelling.parameter import shearzone_injection_cell, GrimselGranodiorite
 from GTS.time_machine import NewtonParameters, TimeMachinePhasesConstantDt
@@ -96,6 +96,7 @@ def prepare_params(
         ],  # "S3_2"],  # ["S1_2", "S3_1"],
         fraczone_bounding_box=box,
         # MechanicsParameters
+        stress=stress_tensor(),
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
         # FlowParameters

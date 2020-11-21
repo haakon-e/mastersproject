@@ -286,7 +286,7 @@ class GeometryParameters(BaseParameters):
 class MechanicsParameters(GeometryParameters):
     """ Parameters for a mechanics model"""
 
-    stress: np.ndarray = stress_tensor()
+    stress: np.ndarray  # e.g.: stress_tensor()
     # See "numerics > contact_mechanics > contact_conditions.py > ColoumbContact"
     # for details on dilation angle
     dilation_angle: float = 0
@@ -301,6 +301,7 @@ class MechanicsParameters(GeometryParameters):
     }
 
     class Config:
+        # For numpy arrays (currently this doesn't work as expected).
         arbitrary_types_allowed = True
 
 

@@ -4,7 +4,7 @@ from typing import Tuple
 
 import porepy as pp
 import numpy as np
-from GTS import BiotParameters, ISCBiotContactMechanics
+from GTS import BiotParameters, ISCBiotContactMechanics, stress_tensor
 from GTS.isc_modelling.parameter import UnitRock, GrimselGranodiorite
 from GTS.time_machine import NewtonParameters, TimeMachinePhasesConstantDt
 from GTS.time_protocols import InjectionRateProtocol, TimeStepProtocol
@@ -47,6 +47,7 @@ def simple_validation():
         box=box,
         mesh_args=mesh_args,
         # MechanicsParameters
+        stress=stress_tensor(),
         dilation_angle=np.radians(5.0),
         newton_options=newton_params.dict(),
         # FlowParameters
