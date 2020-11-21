@@ -23,14 +23,6 @@ from GTS.fit_plane import (
 
 from GTS.isc_modelling.parameter import stress_tensor
 
-# --- SETUP AND RUN MODEL---
-from GTS.isc_modelling.setup import (
-    run_mechanics_model,
-    run_biot_model,
-    run_biot_gts_model,
-    run_abstract_model,
-)
-
 # --- MODELS ---
 
 # Contact mechanics model
@@ -65,10 +57,6 @@ __all__ = [
     "plane_from_points",
     "convex_hull",
     "stress_tensor",
-    "run_mechanics_model",
-    "run_biot_model",
-    "run_biot_gts_model",
-    "run_abstract_model",
     "Mechanics",
     "Flow",
     "FlowISC",
