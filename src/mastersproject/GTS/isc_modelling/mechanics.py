@@ -488,7 +488,10 @@ class Mechanics(CommonAbstractModel):
 
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
-        self.assembler.discretize(term_filter=[self.friction_coupling_term])
+        term_filter = pp.assembler_filters.ListFilter(
+            term_list=[self.friction_coupling_term]
+        )
+        self.assembler.discretize(term_filter)
 
     def update_state(self, solution_vector: np.ndarray) -> None:
         """ Update variables for the current Newton iteration.

@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 import numpy as np
 
@@ -189,14 +189,22 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         # Next, discretize term on the matrix grid not covered by the Biot discretization,
         # i.e. the source term
         # Here, we also discretize the edge terms in the entire gb
-        self.assembler.discretize(grid=g_max, term_filter=["source"])
+        g_max_source_filter = pp.assembler_filters.ListFilter(
+            grid_list=[g_max],
+            term_list=["source"],
+        )
+        self.assembler.discretize(g_max_source_filter)
 
         # Finally, discretize terms on the lower-dimensional grids. This can be done
         # in the traditional way, as there is no Biot discretization here.
-        for g, _ in self.gb:
-            if g.dim < self.Nd:
-                # No need to discretize edges here, this was done above.
-                self.assembler.discretize(grid=g, edges=False)
+        fracs = list(self.gb.get_grids(lambda grid: grid.dim < self.Nd))
+        edges = list(e for e, _ in self.gb.edges())
+        #couplings = [(*self.gb.nodes_of_edge(e), e) for e, _ in self.gb.edges()]
+        couplings = [(*reversed(self.gb.nodes_of_edge(e)), e) for e, _ in self.gb.edges()]
+        frac_filter = pp.assembler_filters.ListFilter(
+            grid_list=fracs+edges+couplings,  # noqa
+        )
+        self.assembler.discretize(frac_filter)
 
     # --- Initial condition ---
 
@@ -262,7 +270,10 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
 
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
-        self.assembler.discretize(term_filter=[self.friction_coupling_term])
+        term_filter = pp.assembler_filters.ListFilter(
+            term_list=[self.friction_coupling_term]
+        )
+        self.assembler.discretize(term_filter)
 
     def after_newton_convergence(self, solution, errors, iteration_counter) -> None:
         super().after_newton_convergence(solution, errors, iteration_counter)

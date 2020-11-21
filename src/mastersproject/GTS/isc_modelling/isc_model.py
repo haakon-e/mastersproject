@@ -819,9 +819,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # In other words: We want to update the ..
         #   .. MPFA terms (k depends on aperture).
         #   .. Mass terms (depends on specific volume / aperture).
-        self.assembler.discretize(
-            term_filter=["!grad_p", "!div_u", "!stabilization", "!mpsa"]
+        term_filter = pp.assembler_filters.ListFilter(
+            term_list=["!grad_p", "!div_u", "!stabilization", "!mpsa"]
         )
+        self.assembler.discretize(term_filter)
         # Report on cells sticking, sliding, etc.:
         msg = "(Open,Sticking,Gliding)/Total: "
         for g, d in self.gb:
