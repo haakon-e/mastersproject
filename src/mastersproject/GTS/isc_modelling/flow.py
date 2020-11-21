@@ -75,24 +75,94 @@ class Flow(CommonAbstractModel):
         """
         return np.zeros(g.num_faces)
 
+    @property
+    def source_flow_rate(self) -> float:
+        """ Scaled source flow rate """
+        injection_rate = self.params.injection_protocol.active_rate(
+            self.time
+        )  # injection rate [l / s], unscaled
+        return (
+                injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
+        )
+
     def source_scalar(self, g: pp.Grid) -> np.ndarray:
-        return np.zeros(g.num_cells)
+        """ Well-bore source (scaled)"""
+        flow_rate = self.source_flow_rate  # scaled
+        values = flow_rate * g.tags["well_cells"] * self.time_step
+        return values
 
     # --- aperture and specific volume ---
 
-    def aperture(self, g: pp.Grid, scaled) -> np.ndarray:
-        """
+    def aperture(
+            self, g: pp.Grid, scaled: bool, **kwargs,
+    ) -> np.ndarray:
+        """Compute the total aperture of each cell on a grid
+
+        Parameters
+        ----------
+        g : pp.Grid
+            grid
+        scaled : bool
+            whether to scale the aperture, which has units [m]
+        **kwargs:
+            Optional keyword arguments
+
         Aperture is a characteristic thickness of a cell, with units [m].
         1 in matrix, thickness of fractures and "side length" of cross-sectional
         area/volume (or "specific volume") for intersections of co-dimension 2 and 3.
         See also specific_volume.
         """
+        a_init = self.compute_initial_aperture(g, scaled=scaled)
+
+        a_total = a_init
+        return a_total
+
+    def compute_initial_aperture(self, g: pp.Grid, scaled) -> np.ndarray:
+        """Fetch the initial aperture
+
+        For 3d-matrix: unitary (aperture isn't really defined in 3d)
+        For 2d-fracture: fetch from the parameter dictionary
+        For 1d-intersection: Get the max from the two adjacent fractures
+        """
         aperture = np.ones(g.num_cells)
-        if g.dim < self.Nd:
-            aperture *= 0.1
+        nd = self.Nd
+        gb = self.gb
+
+        # Get the aperture in the corresponding fracture (is 1 for 3D matrix)
+        if g.dim == nd:
+            return aperture
+        elif g.dim == nd - 1:
+            fracture = gb.node_props(g, "name")
+            aperture *= self.params.compute_initial_aperture(g, fracture)
+        elif g.dim == nd - 2:
+            # Compute initial intersection aperture by projecting apertures from primary grids
+            # i.e. fractures. Then take the cell-by-cell mean.
+            primary_grids = gb.node_neighbors(g, only_higher=True)
+            primary_aps = [
+                self.compute_initial_aperture(g, scaled=scaled) for g in primary_grids
+            ]
+            primary_edges = [(g, g_h) for g_h in primary_grids]
+            primary_cell_faces = [g_h.cell_faces for g_h in primary_grids]
+            mortar_grids = [
+                gb.edge_props(edge)["mortar_grid"] for edge in primary_edges
+            ]
+            projected_aps = [
+                mg.mortar_to_secondary_int()
+                * mg.primary_to_mortar_int()
+                * np.abs(cell_face)
+                * ap
+                for mg, ap, cell_face in zip(
+                    mortar_grids, primary_aps, primary_cell_faces
+                )
+            ]
+            apertures = np.vstack(projected_aps)
+            aperture *= np.mean(apertures, axis=0)
+        else:
+            raise ValueError("Not implemented 0d intersection points")
 
         if scaled:
             aperture *= pp.METER / self.params.length_scale
+
         return aperture
 
     def specific_volume(self, g: pp.Grid, scaled: bool) -> np.ndarray:
@@ -108,7 +178,16 @@ class Flow(CommonAbstractModel):
     # --- Set parameters ---
 
     def set_scalar_parameters(self) -> None:
-        """Set scalar parameters for the simulation"""
+        """Set scalar parameters for the simulation
+
+        We set
+            * boundary conditions and values
+            * mass_weight (aka storage / compressibility term)
+            * source (injection/production in the domains)
+            * time_step (needed for some discretization methods)
+            * permeability (see self.set_permeability_from_aperture)
+            * gravity source term (see self.vector_source)
+        """
         gb = self.gb
 
         # Set to 0 for steady state
@@ -144,15 +223,29 @@ class Flow(CommonAbstractModel):
 
         # Set permeability on grid, fracture and mortar grids.
         self.set_permeability_from_aperture()
+        # Set gravitational effects
+        self.vector_source()
 
-    def permeability(self, g, scaled) -> np.ndarray:
-        k = np.ones(g.num_cells)
-        if scaled:
-            k *= (pp.METER / self.params.length_scale) ** 2
+    def permeability(self, g, scaled, **kwargs) -> np.ndarray:
+        """ Set (uniform) permeability in a subdomain"""
+        # intact rock gets permeability from rock
+        if g.dim == self.Nd:
+            k = self.params.rock.PERMEABILITY * np.ones(g.num_cells)
+            if scaled:
+                k *= (pp.METER / self.params.length_scale) ** 2
+        # fractures get permeability from cubic law
+        else:
+
+            def cubic_law(a):
+                return np.power(a, 2) / 12
+
+            aperture = self.aperture(g, scaled=scaled, **kwargs)
+            k = cubic_law(aperture)
         return k
 
     def porosity(self, g) -> np.ndarray:
-        return np.ones(g.num_cells)
+        porosity = self.params.rock.POROSITY if g.dim == self.Nd else 1.0
+        return np.ones(g.num_cells) * porosity
 
     def set_permeability_from_aperture(self) -> None:
         """Set permeability by cubic law in fractures.
@@ -167,15 +260,7 @@ class Flow(CommonAbstractModel):
             pp.PASCAL / self.params.scalar_scale
         )
         for g, d in gb:
-            # permeability [m2] (scaled)
-            k: np.ndarray = self.permeability(g, scaled=True)
-            # a = self.aperture(g, scaled=True)
-            # logger.info(
-            #     f"Scaled permeability and aperture in dim {g.dim} have values: "
-            #     f"min [k={np.min(k):.2e}, a={np.min(a):.2e}]; "
-            #     f"mean [k={np.mean(k):.2e}, a={np.mean(a):.2e}]; "
-            #     f"max [k={np.max(k):.2e}, a={np.max(a):.2e}]"
-            # )
+            k: np.ndarray = self.permeability(g, scaled=True)  # permeability [m2] (scaled)
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -220,6 +305,107 @@ class Flow(CommonAbstractModel):
                 scalar_key,
                 {"normal_diffusivity": normal_diffusivity},
             )
+
+    # --- Gravity-related methods ---
+
+    def vector_source(self):
+        """ Set gravity as a vector source term in the fluid flow equations"""
+        if not self.params.gravity:
+            return
+
+        gb = self.gb
+        scalar_key = self.scalar_parameter_key
+        ls, ss = self.params.length_scale, self.params.scalar_scale
+        for g, d in gb:
+            # minus sign to convert from positive z downward (depth) to positive upward.
+            gravity = -pp.GRAVITY_ACCELERATION * self.density(g) * (ls / ss)
+            vector_source = np.zeros((self.Nd, g.num_cells))
+            vector_source[-1, :] = gravity
+            vector_params = {
+                "vector_source": vector_source.ravel("F"),
+                "ambient_dimension": self.Nd,
+            }
+            pp.initialize_data(g, d, scalar_key, vector_params)
+
+        for e, de in gb.edges():
+            mg: pp.MortarGrid = de["mortar_grid"]
+            g_l, _ = gb.nodes_of_edge(e)
+            a_l = self.aperture(g_l, scaled=True)
+
+            # Compute gravity on the secondary grid
+            rho_g = -pp.GRAVITY_ACCELERATION * self.density(g_l) * (ls / ss)
+
+            # Multiply by (a/2) to "cancel out" the normal gradient of the diffusivity
+            # (see also self.set_permeability_from_aperture)
+            gravity_l = rho_g * (a_l / 2)
+
+            # Take the gravity from the secondary grid and project to the interface
+            gravity_mg = mg.secondary_to_mortar_avg() * gravity_l
+
+            vector_source = np.zeros((self.Nd, mg.num_cells))
+            vector_source[-1, :] = gravity_mg
+            gravity = vector_source.ravel("F")
+
+            pp.initialize_data(mg, de, scalar_key, {"vector_source": gravity})
+
+    def density(self, g: pp.Grid) -> np.ndarray:
+        """Compute unscaled fluid density
+
+        Either use constant density, or compute as an exponential function of pressure.
+        See also FlowParameters.
+
+        rho = rho0 * exp( c * (p - p0) )
+
+        where rho0 and p0 are reference values.
+
+        For reference values, see:
+            Berre et al. (2018): Three-dimensional numerical modelling of fracture
+                       reactivation due to fluid injection in geothermal reservoirs
+        """
+        c = self.params.fluid.COMPRESSIBILITY
+        ss = self.params.scalar_scale
+        d = self.gb.node_props(g)
+
+        # For reference values, see: Berre et al. (2018):
+        # Three-dimensional numerical modelling of fracture
+        # reactivation due to fluid injection in geothermal reservoirs
+        rho0 = 1014 * np.ones(g.num_cells) * (pp.KILOGRAM / pp.METER ** 3)
+        p0 = 1 * pp.ATMOSPHERIC_PRESSURE
+
+        if self.params.constant_density:
+            # This sets density to rho0.
+            p = p0
+        else:
+            # Use pressure in STATE to approximate density
+            p = d[pp.STATE][self.scalar_variable] * ss if pp.STATE in d else p0
+
+        rho = rho0 * np.exp(c * (p - p0))
+
+        return rho
+
+    def hydrostatic_pressure(self, g: pp.Grid, scaled: bool) -> np.ndarray:
+        """Hydrostatic pressure in the grid g
+
+        If gravity is active, the hydrostatic pressure depends on depth.
+        Otherwise, we set to atmospheric pressure.
+        """
+        params = self.params
+        if params.gravity:
+            depth = self.depth(g.cell_centers)
+        else:
+            depth = self.depth(np.zeros((self.Nd, g.num_cells)))
+        hydrostatic = params.fluid.hydrostatic_pressure(depth)
+        if scaled:
+            hydrostatic /= params.scalar_scale
+
+        return hydrostatic
+
+    def depth(self, coords):
+        """Unscaled depth. We center the domain at 480m below the surface.
+        (See Krietsch et al, 2018a)
+        """
+        assert np.atleast_2d(coords).shape[0] == self.Nd
+        return self.params.depth - self.params.length_scale * coords[2]
 
     # --- Primary variables and discretizations ---
 
@@ -312,16 +498,16 @@ class Flow(CommonAbstractModel):
     # --- Initial condition ---
 
     def initial_scalar_condition(self) -> None:
-        """
-        Initial guess for Newton iteration, scalar variable and bc_values (for time
-        discretization).
+        """Initial scalar conditions for pressure and mortar flux
+
+        The scalar pressure depends on gravity.
         """
         gb = self.gb
 
         for g, d in gb:
             add_nonpresent_dictionary(d, pp.STATE)
             # Initial value for the scalar variable.
-            initial_scalar_value = np.zeros(g.num_cells)
+            initial_scalar_value = self.hydrostatic_pressure(g, scaled=True)
             d[pp.STATE].update({self.scalar_variable: initial_scalar_value})
 
         for _, d in gb.edges():
@@ -545,37 +731,6 @@ class FlowISC(Flow):
         super().__init__(params)
         self.params = params
 
-        # --- PHYSICAL PARAMETERS ---
-
-        # * Permeability and aperture *
-
-        # For now, constant permeability in fractures
-        initial_frac_permeability = (
-            {sz: params.frac_permeability for sz in params.shearzone_names}
-            if params.shearzone_names
-            else {}
-        )
-        initial_intact_permeability = {params.intact_name: params.intact_permeability}
-        self.initial_permeability = {
-            **initial_frac_permeability,
-            **initial_intact_permeability,
-        }
-
-        # Use cubic law to compute initial apertures in fractures.
-        # k = a^2 / 12 => a=sqrt(12k)
-        self.initial_aperture = {
-            sz: np.sqrt(12 * k) for sz, k in self.initial_permeability.items()
-        }
-        self.initial_aperture[params.intact_name] = 1  # Set 3D matrix aperture to 1.
-
-        # --- COMPUTATIONAL MESH ---
-        self._gb: Optional[pp.GridBucket] = None
-        self.network = None
-
-        # ADJUST TIME STEP WITH PERMEABILITY
-        # self.time_step = self.length_scale**2 / self.initial_permeability[None] / 1e10
-        # self.end_time = self.time_step * 4
-
     # --- Grid methods ---
 
     def create_grid(self):
@@ -667,91 +822,8 @@ class FlowISC(Flow):
             pp.set_state(d, {"well": tags.copy()})
 
         # Set injection cells
-        self.params.well_cells(self.params, self.gb)
-
-    # --- Aperture related methods ---
-
-    def aperture(self, g: pp.Grid, scaled) -> np.ndarray:
-        """
-        Aperture is a characteristic thickness of a cell, with units [m].
-        1 in matrix, thickness of fractures and "side length" of cross-sectional
-        area/volume (or "specific volume") for intersections of co-dimension 2 and 3.
-        See also specific_volume.
-        """
-        # TODO: This does not resolve what happens in 1D fractures
-        aperture = np.ones(g.num_cells)
-
-        if g.dim == self.Nd or g.dim == self.Nd - 1:
-            # Get the aperture in the corresponding shearzone (is 1 for 3D matrix)
-            shearzone = self.gb.node_props(g, "name")
-            aperture *= self.initial_aperture[shearzone]
-        else:
-            # Temporary solution: Just take one of the higher-dim grids' aperture
-            g_h = self.gb.node_neighbors(g, only_higher=True)[0]
-            shearzone = self.gb.node_props(g_h, "name")
-            aperture *= self.initial_aperture[shearzone]
-
-        if scaled:
-            aperture *= pp.METER / self.params.length_scale
-
-        return aperture
-
-    # --- Parameter related methods ---
-
-    def permeability(self, g):
-        """ Set (uniform) permeability in a subdomain"""
-
-        # TODO: This does not resolve what happens in 1D fractures
-        if g.dim == self.Nd or g.dim == self.Nd - 1:
-            # get the shearzone
-            shearzone = self.gb.node_props(g, "name")
-            k = self.initial_permeability[shearzone]
-        else:
-            # Set the permeability in fracture intersections as
-            # the average of the neighbouring fractures
-
-            # Temporary solution: Just take one of the higher-dim grids' permeability
-            g_h = self.gb.node_neighbors(g, only_higher=True)[0]
-            shearzone = self.gb.node_props(g_h, "name")
-            k = self.initial_permeability[shearzone]
-
-        return k
-
-    def porosity(self, g):
-        # TODO: Set porosity in fractures and matrix. (Usually set by pp.Rock)
-        return 1
-
-    # def bc_type_scalar(self, g: pp.Grid) -> pp.BoundaryCondition:
-    #     # Define boundary regions
-    #     all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(g)
-    #     dir = np.where(east + west)[0]
-    #     bc = pp.BoundaryCondition(g, dir, ["dir"] * dir.size)
-    #     return bc
-    #
-    # def bc_values_scalar(self, g: pp.Grid) -> np.ndarray:
-    #     """
-    #     Note that Dirichlet values should be divided by scalar_scale.
-    #     """
-    #     all_bf, east, west, north, south, top, bottom = self.domain_boundary_sides(g)
-    #     v = np.zeros(g.num_faces)
-    #     v[west] = 1 * (pp.PASCAL / self.params.scalar_scale)
-    #     return v
-
-    @property
-    def source_flow_rate(self) -> float:
-        """ Scaled source flow rate """
-        injection_rate = (
-            self.params.injection_rate
-        )  # 10 / 60  # 10 l/min  # injection rate [l / s], unscaled
-        return (
-            injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
-        )
-
-    def source_scalar(self, g: pp.Grid) -> np.ndarray:
-        """ Well-bore source (scaled)"""
-        flow_rate = self.source_flow_rate  # scaled
-        values = flow_rate * g.tags["well_cells"] * self.time_step
-        return values
+        if self.params.well_cells:
+            self.params.well_cells(self.params, self.gb)
 
     # --- Simulation and solvers ---
 
@@ -768,6 +840,8 @@ class FlowISC(Flow):
     def after_simulation(self):
         super().after_simulation()
 
+        # --- Print (and save to file) a summary of the simulation ---
+
         # Intro:
         summary_intro = f"Time of simulation: {time.asctime()}\n"
 
@@ -783,9 +857,9 @@ class FlowISC(Flow):
         summary_p_common = (
             f"\nInformation on negative values:\n"
             f"pressure values. "
-            f"max: {p.max():.2e}. "
-            f"Mean: {p.mean():.2e}. "
-            f"Min: {p.min():.2e}\n"
+            f"max: {np.max(p):.2e}. "
+            f"Mean: {np.mean(p):.2e}. "
+            f"Min: {np.min(p):.2e}\n"
         )
         if neg_ind.size > 0:
             summary_p = (
@@ -815,8 +889,6 @@ class FlowISC(Flow):
             f"\nSummary of relevant parameters:\n"
             f"length scale: {self.params.length_scale:.2e}\n"
             f"scalar scale: {self.params.scalar_scale:.2e}\n"
-            f"3d permeability: "
-            f"{self.initial_permeability[self.params.intact_name]:.2e}\n"
             f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
             f"3d cells: {g.num_cells}\n"
             f"pp condition number: {pp_cond:.2e}\n"

@@ -213,6 +213,12 @@ class BaseParameters(BaseModel):
 
     # Gravity
     gravity: bool = False
+    # Either use constant density model (i.e. rho = 1000 kg/m3)
+    # or variable density, rho = rho0 * exp( c * (p - p0) )
+    constant_density: float = True
+    # Depth is needed because hydrostatic pressure depends on the depth.
+    # We center the domain at 480m below the surface (see Krietsch et al, 2018a).
+    depth: float = 480 * pp.METER
 
     # --- Validators ---
 
@@ -341,10 +347,6 @@ class FlowParameters(GeometryParameters):
     # If radius is set to 0, this is not activated.
     near_injection_transmissivity: float = 1
     near_injection_t_radius: float = 0
-
-    # Use constant density model (i.e. rho = 1000 kg/m3)
-    # Otherwise, rho = rho0 * exp( c * (p - p0) )
-    constant_density: float = True
 
     # See 'methods to estimate permeability of shear zones at Grimsel Test Site'
     # in 'Presentasjon til underveismøte' for details on relations between
@@ -505,7 +507,7 @@ def nd_sides_shearzone_injection_cell(
     data_edge = gb.edge_props((fracture, nd_grid))
     mg: pp.MortarGrid = data_edge["mortar_grid"]
 
-    slave_to_master_face = mg.mortar_to_master_int() * mg.slave_to_mortar_int()
+    slave_to_master_face = mg.mortar_to_primary_int() * mg.secondary_to_mortar_int()
     face_to_cell = nd_grid.cell_faces.T
     slave_to_master_cell = face_to_cell * slave_to_master_face
     nd_tags = np.abs(slave_to_master_cell) * tags
