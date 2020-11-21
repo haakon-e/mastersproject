@@ -218,22 +218,22 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             shear_zone = gb.node_props(g, "name")
             aperture *= self.params.compute_initial_aperture(g, shear_zone)
         elif g.dim == nd - 2:
-            # Compute initial intersection aperture by projecting apertures from master grids
+            # Compute initial intersection aperture by projecting apertures from primary grids
             # i.e. fractures. Then take the cell-by-cell maximum.
-            master_grids = gb.node_neighbors(g, only_higher=True)
-            master_aps = [
-                self.compute_initial_aperture(g, scaled=scaled) for g in master_grids
+            primary_grids = gb.node_neighbors(g, only_higher=True)
+            primary_aps = [
+                self.compute_initial_aperture(g, scaled=scaled) for g in primary_grids
             ]
-            master_edges = [(g, g_h) for g_h in master_grids]
-            master_cell_faces = [g_h.cell_faces for g_h in master_grids]
-            mortar_grids = [gb.edge_props(edge)["mortar_grid"] for edge in master_edges]
+            primary_edges = [(g, g_h) for g_h in primary_grids]
+            primary_cell_faces = [g_h.cell_faces for g_h in primary_grids]
+            mortar_grids = [gb.edge_props(edge)["mortar_grid"] for edge in primary_edges]
             projected_aps = [
-                mg.mortar_to_slave_int()
-                * mg.master_to_mortar_int()
+                mg.mortar_to_secondary_int()
+                * mg.primary_to_mortar_int()
                 * np.abs(cell_face)
                 * ap
                 for mg, ap, cell_face in zip(
-                    mortar_grids, master_aps, master_cell_faces
+                    mortar_grids, primary_aps, primary_cell_faces
                 )
             ]
             apertures = np.vstack(projected_aps)
@@ -305,9 +305,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         if g.dim == nd:
             return np.zeros(g.num_cells)
 
-        # For 2d & 1d, fetch the master grids
-        master_grids = gb.node_neighbors(g, only_higher=True)
-        de = [gb.edge_props((g, e)) for e in master_grids]
+        # For 2d & 1d, fetch the primary grids
+        primary_grids = gb.node_neighbors(g, only_higher=True)
+        de = [gb.edge_props((g, e)) for e in primary_grids]
         initialized = np.alltrue([pp.STATE in d for d in de])
         if not initialized:
             return np.zeros(g.num_cells)
@@ -322,11 +322,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         #  for fracture intersections where either side of fracture has different aperture.
         # In fracture intersections
         elif g.dim == nd - 2:
-            # (g is the slave grid.)
+            # (g is the secondary grid.)
             # Fetch edges of g that points to a higher-dimensional grid
-            intx_edges = [(g, g_h) for g_h in master_grids]
-            frac_edges = [(g_h, nd_grid) for g_h in master_grids]
-            frac_cell_faces = [g_h.cell_faces for g_h in master_grids]
+            intx_edges = [(g, g_h) for g_h in primary_grids]
+            frac_edges = [(g_h, nd_grid) for g_h in primary_grids]
+            frac_cell_faces = [g_h.cell_faces for g_h in primary_grids]
 
             # get apertures on the adjacent fractures
             data_edges = [gb.edge_props(edge) for edge in frac_edges]
@@ -344,7 +344,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             # Note: for matching grids, avg and int mortar projections are identical.
             mortar_grids = [gb.edge_props(edge)["mortar_grid"] for edge in intx_edges]
             mortar_apertures = [
-                mg.master_to_mortar_int() * ap
+                mg.primary_to_mortar_int() * ap
                 for mg, ap in zip(mortar_grids, frac_face_apertures)
             ]
             # The reshape and max operations implicitly project the aperture to
@@ -432,15 +432,15 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             g_l, _ = gb.nodes_of_edge(e)
             a_l = self.aperture(g_l, scaled=True)
 
-            # Compute gravity on the slave grid
+            # Compute gravity on the secondary grid
             rho_g = -pp.GRAVITY_ACCELERATION * self.density(g_l) * (ls / ss)
 
             # Multiply by (a/2) to "cancel out" the normal gradient of the diffusivity
             # (see also self.set_permeability_from_aperture)
             gravity_l = rho_g * (a_l / 2)
 
-            # Take the gravity from the slave grid and project to the interface
-            gravity_mg = mg.slave_to_mortar_avg() * gravity_l
+            # Take the gravity from the secondary grid and project to the interface
+            gravity_mg = mg.secondary_to_mortar_avg() * gravity_l
 
             vector_source = np.zeros((self.Nd, mg.num_cells))
             vector_source[-1, :] = gravity_mg

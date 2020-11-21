@@ -195,7 +195,7 @@ class Flow(CommonAbstractModel):
 
             # Take trace of and then project specific volumes from g_h to mg
             V_h = (
-                mg.master_to_mortar_avg()
+                mg.primary_to_mortar_avg()
                 * np.abs(g_h.cell_faces)
                 * self.specific_volume(g_h, scaled=True)
             )
@@ -205,7 +205,7 @@ class Flow(CommonAbstractModel):
 
             # Division through half the aperture represents taking the (normal) gradient
             # Then, project to mg.
-            normal_diffusivity = mg.slave_to_mortar_int() * np.divide(
+            normal_diffusivity = mg.secondary_to_mortar_int() * np.divide(
                 diffusivity, a_l / 2
             )
 

@@ -591,7 +591,7 @@ class Mechanics(CommonAbstractModel):
             if mg.dim == self.Nd - 1:
                 u_e = d_e[pp.STATE][var_mortar]
 
-                stress += bound_stress_discr * mg.mortar_to_master_avg(nd=self.Nd) * u_e
+                stress += bound_stress_discr * mg.mortar_to_primary_avg(nd=self.Nd) * u_e
 
         d[pp.STATE]["stress"] = stress
 
@@ -625,7 +625,7 @@ class Mechanics(CommonAbstractModel):
             mortar_u = data_edge[pp.STATE][var_mortar]
 
         displacement_jump_global_coord = (
-            mg.mortar_to_slave_avg(nd=nd) * mg.sign_of_mortar_sides(nd=nd) * mortar_u
+            mg.mortar_to_secondary_avg(nd=nd) * mg.sign_of_mortar_sides(nd=nd) * mortar_u
         )
         projection: pp.TangentialNormalProjection = data_edge[
             "tangential_normal_projection"
@@ -755,7 +755,7 @@ class Mechanics(CommonAbstractModel):
                 mg = data_edge["mortar_grid"]
                 mortar_u = data_edge[pp.STATE][var_mortar]
                 displacement_jump_global_coord = (
-                    mg.mortar_to_slave_avg(nd=nd)
+                    mg.mortar_to_secondary_avg(nd=nd)
                     * mg.sign_of_mortar_sides(nd=nd)
                     * mortar_u
                 )
