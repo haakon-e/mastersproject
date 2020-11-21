@@ -530,7 +530,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
                 glob_ind = dof_ind[tunnels]
                 glob_inds.append(glob_ind)
-        rows_to_zero = np.hstack(glob_inds)
+        rows_to_zero = np.hstack(glob_inds) if len(glob_inds) > 0 else np.empty(0, dtype=np.bool)
         return rows_to_zero
 
     def csr_zero_rows(self, csr, rows_to_zero):
