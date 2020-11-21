@@ -19,7 +19,7 @@ class Flow(CommonAbstractModel):
     """ General flow model for time-dependent Darcy Flow for fractured porous media"""
 
     def __init__(self, params: FlowParameters):
-        """ General flow model for time-dependent Darcy Flow
+        """General flow model for time-dependent Darcy Flow
 
         Parameters
         ----------
@@ -108,8 +108,7 @@ class Flow(CommonAbstractModel):
     # --- Set parameters ---
 
     def set_scalar_parameters(self) -> None:
-        """ Set scalar parameters for the simulation
-        """
+        """Set scalar parameters for the simulation"""
         gb = self.gb
 
         # Set to 0 for steady state
@@ -156,7 +155,7 @@ class Flow(CommonAbstractModel):
         return np.ones(g.num_cells)
 
     def set_permeability_from_aperture(self) -> None:
-        """ Set permeability by cubic law in fractures.
+        """Set permeability by cubic law in fractures.
 
         Currently, we simply set the initial permeability.
         """
@@ -216,7 +215,10 @@ class Flow(CommonAbstractModel):
 
             # Set the data
             pp.initialize_data(
-                mg, data_edge, scalar_key, {"normal_diffusivity": normal_diffusivity},
+                mg,
+                data_edge,
+                scalar_key,
+                {"normal_diffusivity": normal_diffusivity},
             )
 
     # --- Primary variables and discretizations ---
@@ -233,7 +235,9 @@ class Flow(CommonAbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.scalar_variable: {"cells": 1},}  # noqa: E231
+                {
+                    self.scalar_variable: {"cells": 1},
+                }  # noqa: E231
             )
 
         # Then for the edges
@@ -241,7 +245,9 @@ class Flow(CommonAbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
 
             d[primary_vars].update(
-                {self.mortar_scalar_variable: {"cells": 1},}
+                {
+                    self.mortar_scalar_variable: {"cells": 1},
+                }
             )
 
     def assign_scalar_discretizations(self) -> None:
@@ -297,8 +303,7 @@ class Flow(CommonAbstractModel):
 
     @timer(logger, level="INFO")
     def discretize(self) -> None:
-        """ Discretize all terms
-        """
+        """Discretize all terms"""
         if not self.assembler:
             self.assembler = pp.Assembler(self.gb)
 
@@ -329,7 +334,7 @@ class Flow(CommonAbstractModel):
 
     @timer(logger)
     def prepare_simulation(self):
-        """ Is run prior to a time-stepping scheme. Use this to initialize
+        """Is run prior to a time-stepping scheme. Use this to initialize
         discretizations, linear solvers etc.
         """
         self._prepare_grid()
@@ -421,7 +426,7 @@ class Flow(CommonAbstractModel):
 
     @timer(logger, level="INFO")
     def initialize_linear_solver(self):
-        """ Initialize linear solver
+        """Initialize linear solver
 
         Currently, we only consider the direct solver.
         See also self.assemble_and_solve_linear_system()
@@ -433,7 +438,7 @@ class Flow(CommonAbstractModel):
         # logger.info(f"Exact condition number: {cond:.2e}")
 
         if self.params.linear_solver == "direct":
-            """ In theory, it should be possible to instruct SuperLU to reuse the
+            """In theory, it should be possible to instruct SuperLU to reuse the
             symbolic factorization from one iteration to the next. However, it seems
             the scipy wrapper around SuperLU has not implemented the necessary
             functionality, as discussed in
@@ -451,7 +456,7 @@ class Flow(CommonAbstractModel):
     # --- Newton iterations ---
 
     def before_newton_loop(self):
-        """ Will be run before entering a Newton loop.
+        """Will be run before entering a Newton loop.
         E.g.
            Discretize time-dependent quantities etc.
            Update time-dependent parameters (captured by assembly).
@@ -459,8 +464,7 @@ class Flow(CommonAbstractModel):
         self.set_scalar_parameters()
 
     def after_simulation(self):
-        """ Called after a time-dependent problem
-        """
+        """Called after a time-dependent problem"""
         self.export_pvd()
         logger.info(f"Solution exported to folder \n {self.params.folder_name}")
 
@@ -531,7 +535,7 @@ class FlowISC(Flow):
     """ Flow model for fractured porous media. Specific to GTS-ISC project."""
 
     def __init__(self, params: FlowParameters):
-        """ Initialize the flow model
+        """Initialize the flow model
 
         Parameters
         ----------
@@ -619,8 +623,7 @@ class FlowISC(Flow):
 
     @gb.setter
     def gb(self, gb: pp.GridBucket):
-        """ Set a grid bucket to the class
-        """
+        """Set a grid bucket to the class"""
         self._gb = gb
         if gb is None:
             return
@@ -645,9 +648,7 @@ class FlowISC(Flow):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
     def grids_by_name(self, name, key="name") -> np.ndarray:
-        """ Get grid by grid bucket node property 'name'
-
-        """
+        """Get grid by grid bucket node property 'name'"""
         gb = self.gb
         grids = gb.get_grids(lambda g: gb.node_props(g, key) == name)
 
@@ -755,7 +756,7 @@ class FlowISC(Flow):
     # --- Simulation and solvers ---
 
     def _prepare_grid(self):
-        """ Tag well cells right after creation.
+        """Tag well cells right after creation.
         Called by self.prepare_simulation()
         """
         if self.gb is None:

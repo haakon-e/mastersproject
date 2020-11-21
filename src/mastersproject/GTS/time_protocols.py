@@ -63,7 +63,7 @@ class TimeStepPhase(AbstractPhase):
 
 
 class AbstractProtocol:
-    """ Abstract protocol getting data in discrete time intervals
+    """Abstract protocol getting data in discrete time intervals
 
     Partition of a time interval to phases,
     with arbitrary data within each interval.
@@ -128,7 +128,9 @@ class AbstractProtocol:
         ), "All rates must be encapsulated by phase limits"
         phases = [
             phase_type(
-                start_time=phase_limits[i], end_time=phase_limits[i + 1], data=value,
+                start_time=phase_limits[i],
+                end_time=phase_limits[i + 1],
+                data=value,
             )
             for i, value in enumerate(values)
         ]

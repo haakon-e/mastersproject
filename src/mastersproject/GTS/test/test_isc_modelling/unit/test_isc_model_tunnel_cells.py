@@ -31,7 +31,10 @@ def create_protocols():
 @pytest.fixture(scope="session")
 def params(tmpdir_factory):
     inj, dt = create_protocols()
-    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=10,)
+    newton_params = NewtonParameters(
+        convergence_tol=1e-6,
+        max_iterations=10,
+    )
     path = tmpdir_factory.mktemp("results")
     biot_params = BiotParameters(
         # BaseParameters

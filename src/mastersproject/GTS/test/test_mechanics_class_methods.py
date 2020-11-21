@@ -12,8 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_mechanical_boundary_conditions():
-    """ Test that mechanical boundary conditions are correctly set
-    """
+    """Test that mechanical boundary conditions are correctly set"""
 
     this_method = test_mechanical_boundary_conditions.__name__
     now_as_YYMMDD = pendulum.now().format("YYMMDD")
@@ -75,7 +74,7 @@ def test_mechanical_boundary_conditions():
 
 @trace(logger)
 def test_decomposition_of_stress(setup="normal_shear"):
-    """ Test the solutions acquired when decomposing stress to
+    """Test the solutions acquired when decomposing stress to
     purely compressive and purely rotational components.
 
     --- Setup ---

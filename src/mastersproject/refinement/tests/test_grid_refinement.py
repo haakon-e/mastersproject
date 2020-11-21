@@ -98,7 +98,7 @@ def generate_n_grids(path_head: str, n_grids: int) -> List[pp.GridBucket]:
 def create_gb_with_simple_fracture(
     path_head: str,
 ) -> Tuple[pp.FractureNetwork3d, Path, pp.GridBucket]:
-    """ Setup method.
+    """Setup method.
 
     Set up a fracture network and mesh it.
 

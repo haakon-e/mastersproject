@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class TestFlow:
     def test_1_frac_unit_domain(self):
-        """ Test that we a basic 1-fracture setup runs as
+        """Test that we a basic 1-fracture setup runs as
         expected with easy parameters.
 
         Goal: No negative pressure cells
@@ -31,7 +31,7 @@ class TestFlow:
         )
 
     def test_2_fracs_unit_domain(self):
-        """ Test that we a basic 2-fracture setup runs as
+        """Test that we a basic 2-fracture setup runs as
         expected with easy parameters.
 
         Goal: No negative pressure cells
@@ -45,7 +45,7 @@ class TestFlow:
         )
 
     def test_2_fracs_unit_domain_incompressible_flow(self):
-        """ Test that we a basic 2-fracture setup runs as
+        """Test that we a basic 2-fracture setup runs as
         expected with easy parameters and incompressible flow.
 
         Goal: No negative pressure cells
@@ -60,7 +60,7 @@ class TestFlow:
         )
 
     def test_1_frac_unit_domain_incompressible_flow(self):
-        """ Test that we a basic 1-fracture setup runs as
+        """Test that we a basic 1-fracture setup runs as
         expected with easy parameters and incompressible flow.
 
         Goal: No negative pressure cells
@@ -75,7 +75,7 @@ class TestFlow:
         )
 
     def test_0_frac_unit_domain_incompressible_flow(self):
-        """ Test that we a basic 0-fracture setup runs as
+        """Test that we a basic 0-fracture setup runs as
         expected with easy parameters and incompressible flow.
 
         Goal: No negative pressure cells
@@ -98,7 +98,7 @@ def _run_flow_models_helper(
     shearzone_names: Optional[List[str]],
     time_step: float = None,
 ) -> None:
-    """ Helper method for the test_flow setups
+    """Helper method for the test_flow setups
 
     sz is related to mesh_args
     incompressible turns on or off compressibility (and time stepping)
@@ -149,9 +149,7 @@ def _run_flow_models_helper(
 
 
 def network_n_fractures(n_frac: int) -> pp.FractureNetwork3d:
-    """ Create a unit domain in 3d with n (pre-defined) fractures
-
-    """
+    """Create a unit domain in 3d with n (pre-defined) fractures"""
     assert 0 <= n_frac <= 2, "Only implemented between 0 and 2 fractures"
 
     bounding_box = {"xmin": 0, "ymin": 0, "zmin": 0, "xmax": 1, "ymax": 1, "zmax": 1}

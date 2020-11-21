@@ -9,12 +9,10 @@ from refinement.run_convergence_study import run_model_for_convergence_study
 
 
 class TestRunModelForConvergenceStudy:
-    """ Test run_model_for_convergence_study on various domains and parameters
-    """
+    """Test run_model_for_convergence_study on various domains and parameters"""
 
     def test_0_frac_unit_domain(self):
-        """ No fractures, incompressible
-        """
+        """No fractures, incompressible"""
         _run_convergence_study_helper(
             head="test_0_frac_unit_domain",
             shearzone_names=None,
@@ -27,7 +25,7 @@ class TestRunModelForConvergenceStudy:
     #           run more than 1 refinement due to constraints in number of cells.
 
     def test_2_fracs_unit_domain(self):
-        """ 2 fractures, incompressible
+        """2 fractures, incompressible
 
         # Note: The current mesh_args gives no negative cells, but we are not able
         # to solve a second refinement. So this test cannot be run to its full intent.
@@ -42,7 +40,7 @@ class TestRunModelForConvergenceStudy:
         )
 
     def test_1_frac_unit_domain(self):
-        """ 1 fracture, incompressible
+        """1 fracture, incompressible
 
         # Note: The current mesh_args gives no negative cells, but we are not able
         # to solve a second refinement. So this test cannot be run to its full intent.
@@ -64,7 +62,7 @@ def _run_convergence_study_helper(
     frac_permeability: float = 1,
     intact_permeability: float = 1,
 ) -> None:
-    """ Helper method for run_convergence_study tests
+    """Helper method for run_convergence_study tests
 
     head is the path head. Usually, method name
     shearzone_names is a list of names given to fractures
@@ -109,9 +107,7 @@ def _run_convergence_study_helper(
 
 
 def network_n_fractures(n_frac: int) -> pp.FractureNetwork3d:
-    """ Create a unit domain in 3d with n (pre-defined) fractures
-
-    """
+    """Create a unit domain in 3d with n (pre-defined) fractures"""
     assert 0 <= n_frac <= 2, "Only implemented between 0 and 2 fractures"
 
     bounding_box = {"xmin": 0, "ymin": 0, "zmin": 0, "xmax": 1, "ymax": 1, "zmax": 1}

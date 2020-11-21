@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 # TODO: Move convex_plane to the isc class.
 def convex_plane(shearzone_names, coord_system="gts", path=None) -> pd.DataFrame:
-    """ Compute vertices for the convex polygon of the projected point cloud
+    """Compute vertices for the convex polygon of the projected point cloud
     to the plane of best fit for each shear-zone is shearzone_names.
 
     Data imported from gts.ISCData()
@@ -74,7 +74,7 @@ def convex_plane(shearzone_names, coord_system="gts", path=None) -> pd.DataFrame
 def fracture_network(
     shearzone_names, export_vtk: bool = False, path=None, **network_kwargs
 ) -> pp.FractureNetwork3d:
-    """ Make a fracture network from a selection of shear-zones.
+    """Make a fracture network from a selection of shear-zones.
 
     Parameters:
         shearzone_names : str or list

@@ -19,7 +19,7 @@ def prepare_setup(
     prepare_simulation: bool = True,
     setup_loggers: bool = True,
 ) -> ContactMechanicsISC:
-    """ Helper method to create grids, etc. for test methods
+    """Helper method to create grids, etc. for test methods
 
     Parameters
     ----------
@@ -44,7 +44,9 @@ def prepare_setup(
     """
 
     in_params = prepare_params(
-        path_head=path_head, params=params, setup_loggers=setup_loggers,
+        path_head=path_head,
+        params=params,
+        setup_loggers=setup_loggers,
     )
 
     setup = model(in_params)
@@ -54,7 +56,11 @@ def prepare_setup(
 
 
 @trace(logger, timeit=False, level="DEBUG")
-def prepare_params(path_head: str, params: dict, setup_loggers: bool,) -> dict:
+def prepare_params(
+    path_head: str,
+    params: dict,
+    setup_loggers: bool,
+) -> dict:
     """
     Method to prepare default set of parameters for model runs.
 

@@ -18,6 +18,8 @@ def structured_grid_2_frac_vertical(length_scale: float):
          [0, 0, 150, 150]])
     # fmt: on
     gb = pp.meshing.cart_grid(
-        [frac_pts1, frac_pts2], nx=nx, physdims=physdims / length_scale,
+        [frac_pts1, frac_pts2],
+        nx=nx,
+        physdims=physdims / length_scale,
     )
     return gb

@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class Mechanics(CommonAbstractModel):
     def __init__(self, params: BaseParameters):
-        """ General mechanics model for static contact mechanics
+        """General mechanics model for static contact mechanics
 
         Parameters
         ----------
@@ -73,8 +73,7 @@ class Mechanics(CommonAbstractModel):
         return bc
 
     def bc_values_mechanics(self, g: pp.Grid) -> np.ndarray:
-        """ Set homogeneous conditions on all boundary faces.
-        """
+        """Set homogeneous conditions on all boundary faces."""
         # Values for all Nd components, facewise
         values = np.zeros((self.Nd, g.num_faces))
         # Reshape according to PorePy convention
@@ -88,7 +87,7 @@ class Mechanics(CommonAbstractModel):
     # --- Set parameters ---
 
     def rock_friction_coefficient(self, g: pp.Grid) -> np.ndarray:  # noqa
-        """ The friction coefficient is uniform, and equal to 1.
+        """The friction coefficient is uniform, and equal to 1.
 
         Assumes self.set_rock() is called
         """
@@ -148,8 +147,7 @@ class Mechanics(CommonAbstractModel):
     # --- Primary variables and discretizations ---
 
     def assign_mechanics_variables(self) -> None:
-        """ Assign variables to the nodes and edges of the grid bucket.
-        """
+        """Assign variables to the nodes and edges of the grid bucket."""
         gb = self.gb
         primary_vars = pp.PRIMARY_VARIABLES
         var_m = self.displacement_variable
@@ -160,12 +158,16 @@ class Mechanics(CommonAbstractModel):
             add_nonpresent_dictionary(d, primary_vars)
             if g.dim == self.Nd:
                 d[primary_vars].update(
-                    {var_m: {"cells": self.Nd},}
+                    {
+                        var_m: {"cells": self.Nd},
+                    }
                 )
 
             elif g.dim == self.Nd - 1:
                 d[primary_vars].update(
-                    {var_contact: {"cells": self.Nd},}
+                    {
+                        var_contact: {"cells": self.Nd},
+                    }
                 )
 
         for e, d in gb.edges():
@@ -174,7 +176,9 @@ class Mechanics(CommonAbstractModel):
             g_l, g_h = gb.nodes_of_edge(e)
             if g_h.dim == self.Nd:
                 d[primary_vars].update(
-                    {var_mortar: {"cells": self.Nd},}
+                    {
+                        var_mortar: {"cells": self.Nd},
+                    }
                 )
 
     def assign_mechanics_discretizations(self) -> None:
@@ -202,12 +206,16 @@ class Mechanics(CommonAbstractModel):
 
             if g.dim == nd:
                 d[discr_key].update(
-                    {var_m: {"mpsa": mpsa},}
+                    {
+                        var_m: {"mpsa": mpsa},
+                    }
                 )
 
             elif g.dim == nd - 1:
                 d[discr_key].update(
-                    {var_contact: {"empty": empty_discr},}
+                    {
+                        var_contact: {"empty": empty_discr},
+                    }
                 )
 
         # Define the contact condition on the mortar grid
@@ -230,8 +238,7 @@ class Mechanics(CommonAbstractModel):
 
     @timer(logger, level="INFO")
     def discretize(self) -> None:
-        """ Discretize all terms
-        """
+        """Discretize all terms"""
         if not self.assembler:
             self.assembler = pp.Assembler(self.gb)
 
@@ -240,7 +247,7 @@ class Mechanics(CommonAbstractModel):
     # --- Initial condition ---
 
     def initial_mechanics_condition(self) -> None:
-        """ Set initial guess for the variables.
+        """Set initial guess for the variables.
 
         The displacement is set to zero in the Nd-domain, and at the fracture interfaces
         The displacement jump is thereby also zero.
@@ -265,7 +272,9 @@ class Mechanics(CommonAbstractModel):
                 # Initialize displacement variable
                 initial_displacement_value = np.zeros(g.num_cells * self.Nd)
                 d[state].update(
-                    {var_m: initial_displacement_value,}
+                    {
+                        var_m: initial_displacement_value,
+                    }
                 )
 
             elif g.dim == self.Nd - 1:
@@ -274,7 +283,10 @@ class Mechanics(CommonAbstractModel):
                     (np.zeros((g.dim, g.num_cells)), -1 * np.ones(g.num_cells))
                 ).ravel(order="F")
                 d[state].update(
-                    {iterate: {var_contact: traction}, var_contact: traction,}
+                    {
+                        iterate: {var_contact: traction},
+                        var_contact: traction,
+                    }
                 )
 
         for e, d in self.gb.edges():
@@ -284,14 +296,17 @@ class Mechanics(CommonAbstractModel):
             if mg.dim == self.Nd - 1:
                 size = mg.num_cells * self.Nd
                 d[state].update(
-                    {var_mortar: np.zeros(size), iterate: {var_mortar: np.zeros(size)},}
+                    {
+                        var_mortar: np.zeros(size),
+                        iterate: {var_mortar: np.zeros(size)},
+                    }
                 )
 
     # --- Simulation and solvers ---
 
     @timer(logger, level="INFO")
     def prepare_simulation(self) -> None:
-        """ Is run prior to a time-stepping scheme. Use this to initialize
+        """Is run prior to a time-stepping scheme. Use this to initialize
         discretizations, linear solvers etc.
         """
         self._prepare_grid()
@@ -311,7 +326,7 @@ class Mechanics(CommonAbstractModel):
 
     @timer(logger, level="INFO")
     def initialize_linear_solver(self) -> None:
-        """ Initialize linear solver
+        """Initialize linear solver
 
         Currently, we only consider the direct solver.
         See also self.assemble_and_solve_linear_system()
@@ -323,7 +338,7 @@ class Mechanics(CommonAbstractModel):
         # logger.info(f"Exact condition number: {cond:.2e}")
 
         if self.params.linear_solver == "direct":
-            """ In theory, it should be possible to instruct SuperLU to reuse the
+            """In theory, it should be possible to instruct SuperLU to reuse the
             symbolic factorization from one iteration to the next. However, it seems
             the scipy wrapper around SuperLU has not implemented the necessary
             functionality, as discussed in
@@ -465,10 +480,16 @@ class Mechanics(CommonAbstractModel):
         # -- Calculate mechanics error for non-linear simulations --
 
         error_mech, converged_mech, diverged_mech = self._check_convergence_mechanics(
-            solution, prev_solution, init_solution, nl_params,
+            solution,
+            prev_solution,
+            init_solution,
+            nl_params,
         )
         _, converged_contact, diverged_contact = self._check_convergence_contact(
-            solution, prev_solution, init_solution, nl_params,
+            solution,
+            prev_solution,
+            init_solution,
+            nl_params,
         )
 
         converged = converged_mech and converged_contact
@@ -480,7 +501,7 @@ class Mechanics(CommonAbstractModel):
     # --- Newton iterations ---
 
     def before_newton_loop(self) -> None:
-        """ Will be run before entering a Newton loop.
+        """Will be run before entering a Newton loop.
 
         Discretize time-dependent quantities etc.
         """
@@ -494,7 +515,7 @@ class Mechanics(CommonAbstractModel):
         self.assembler.discretize(term_filter)
 
     def update_state(self, solution_vector: np.ndarray) -> None:
-        """ Update variables for the current Newton iteration.
+        """Update variables for the current Newton iteration.
 
         Extract parts of the solution for current iterate.
 
@@ -548,7 +569,7 @@ class Mechanics(CommonAbstractModel):
     # --- Helper methods ---
 
     def reconstruct_stress(self, previous_iterate: bool = False) -> None:
-        """ Compute the stress in the highest-dimensional grid based on the displacement
+        """Compute the stress in the highest-dimensional grid based on the displacement
         states in that grid, adjacent interfaces and global boundary conditions.
 
         The stress is stored in the data dictionary of the highest-dimensional grid,
@@ -594,14 +615,16 @@ class Mechanics(CommonAbstractModel):
             if mg.dim == self.Nd - 1:
                 u_e = d_e[pp.STATE][var_mortar]
 
-                stress += bound_stress_discr * mg.mortar_to_primary_avg(nd=self.Nd) * u_e
+                stress += (
+                    bound_stress_discr * mg.mortar_to_primary_avg(nd=self.Nd) * u_e
+                )
 
         d[pp.STATE]["stress"] = stress
 
     def reconstruct_local_displacement_jump(
         self, data_edge: Dict, from_iterate: bool = True
     ):
-        """ Reconstruct the displacement jump in local coordinates.
+        """Reconstruct the displacement jump in local coordinates.
 
         Parameters:
             data_edge : Dict
@@ -628,7 +651,9 @@ class Mechanics(CommonAbstractModel):
             mortar_u = data_edge[pp.STATE][var_mortar]
 
         displacement_jump_global_coord = (
-            mg.mortar_to_secondary_avg(nd=nd) * mg.sign_of_mortar_sides(nd=nd) * mortar_u
+            mg.mortar_to_secondary_avg(nd=nd)
+            * mg.sign_of_mortar_sides(nd=nd)
+            * mortar_u
         )
         projection: pp.TangentialNormalProjection = data_edge[
             "tangential_normal_projection"
@@ -708,7 +733,7 @@ class Mechanics(CommonAbstractModel):
             state[self.fracture_state] = fracture_state
 
     def save_frac_jump_data(self, from_iterate: bool = False) -> None:
-        """ Save upscaled normal and tangential jumps to a class attribute
+        """Save upscaled normal and tangential jumps to a class attribute
         Inspired by Keilegavlen 2019 (code)
         """
         gb = self.gb
@@ -763,7 +788,8 @@ class Mechanics(CommonAbstractModel):
                     * mortar_u
                 )
                 u_mortar_global = displacement_jump_global_coord.reshape(
-                    (nd, -1), order="F",
+                    (nd, -1),
+                    order="F",
                 )
                 u_exp = u_mortar_global * ls
             else:

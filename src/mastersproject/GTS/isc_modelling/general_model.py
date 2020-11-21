@@ -28,7 +28,7 @@ class CommonAbstractModel(AbstractModel):
         self.export_fields: List = []
 
     def get_state_vector(self):
-        """ Get a vector of the current state of the variables; with the same ordering
+        """Get a vector of the current state of the variables; with the same ordering
             as in the assembler.
 
         Returns:
@@ -51,7 +51,7 @@ class CommonAbstractModel(AbstractModel):
 
     @abc.abstractmethod
     def prepare_simulation(self):
-        """ Method called prior to the start of time stepping, or prior to entering the
+        """Method called prior to the start of time stepping, or prior to entering the
         non-linear solver for stationary problems.
 
         The intended use is to define parameters, geometry and grid, discretize linear
@@ -64,7 +64,7 @@ class CommonAbstractModel(AbstractModel):
 
     @abc.abstractmethod
     def before_newton_loop(self):
-        """ Method to be called before entering the non-linear solver, thus at the start
+        """Method to be called before entering the non-linear solver, thus at the start
         of a new time step.
 
         Possible usage is to update time-dependent parameters, discertizations etc.
@@ -73,7 +73,7 @@ class CommonAbstractModel(AbstractModel):
         pass
 
     def before_newton_iteration(self):
-        """ Method to be called at the start of every non-linear iteration.
+        """Method to be called at the start of every non-linear iteration.
 
         Possible usage is to update non-linear parameters, discertizations etc.
 
@@ -81,7 +81,7 @@ class CommonAbstractModel(AbstractModel):
         pass
 
     def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
-        """ Actions after each Newton iteration
+        """Actions after each Newton iteration
 
         For instance; update_state updates the non-linear terms.
 
@@ -139,7 +139,7 @@ class CommonAbstractModel(AbstractModel):
             )
 
     def assemble_matrix_rhs(self):
-        """ Wrapper for assembler.assemble_matrix_rhs
+        """Wrapper for assembler.assemble_matrix_rhs
 
         Wrap the assembler method so it can be overwritten elsewhere.
         """
@@ -215,8 +215,7 @@ class CommonAbstractModel(AbstractModel):
         return False
 
     def _nd_grid(self) -> pp.Grid:
-        """ Get the grid of the highest dimension. Assumes self.gb is set.
-        """
+        """Get the grid of the highest dimension. Assumes self.gb is set."""
         return self.gb.grids_of_dimension(self.Nd)[0]
 
     def domain_boundary_sides(self, g):

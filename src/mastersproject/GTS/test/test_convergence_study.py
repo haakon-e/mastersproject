@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 @trace(logger=logger)
 def test_unit_convergence_study():
-    """ Unit test for convergence study
+    """Unit test for convergence study
 
     Simple prototype-like setup.
     """
@@ -48,7 +48,7 @@ def test_unit_convergence_study():
 
 @trace(logger=logger)
 def test_unit_biot_convergence_study():
-    """ Unit test for convergence study
+    """Unit test for convergence study
 
     -- Key setup
     * Full biot equations

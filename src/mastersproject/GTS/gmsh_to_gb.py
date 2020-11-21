@@ -43,7 +43,10 @@ def volume_with_fracture():
 
     # Partition domain
     box_dim = 3
-    out, m = kernel.fragment([(box_dim, outer_box)], f_out,)
+    out, m = kernel.fragment(
+        [(box_dim, outer_box)],
+        f_out,
+    )
     kernel.synchronize()
 
     # Mesh the domain

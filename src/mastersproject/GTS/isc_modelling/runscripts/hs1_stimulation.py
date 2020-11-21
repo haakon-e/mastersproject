@@ -63,9 +63,13 @@ def prepare_params_thesis_cases(case: str, length_scale, scalar_scale):
 
 
 def prepare_params(
-    length_scale, scalar_scale, k, box, case=None,
+    length_scale,
+    scalar_scale,
+    k,
+    box,
+    case=None,
 ) -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
-    """ Hydro shearing experiment HS1
+    """Hydro shearing experiment HS1
 
     HS1 targeted S1.3 through INJ2 at 39.75 - 40.75 m.
     """
@@ -74,7 +78,10 @@ def prepare_params(
         tunnel_equilibration_time
     )
 
-    newton_params = NewtonParameters(convergence_tol=5e-5, max_iterations=300,)
+    newton_params = NewtonParameters(
+        convergence_tol=5e-5,
+        max_iterations=300,
+    )
     base = Path.home() / "mastersproject-data/hs1"
     head = f"final/case_{case or '0'}"
     biot_params = BiotParameters(
@@ -85,7 +92,9 @@ def prepare_params(
         head=head,
         time_step=time_params.initial_time_step,
         end_time=time_params.end_time,
-        rock=GrimselGranodiorite(PERMEABILITY=k,),  # low k: 5e-21 -- high k: 2 * 5e-21
+        rock=GrimselGranodiorite(
+            PERMEABILITY=k,
+        ),  # low k: 5e-21 -- high k: 2 * 5e-21
         gravity=False,
         # GeometryParameters
         shearzone_names=[
@@ -100,7 +109,10 @@ def prepare_params(
         dilation_angle=np.radians(3),
         newton_options=newton_params.dict(),
         # FlowParameters
-        source_scalar_borehole_shearzone={"shearzone": "S1_3", "borehole": "INJ2",},
+        source_scalar_borehole_shearzone={
+            "shearzone": "S1_3",
+            "borehole": "INJ2",
+        },
         well_cells=shearzone_injection_cell,
         tunnel_equilibrium_time=tunnel_equilibration_time,
         injection_protocol=injection_protocol,
@@ -124,7 +136,9 @@ def prepare_params(
 
 def box_runscript(case, run=True):
     biot_params, newton_params, time_params = prepare_params_thesis_cases(
-        case, length_scale=1.0, scalar_scale=1e11,
+        case,
+        length_scale=1.0,
+        scalar_scale=1e11,
     )
     # *2 gives ~25kc on 4fracs.
     # l=0.3, lcin 5*5*l, lcout 50*10*l
@@ -145,7 +159,7 @@ def box_runscript(case, run=True):
 
 
 def isc_dt_and_injection_protocol(tunnel_time: float):
-    """ Stimulation protocol for the rate-controlled phase of the ISC experiment
+    """Stimulation protocol for the rate-controlled phase of the ISC experiment
 
     Here, we consider Doetsch et al (2018) [see e.g. p. 78/79 or App. J]
             Hydro Shearing Protocol:

@@ -21,7 +21,7 @@ def gb_refinements(
     gmsh_folder_path: Union[str, Path],
     mesh_args: dict,
 ) -> Generator[pp.GridBucket, None, None]:
-    """ Create n refinements of a fracture network.
+    """Create n refinements of a fracture network.
 
     This method is used if you have a pp.FractureNetwork,
     but not a .geo file describing the mesh.
@@ -65,7 +65,9 @@ def gb_refinements(
     network.to_gmsh(in_file, in_3d=True)
 
     yield from refine_mesh_by_splitting(
-        in_file=in_file, out_file=out_file, dim=dim,
+        in_file=in_file,
+        out_file=out_file,
+        dim=dim,
     )
 
 
@@ -79,7 +81,7 @@ def run_model_for_convergence_study(
     variable: List[str] = None,  # This is really required for the moment
     variable_dof: List[int] = None,
 ) -> Tuple[List[pp.GridBucket], List[dict]]:
-    """ Run a model on a grid, refined n times.
+    """Run a model on a grid, refined n times.
 
     For a given model and method to run the model,
     and a set of parameters, n refinements of the
@@ -169,7 +171,10 @@ def run_model_for_convergence_study(
         gb_coarse_fine_cell_mapping(gb=gb_i, gb_ref=gb_ref)
 
         _error = grid_error(
-            gb=gb_i, gb_ref=gb_ref, variable=variable, variable_dof=variable_dof,
+            gb=gb_i,
+            gb_ref=gb_ref,
+            variable=variable,
+            variable_dof=variable_dof,
         )
         errors.append(_error)
 
@@ -177,7 +182,7 @@ def run_model_for_convergence_study(
 
 
 def _impose_network_parameters(network: pp.FractureNetwork3d, mesh_args: dict):
-    """ TODO: Consider separating the start FractureNetwork3d.mesh,
+    """TODO: Consider separating the start FractureNetwork3d.mesh,
             to avoid us copying its contents here
     We need to generate a .geo file for refine_mesh_by_splitting.
     refine_mesh_by_splitting will mesh the coarsest grid for us

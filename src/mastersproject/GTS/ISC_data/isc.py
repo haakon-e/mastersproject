@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class ISCData:
     def __init__(self, path=None):
-        """ Initialize the class managing data from the ISC project
+        """Initialize the class managing data from the ISC project
 
         Parameters:
             path : str, pathlib.Path : Optional
@@ -93,7 +93,7 @@ class ISCData:
     # ========= PUBLIC CLASS METHODS ===================================================================================
 
     def get_shearzone(self, sz: str, coords: str = "gts"):
-        """ Extract shear-zone coordinates for a given shear-zone
+        """Extract shear-zone coordinates for a given shear-zone
 
         Coordinates extracted will either be 'swiss' or 'gts'.
 
@@ -119,7 +119,7 @@ class ISCData:
         shearzone=None,
         coords="gts",
     ):
-        """ Get structures in a borehole at depth
+        """Get structures in a borehole at depth
 
         For a given borehole, and a given depth (or depth interval),
         get all structures - or a subset of structures, or specific shearzones.
@@ -187,7 +187,7 @@ class ISCData:
         return _bh
 
     def borehole_plane_intersection(self):
-        """ Compute new intersections of boreholes and shear-zones.
+        """Compute new intersections of boreholes and shear-zones.
 
         There will be new intersections due to regression over old
         intersections to produce shear-zone planes.
@@ -264,7 +264,7 @@ class ISCData:
         return df
 
     def planes(self):
-        """ Compute plane of best fit from point cloud of each shear-zone.
+        """Compute plane of best fit from point cloud of each shear-zone.
 
         Returns
         df : pd.DataFrame
@@ -290,7 +290,7 @@ class ISCData:
     # ======= PRIVATE CLASS UTILITY METHODS ============================================================================
 
     def _borehole_data(self):
-        """ Fetch data with borehole coordinates
+        """Fetch data with borehole coordinates
 
         Assumes existence of the following attributes:
             gts_coordinates
@@ -317,7 +317,7 @@ class ISCData:
         return df
 
     def _borehole_structure_data(self):
-        """ Data on geological structures' intersections to boreholes.
+        """Data on geological structures' intersections to boreholes.
 
         Returns
         pd.DataFrame: data on depth, orientation, and thickness of intersecting structures to each borehole.
@@ -338,9 +338,7 @@ class ISCData:
         return df
 
     def _tunnel_shearzone_data(self):
-        """Data on tunnel intersections with shearzones
-
-        """
+        """Data on tunnel intersections with shearzones"""
         file_loc = self.data_path / "03_GeologicalMapping" / "01_TunnelIntersections"
         columns = ["x", "y", "z", "true_dip_direction", "dip", "tunnel", "shearzone"]
 
@@ -348,12 +346,15 @@ class ISCData:
         df = pd.read_csv(path, sep=None, names=columns, engine="python")
         df["shearzone"] = df["shearzone"].apply(rename_sz)
         df = df.rename(
-            columns={"true_dip_direction": "azimuth_struc", "tunnel": "borehole",}
+            columns={
+                "true_dip_direction": "azimuth_struc",
+                "tunnel": "borehole",
+            }
         )
         return df
 
     def _shearzone_borehole_data(self):
-        """ Import data on shearzone intersections with boreholes
+        """Import data on shearzone intersections with boreholes
 
         This data is 'opposite' of the data from _borehole_structure_data(self).
         i.e. We extract for every shearzone (S1_1, S1_2, ...) their intersections with boreholes.
@@ -382,7 +383,7 @@ class ISCData:
         return df
 
     def _characterize_shearzones(self):
-        """ Classify all structures as specific shear-zones (e.g. S1_1) or none
+        """Classify all structures as specific shear-zones (e.g. S1_1) or none
 
         Helper method to self._full_structure_geometry()
 
@@ -449,7 +450,7 @@ class ISCData:
         return _merge
 
     def _full_structure_geometry(self):
-        """ Compute geometry of all structures in ISC.
+        """Compute geometry of all structures in ISC.
 
         Geometry of all structures in boreholes and shear-zones in tunnels are located,
         and global coordinates computed.
@@ -499,7 +500,7 @@ def borehole_to_global_coords(
     upward_gradient: str,
     azimuth: str,
 ):
-    """ Convert coordinates in a borehole to global coordinates
+    """Convert coordinates in a borehole to global coordinates
 
     For all rows in a DataFrame, convert some (x,y,z) coordinates to global
     coordinates, localized to Swiss and/or GTS.
@@ -536,7 +537,7 @@ def borehole_to_global_coords(
 
 
 def swiss_to_gts(v):
-    """ Convert from swiss coordinates to gts coordinates
+    """Convert from swiss coordinates to gts coordinates
 
     GTS coordinates are: (x,y,z) = (667400, 158800, 1700)
 

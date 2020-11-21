@@ -28,7 +28,10 @@ def simple_validation():
     time_params = TimeStepProtocol.create_protocol(phase_limits, phase_time_steps)
 
     # Newton
-    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=15,)
+    newton_params = NewtonParameters(
+        convergence_tol=1e-6,
+        max_iterations=15,
+    )
 
     # Model parameters
     biot_params = BiotParameters(
@@ -73,7 +76,13 @@ def create_grid() -> Tuple[pp.Grid, dict, dict]:
 
     # Injection
     f_1 = pp.EllipticFracture(
-        np.array([10, 3.5, -3]), 11, 18, 0.5, 0, 0, num_points=n_points,
+        np.array([10, 3.5, -3]),
+        11,
+        18,
+        0.5,
+        0,
+        0,
+        num_points=n_points,
     )
     f_2 = pp.EllipticFracture(
         np.array([1, 5, 1]),
@@ -86,7 +95,13 @@ def create_grid() -> Tuple[pp.Grid, dict, dict]:
     )
     # Production
     f_3 = pp.EllipticFracture(
-        np.array([-13, 0, 0]), 20, 10, 0.5, np.pi / 3, np.pi / 1.6, num_points=n_points,
+        np.array([-13, 0, 0]),
+        20,
+        10,
+        0.5,
+        np.pi / 3,
+        np.pi / 1.6,
+        num_points=n_points,
     )
     fractures = [f_1, f_2, f_3]
 
@@ -123,7 +138,13 @@ def _tag_ivar_well_cells(_, gb: pp.GridBucket) -> None:
     for g, d in gb:
         tags = np.zeros(g.num_cells)
         if g.dim < nd:
-            point = np.array([[(box["xmin"] + box["xmax"]) / 2], [box["ymax"]], [0],])
+            point = np.array(
+                [
+                    [(box["xmin"] + box["xmax"]) / 2],
+                    [box["ymax"]],
+                    [0],
+                ]
+            )
             distances = pp.distances.point_pointset(point, g.cell_centers)
             indexes = np.argsort(distances)
             if d["node_number"] == 1:

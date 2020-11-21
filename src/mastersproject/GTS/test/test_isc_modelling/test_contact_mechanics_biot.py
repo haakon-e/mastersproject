@@ -16,12 +16,16 @@ from porepy.utils.derived_discretizations import implicit_euler
 def base_params() -> BaseParameters:
     """ Initialize BaseParameters with folder_name pointing here."""
     here = Path(__file__).parent
-    params = BaseParameters(folder_name=here,)
+    params = BaseParameters(
+        folder_name=here,
+    )
     return params
 
 
 @pytest.fixture
-def setup(base_params,) -> ContactMechanicsBiotBase:
+def setup(
+    base_params,
+) -> ContactMechanicsBiotBase:
     """ Contact Mechanics Biot Base setup with simple fractured grid"""
     _setup = ContactMechanicsBiotBase(base_params)
 
@@ -157,7 +161,7 @@ class TestContactMechanicsBiotBase:
         assert False
 
     def test_initial_biot_condition(self, setup):
-        """ Test for zero initial conditions.
+        """Test for zero initial conditions.
         Will fail if gravity is introduced
         """
         setup.set_biot_parameters()
@@ -217,7 +221,9 @@ class TestContactMechanicsBiotBase:
         Flow.check_convergence.assert_called_once_with(arr, arr, arr, {})
         Mechanics.check_convergence.assert_called_once_with(arr, arr, arr, {})
 
-    def test_before_newton_loop(self,):
+    def test_before_newton_loop(
+        self,
+    ):
         assert False
 
     def test_before_newton_iteration(self):

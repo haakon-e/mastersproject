@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def write_pickle(obj, path):
-    """ Write any object to pickle
+    """Write any object to pickle
 
     Parameters
     ----------
@@ -21,8 +21,7 @@ def write_pickle(obj, path):
 
 
 def read_pickle(path):
-    """ Read a stored object
-    """
+    """Read a stored object"""
     with open(path, "rb") as f:
         raw = f.read()
     return pickle.loads(raw)

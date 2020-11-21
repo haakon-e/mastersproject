@@ -29,7 +29,10 @@ def simple_validation():
     time_params = TimeStepProtocol.create_protocol(phase_limits, phase_time_steps)
 
     # Newton
-    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=50,)
+    newton_params = NewtonParameters(
+        convergence_tol=1e-6,
+        max_iterations=50,
+    )
 
     rock = GrimselGranodiorite()
     rock.FRICTION_COEFFICIENT = 0.2

@@ -65,8 +65,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     @gb.setter
     def gb(self, gb: pp.GridBucket):
-        """ Set a grid bucket to the class
-        """
+        """Set a grid bucket to the class"""
         self._gb = gb
         if gb is None:
             return
@@ -91,9 +90,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
     def grids_by_name(self, name, key="name") -> np.ndarray:
-        """ Get grid by grid bucket node property 'name'
-
-        """
+        """Get grid by grid bucket node property 'name'"""
         gb = self.gb
         grids = gb.get_grids(lambda g: gb.node_props(g, key) == name)
 
@@ -116,7 +113,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             self.params.well_cells(self.params, self.gb)
 
     def depth(self, coords):
-        """ Unscaled depth. We center the domain at 480m below the surface.
+        """Unscaled depth. We center the domain at 480m below the surface.
         (See Krietsch et al, 2018a)
         """
         assert np.atleast_2d(coords).shape[0] == self.Nd
@@ -128,7 +125,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         return self.params.alpha if g.dim == self.Nd else 1.0
 
     def density(self, g: pp.Grid) -> np.ndarray:
-        """ Compute unscaled fluid density
+        """Compute unscaled fluid density
 
         Either use constant density, or compute as an exponential function of pressure.
         See also FlowParameters.
@@ -177,7 +174,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def aperture(
         self, g: pp.Grid, scaled: bool, from_iterate: bool = True
     ) -> np.ndarray:
-        """ Compute the total aperture of each cell on a grid
+        """Compute the total aperture of each cell on a grid
 
         Parameters
         ----------
@@ -201,7 +198,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         return a_total
 
     def compute_initial_aperture(self, g: pp.Grid, scaled) -> np.ndarray:
-        """ Fetch the initial aperture
+        """Fetch the initial aperture
 
         For 3d-matrix: unitary (aperture isn't really defined in 3d)
         For 2d-fracture: fetch from the parameter dictionary
@@ -226,7 +223,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             ]
             primary_edges = [(g, g_h) for g_h in primary_grids]
             primary_cell_faces = [g_h.cell_faces for g_h in primary_grids]
-            mortar_grids = [gb.edge_props(edge)["mortar_grid"] for edge in primary_edges]
+            mortar_grids = [
+                gb.edge_props(edge)["mortar_grid"] for edge in primary_edges
+            ]
             projected_aps = [
                 mg.mortar_to_secondary_int()
                 * mg.primary_to_mortar_int()
@@ -249,7 +248,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def mechanical_aperture(
         self, g: pp.Grid, scaled: bool, from_iterate: bool
     ) -> np.ndarray:
-        """ Compute aperture contribution from mechanical opening of fractures
+        """Compute aperture contribution from mechanical opening of fractures
 
         For 3d-matrix: zeros (aperture isn't really defined in 3d)
         For 2d-fracture: compute from the local displacement jump
@@ -283,12 +282,13 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         nd_grid = self._nd_grid()
 
         def _aperture_from_edge(data: Dict):
-            """ Compute the mechanical contribution to the aperture
+            """Compute the mechanical contribution to the aperture
             for a given fracture. data is the edge data.
             """
             # Get normal displacement component from solution
             u_mortar_local = self.reconstruct_local_displacement_jump(
-                data, from_iterate=from_iterate,
+                data,
+                from_iterate=from_iterate,
             )
             # Jump distances in each cell (index, -1, extracts normal component)
             aperture_contribution = np.abs(u_mortar_local[-1, :])
@@ -449,7 +449,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             pp.initialize_data(mg, de, scalar_key, {"vector_source": gravity})
 
     def hydrostatic_pressure(self, g: pp.Grid, scaled: bool) -> np.ndarray:
-        """ Hydrostatic pressure in the grid g
+        """Hydrostatic pressure in the grid g
 
         If gravity is active, the hydrostatic pressure depends on depth.
         Otherwise, we set to atmospheric pressure.
@@ -466,7 +466,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         return hydrostatic
 
     def initial_scalar_condition(self) -> None:
-        """ Hydrostatic initial guess for the Newton iteration
+        """Hydrostatic initial guess for the Newton iteration
 
         The pressures are set to hydrostatic in gravity,
         or atmospheric otherwise.
@@ -530,15 +530,17 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
                 glob_ind = dof_ind[tunnels]
                 glob_inds.append(glob_ind)
-        rows_to_zero = np.hstack(glob_inds) if len(glob_inds) > 0 else np.empty(0, dtype=np.bool)
+        rows_to_zero = (
+            np.hstack(glob_inds) if len(glob_inds) > 0 else np.empty(0, dtype=np.bool)
+        )
         return rows_to_zero
 
     def csr_zero_rows(self, csr, rows_to_zero):
-        """ Efficient way to set csr sparse matrix row to zero.
+        """Efficient way to set csr sparse matrix row to zero.
 
         https://stackoverflow.com/questions/19784868/
         what-is-most-efficient-way-of-setting-row-to-zeros-for-a-sparse-scipy-matrix/
-        19800305#19800305 """
+        19800305#19800305"""
         rows, cols = csr.shape
         mask = np.ones((rows,), dtype=np.bool)
         mask[rows_to_zero] = False
@@ -551,7 +553,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         csr.indptr[1:] = np.cumsum(nnz_per_row)
 
     def tag_tunnel_cells(self):
-        """ Tag tunnel-shearzone intersections
+        """Tag tunnel-shearzone intersections
 
         Compute the nearest cell for each shear zone that intersects each of the
         tunnels.
@@ -629,7 +631,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     # --- Other flow related methods ---
 
     def assign_scalar_discretizations(self) -> None:
-        """ Assign k inverse scaling to the coupling discretization
+        """Assign k inverse scaling to the coupling discretization
 
         From IvaR:
         For long time steps, scaling the diffusive interface fluxes in the non-default
@@ -645,7 +647,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     # --- MECHANICS ---
 
     def faces_to_fix(self, g: pp.Grid):
-        """ Fix some boundary faces to dirichlet to ensure unique solution to problem.
+        """Fix some boundary faces to dirichlet to ensure unique solution to problem.
 
         Identify three boundary faces to fix (u=0). This should allow us to assign
         Neumann "background stress" conditions on the rest of the boundary faces.
@@ -671,7 +673,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         return faces
 
     def bc_type_mechanics(self, g: pp.Grid) -> pp.BoundaryConditionVectorial:
-        """ We set Neumann values on all but a few boundary faces.
+        """We set Neumann values on all but a few boundary faces.
         Fracture faces are set to Dirichlet.
 
         Three boundary faces (see self.faces_to_fix())
@@ -689,7 +691,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         return bc
 
     def bc_values_mechanics(self, g: pp.Grid) -> np.ndarray:
-        """ Mechanical stress values as ISC
+        """Mechanical stress values as ISC
 
         All faces are Neumann, except 3 faces fixed
         by self.faces_to_fix(g), which are Dirichlet.
@@ -753,7 +755,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         return bc_values.ravel("F")
 
     def source_mechanics(self, g: pp.Grid) -> np.ndarray:
-        """ Gravity term.
+        """Gravity term.
 
         Gravity points downward, but we give the term
         on the RHS of the equation, thus we take the
@@ -771,7 +773,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     # --- Set mechanics parameters ---
 
     def rock_friction_coefficient(self, g: pp.Grid) -> np.ndarray:  # noqa
-        """ The friction coefficient is uniform, and equal to 1.
+        """The friction coefficient is uniform, and equal to 1.
 
         Assumes self.set_rock() is called
         """
@@ -793,13 +795,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                     "cohesion": cohesion,
                 }
                 params.update_dictionaries(
-                    [self.mechanics_parameter_key], [mech_params],
+                    [self.mechanics_parameter_key],
+                    [mech_params],
                 )
 
     # --- Simulation and solvers ---
 
     def _prepare_grid(self):
-        """ Tag well cells right after creation.
+        """Tag well cells right after creation.
         Called by self.prepare_simulation()
         """
         if self.gb is None:
@@ -872,7 +875,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # "well" state field defined by well_cells()
         # "tunnel_cells" state field defined by tag_tunnel_cells()
         self.export_fields.extend(
-            ["well", "tunnel_cells", self.p_perturb,]
+            [
+                "well",
+                "tunnel_cells",
+                self.p_perturb,
+            ]
         )
 
     # -- For testing --

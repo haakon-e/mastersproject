@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # --- Parameters ---
 def stress_tensor() -> np.ndarray:
-    """ Stress at ISC test site
+    """Stress at ISC test site
 
     Values from Krietsch et al 2019
     """
@@ -80,7 +80,7 @@ class UnitRock(BaseModel):
         return e / (3 * (1 - 2 * nu))
 
     def lithostatic_pressure(self, depth):
-        """ Lithostatic pressure.
+        """Lithostatic pressure.
 
         NOTE: Returns positive values for positive depths.
         Use the negative value when working with compressive
@@ -171,7 +171,7 @@ class Water(UnitFluid):
 
 
 class BaseParameters(BaseModel):
-    """ Common parameters for any model implementation
+    """Common parameters for any model implementation
 
     length_scale, scalar_scale : float
         scaling coefficients for variables and geometry
@@ -306,7 +306,7 @@ class MechanicsParameters(GeometryParameters):
 
 
 class FlowParameters(GeometryParameters):
-    """ Parameters for the flow model
+    """Parameters for the flow model
 
     source_scalar_borehole_shearzone : Dict[str, str]
         In conjunction with method shearzone_injection_cell,
@@ -323,8 +323,8 @@ class FlowParameters(GeometryParameters):
     }
     isc_data: Optional[ISCData] = ISCData()
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
-    injection_protocol: InjectionRateProtocol = (
-        InjectionRateProtocol.create_protocol([0.0, 1.0], [0.0])
+    injection_protocol: InjectionRateProtocol = InjectionRateProtocol.create_protocol(
+        [0.0, 1.0], [0.0]
     )
 
     # Set constant pressure value in tunnel - shear zone intersections
@@ -431,7 +431,7 @@ class BiotParameters(FlowParameters, MechanicsParameters):
 
 
 def nd_injection_cell_center(params: FlowParameters, gb: pp.GridBucket) -> None:
-    """ Tag the center cell of the nd-grid with 1 (injection)
+    """Tag the center cell of the nd-grid with 1 (injection)
 
     Parameters
     ----------
@@ -453,7 +453,7 @@ def nd_injection_cell_center(params: FlowParameters, gb: pp.GridBucket) -> None:
 
 
 def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
-    """ Tag the borehole - shearzone intersection cell with 1 (injection)
+    """Tag the borehole - shearzone intersection cell with 1 (injection)
 
     Parameters
     ----------
@@ -477,9 +477,11 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
 
 
 def nd_sides_shearzone_injection_cell(
-    params: FlowParameters, gb: pp.GridBucket, reset_frac_tags: bool = True,
+    params: FlowParameters,
+    gb: pp.GridBucket,
+    reset_frac_tags: bool = True,
 ) -> None:
-    """ Tag the Nd cells surrounding a shear zone injection point
+    """Tag the Nd cells surrounding a shear zone injection point
 
     Parameters
     ----------
@@ -530,7 +532,7 @@ def nd_and_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -
 def center_of_shearzone_injection_cell(
     params: FlowParameters, gb: pp.GridBucket
 ) -> None:
-    """ Tag the center cell of the given shear zone with 1 (injection)
+    """Tag the center cell of the given shear zone with 1 (injection)
 
     Parameters
     ----------
@@ -553,7 +555,7 @@ def center_of_shearzone_injection_cell(
 def _tag_injection_cell(
     gb: pp.GridBucket, g: pp.Grid, pts: np.ndarray, length_scale
 ) -> None:
-    """ Helper method to tag find closest point on g to pts
+    """Helper method to tag find closest point on g to pts
 
     The tag is set locally to g and to node props on gb.
     length_scale is used to log the unscaled distance to
@@ -584,7 +586,10 @@ def _tag_injection_cell(
 
 
 def _shearzone_borehole_intersection(
-    borehole: str, shearzone: str, length_scale: float, isc_data=None,
+    borehole: str,
+    shearzone: str,
+    length_scale: float,
+    isc_data=None,
 ) -> np.ndarray:
     """ Find the cell which is the intersection of a borehole and a shear zone"""
     # Compute the intersections between boreholes and shear zones

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_compare_run_mech_and_run_mech_by_filter_term():
-    """ This test runs pure mechanics by running the test
+    """This test runs pure mechanics by running the test
     'test_mechanics_class_methods.test_decomposition_of_stress()'
     for the hydrostatic case. Then, it runs the test
     'test_run_mechanics_term_by_filter()'.
@@ -92,9 +92,9 @@ def test_compare_run_mech_and_run_mech_by_filter_term():
 
 
 def test_run_mechanics_term_by_filter():
-    """ This test intends to replicate the part of the
-     results of 'test_decomposition_of_stress' by only
-     discretizing the mechanics term.
+    """This test intends to replicate the part of the
+    results of 'test_decomposition_of_stress' by only
+    discretizing the mechanics term.
     """
 
     # 1. Prepare parameters
@@ -132,7 +132,7 @@ def test_run_mechanics_term_by_filter():
 
 
 def test_run_flow_term_by_filter():
-    """ This test intends to test results of running only
+    """This test intends to test results of running only
     the flow terms of the biot equation (on all subdomains)
 
     -- Key features:
@@ -186,7 +186,7 @@ def test_run_flow_term_by_filter():
 
 def test_run_biot_term_by_term(test_name: str):
     # TODO: THIS METHOD IS NOT FINISHED SET UP (maybe remove it)
-    """ This test intends to investigate various
+    """This test intends to investigate various
     properties of the biot equation by discretizing
     only certain terms.
 
@@ -235,8 +235,7 @@ def test_run_biot_term_by_term(test_name: str):
 class BiotReduceToMechanics(ContactMechanicsBiotISC):
     @trace(logger)
     def discretize(self):
-        """ Discretize the mechanics stress term
-        """
+        """Discretize the mechanics stress term"""
         if not hasattr(self, "assembler"):
             self.assembler = pp.Assembler(
                 self.gb, active_variables=[self.displacement_variable]

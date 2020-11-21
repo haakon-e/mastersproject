@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 def _hs1_protocols_optimal_scaling():
-    """ Stimulation protocol for the rate-controlled phase of HS1
-    """
+    """Stimulation protocol for the rate-controlled phase of HS1"""
     _1min = pp.MINUTE
     _5min = 5 * _1min
     phase_limits = [
@@ -35,16 +34,20 @@ def _hs1_protocols_optimal_scaling():
 
 
 def prepare_params(
-    length_scale, scalar_scale,
+    length_scale,
+    scalar_scale,
 ) -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
-    """ Hydro shearing experiment HS1
+    """Hydro shearing experiment HS1
 
     HS1 targeted S1.3 through INJ2 at 39.75 - 40.75 m.
     """
     tunnel_equilibration_time = 30 * pp.YEAR
     injection_protocol, time_params = _hs1_protocols_optimal_scaling()
 
-    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=300,)
+    newton_params = NewtonParameters(
+        convergence_tol=1e-6,
+        max_iterations=300,
+    )
     biot_params = BiotParameters(
         # BaseParameters
         length_scale=length_scale,
@@ -74,7 +77,10 @@ def prepare_params(
         # MechanicsParameters
         dilation_angle=np.radians(3),
         # FlowParameters
-        source_scalar_borehole_shearzone={"shearzone": "S1_3", "borehole": "INJ2",},
+        source_scalar_borehole_shearzone={
+            "shearzone": "S1_3",
+            "borehole": "INJ2",
+        },
         well_cells=shearzone_injection_cell,
         tunnel_equilibrium_time=tunnel_equilibration_time,  # TODO: Think about initial conditions for scaling
         injection_protocol=injection_protocol,
@@ -119,7 +125,10 @@ def condition_number_porepy(A):
 
 
 def find_best_cond_num_neighbour(
-    log_ls0, log_ss0, has_searched=None, ls_gb=None,
+    log_ls0,
+    log_ss0,
+    has_searched=None,
+    ls_gb=None,
 ):
     """ Find optimal conditioning for the HS1 experiment"""
 

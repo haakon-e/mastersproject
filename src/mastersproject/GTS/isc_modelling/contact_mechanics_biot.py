@@ -48,7 +48,8 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
             scalar_params = {"biot_alpha": alpha}
 
             params.update_dictionaries(
-                [key_m, key_s], [mech_params, scalar_params],
+                [key_m, key_s],
+                [mech_params, scalar_params],
             )
 
     # --- Primary variables and discretizations ---
@@ -87,7 +88,9 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         for g, d in gb:
             if g.dim == self.Nd:
                 d[discr_key][var_s].update(
-                    {"stabilization": stabilization_disc_s,}
+                    {
+                        "stabilization": stabilization_disc_s,
+                    }
                 )
 
                 d[discr_key].update(
@@ -172,8 +175,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
 
     @timer(logger, level="INFO")
     def discretize(self) -> None:
-        """ Discretize all terms
-        """
+        """Discretize all terms"""
         if not self.assembler:
             self.assembler = pp.Assembler(self.gb)
 
@@ -199,10 +201,12 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         # in the traditional way, as there is no Biot discretization here.
         fracs = list(self.gb.get_grids(lambda grid: grid.dim < self.Nd))
         edges = list(e for e, _ in self.gb.edges())
-        #couplings = [(*self.gb.nodes_of_edge(e), e) for e, _ in self.gb.edges()]
-        couplings = [(*reversed(self.gb.nodes_of_edge(e)), e) for e, _ in self.gb.edges()]
+        # couplings = [(*self.gb.nodes_of_edge(e), e) for e, _ in self.gb.edges()]
+        couplings = [
+            (*reversed(self.gb.nodes_of_edge(e)), e) for e, _ in self.gb.edges()
+        ]
         frac_filter = pp.assembler_filters.ListFilter(
-            grid_list=fracs+edges+couplings,  # noqa
+            grid_list=fracs + edges + couplings,  # noqa
         )
         self.assembler.discretize(frac_filter)
 
@@ -224,7 +228,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
 
     @timer(logger)
     def prepare_simulation(self):
-        """ Is run prior to a time-stepping scheme. Use this to initialize
+        """Is run prior to a time-stepping scheme. Use this to initialize
         discretizations, linear solvers etc.
         """
         self._prepare_grid()
@@ -247,9 +251,17 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
     ) -> Tuple[np.ndarray, bool, bool]:
         error_s, converged_s, diverged_s = super(
             ContactMechanicsBiotBase, self
-        ).check_convergence(solution, prev_solution, init_solution, nl_params,)
+        ).check_convergence(
+            solution,
+            prev_solution,
+            init_solution,
+            nl_params,
+        )
         error_m, converged_m, diverged_m = super(Flow, self).check_convergence(
-            solution, prev_solution, init_solution, nl_params,
+            solution,
+            prev_solution,
+            init_solution,
+            nl_params,
         )
 
         converged = converged_m and converged_s
@@ -261,7 +273,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
     # --- Newton iterations ---
 
     def before_newton_loop(self) -> None:
-        """ Will be run before entering a Newton loop.
+        """Will be run before entering a Newton loop.
         E.g.
            Discretize time-dependent quantities etc.
            Update time-dependent parameters (captured by assembly).

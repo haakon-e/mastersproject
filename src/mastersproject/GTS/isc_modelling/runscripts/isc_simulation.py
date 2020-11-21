@@ -17,12 +17,16 @@ logger = logging.getLogger(__name__)
 
 
 def prepare_params(
-    length_scale, scalar_scale,
+    length_scale,
+    scalar_scale,
 ) -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
     """ Validation on the ISC grid"""
     injection_protocol, time_params = isc_dt_and_injection_protocol()
 
-    newton_params = NewtonParameters(convergence_tol=1e-6, max_iterations=200,)
+    newton_params = NewtonParameters(
+        convergence_tol=1e-6,
+        max_iterations=200,
+    )
     sz = 10
     # path = Path(__file__).parent / "isc_simulation/200830/box-test/t1-gravity"
     root = Path.home()
@@ -63,7 +67,8 @@ def prepare_params(
 
 def validation():
     biot_params, newton_params, time_params = prepare_params(
-        length_scale=0.01, scalar_scale=1e6,
+        length_scale=0.01,
+        scalar_scale=1e6,
     )
     setup = ISCBiotContactMechanics(biot_params)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
@@ -74,7 +79,8 @@ def validation():
 
 def box_validation():
     biot_params, newton_params, time_params = prepare_params(
-        length_scale=0.01, scalar_scale=1e6,
+        length_scale=0.01,
+        scalar_scale=1e6,
     )
     setup = ISCBoxModel(biot_params, lcin=5 * 1.5, lcout=50 * 1.5)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
@@ -96,7 +102,10 @@ def cond_num_isc(ls, log_ss):
 def assemble_matrix(values):
     ls, log_ss = values
     ss = np.float_power(10, log_ss)
-    biot_params, newton, time = prepare_params(length_scale=ls, scalar_scale=ss,)
+    biot_params, newton, time = prepare_params(
+        length_scale=ls,
+        scalar_scale=ss,
+    )
     setup = ISCBiotContactMechanics(biot_params)
     setup.prepare_simulation()
     A, b = setup.assembler.assemble_matrix_rhs()
@@ -110,7 +119,7 @@ def optimal_scaling():
 
 
 def isc_dt_and_injection_protocol():
-    """ Stimulation protocol for the rate-controlled phase of the ISC experiment
+    """Stimulation protocol for the rate-controlled phase of the ISC experiment
 
     Here, we consider Doetsch et al (2018) [see e.g. p. 78/79 or App. J]
             Hydro Shearing Protocol:
