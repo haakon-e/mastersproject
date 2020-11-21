@@ -234,20 +234,3 @@ class TimeMachinePhasesConstantDt(TimeMachine):
         current_time_step = self.adjust_time_step_to_must_hit_times()
 
         return current_time_step
-
-
-class GrabowskiTimeMachine(TimeMachine):
-    def determine_time_step(self) -> float:
-        """Grabowski step
-
-        see Grabowski et al. (1979): A fully implicit general purpose
-            finite-difference thermal model for in situ combustion and steam
-        and;
-        McClure (2012), PhD-thesis: Modeling and characterization of hydraulic
-            stimulation and induced seismicity in geothermal and shale gas
-            reservoirs
-        """
-        setup = self.setup
-        dt0 = self.time_params.time_step
-        # eta
-        return 0.0
