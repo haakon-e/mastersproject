@@ -48,7 +48,8 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
             scalar_params = {"biot_alpha": alpha}
 
             params.update_dictionaries(
-                [key_m, key_s], [mech_params, scalar_params],
+                [key_m, key_s],
+                [mech_params, scalar_params],
             )
 
     # --- Primary variables and discretizations ---
@@ -87,7 +88,9 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         for g, d in gb:
             if g.dim == self.Nd:
                 d[discr_key][var_s].update(
-                    {"stabilization": stabilization_disc_s,}
+                    {
+                        "stabilization": stabilization_disc_s,
+                    }
                 )
 
                 d[discr_key].update(
@@ -172,8 +175,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
 
     @timer(logger, level="INFO")
     def discretize(self) -> None:
-        """ Discretize all terms
-        """
+        """Discretize all terms"""
         if not self.assembler:
             self.assembler = pp.Assembler(self.gb)
 
@@ -189,14 +191,24 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         # Next, discretize term on the matrix grid not covered by the Biot discretization,
         # i.e. the source term
         # Here, we also discretize the edge terms in the entire gb
-        self.assembler.discretize(grid=g_max, term_filter=["source"])
+        g_max_source_filter = pp.assembler_filters.ListFilter(
+            grid_list=[g_max],
+            term_list=["source"],
+        )
+        self.assembler.discretize(g_max_source_filter)
 
         # Finally, discretize terms on the lower-dimensional grids. This can be done
         # in the traditional way, as there is no Biot discretization here.
-        for g, _ in self.gb:
-            if g.dim < self.Nd:
-                # No need to discretize edges here, this was done above.
-                self.assembler.discretize(grid=g, edges=False)
+        fracs = list(self.gb.get_grids(lambda grid: grid.dim < self.Nd))
+        edges = list(e for e, _ in self.gb.edges())
+        # couplings = [(*self.gb.nodes_of_edge(e), e) for e, _ in self.gb.edges()]
+        couplings = [
+            (*reversed(self.gb.nodes_of_edge(e)), e) for e, _ in self.gb.edges()
+        ]
+        frac_filter = pp.assembler_filters.ListFilter(
+            grid_list=fracs + edges + couplings,  # noqa
+        )
+        self.assembler.discretize(frac_filter)
 
     # --- Initial condition ---
 
@@ -216,7 +228,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
 
     @timer(logger)
     def prepare_simulation(self):
-        """ Is run prior to a time-stepping scheme. Use this to initialize
+        """Is run prior to a time-stepping scheme. Use this to initialize
         discretizations, linear solvers etc.
         """
         self._prepare_grid()
@@ -239,9 +251,17 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
     ) -> Tuple[np.ndarray, bool, bool]:
         error_s, converged_s, diverged_s = super(
             ContactMechanicsBiotBase, self
-        ).check_convergence(solution, prev_solution, init_solution, nl_params,)
+        ).check_convergence(
+            solution,
+            prev_solution,
+            init_solution,
+            nl_params,
+        )
         error_m, converged_m, diverged_m = super(Flow, self).check_convergence(
-            solution, prev_solution, init_solution, nl_params,
+            solution,
+            prev_solution,
+            init_solution,
+            nl_params,
         )
 
         converged = converged_m and converged_s
@@ -253,7 +273,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
     # --- Newton iterations ---
 
     def before_newton_loop(self) -> None:
-        """ Will be run before entering a Newton loop.
+        """Will be run before entering a Newton loop.
         E.g.
            Discretize time-dependent quantities etc.
            Update time-dependent parameters (captured by assembly).
@@ -262,7 +282,10 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
 
     def before_newton_iteration(self) -> None:
         # Re-discretize the nonlinear term
-        self.assembler.discretize(term_filter=[self.friction_coupling_term])
+        term_filter = pp.assembler_filters.ListFilter(
+            term_list=[self.friction_coupling_term]
+        )
+        self.assembler.discretize(term_filter)
 
     def after_newton_convergence(self, solution, errors, iteration_counter) -> None:
         super().after_newton_convergence(solution, errors, iteration_counter)

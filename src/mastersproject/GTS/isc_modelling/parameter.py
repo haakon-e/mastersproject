@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 # --- Parameters ---
 def stress_tensor() -> np.ndarray:
-    """ Stress at ISC test site
+    """Stress at ISC test site
 
     Values from Krietsch et al 2019
     """
@@ -80,7 +80,7 @@ class UnitRock(BaseModel):
         return e / (3 * (1 - 2 * nu))
 
     def lithostatic_pressure(self, depth):
-        """ Lithostatic pressure.
+        """Lithostatic pressure.
 
         NOTE: Returns positive values for positive depths.
         Use the negative value when working with compressive
@@ -171,7 +171,7 @@ class Water(UnitFluid):
 
 
 class BaseParameters(BaseModel):
-    """ Common parameters for any model implementation
+    """Common parameters for any model implementation
 
     length_scale, scalar_scale : float
         scaling coefficients for variables and geometry
@@ -213,6 +213,12 @@ class BaseParameters(BaseModel):
 
     # Gravity
     gravity: bool = False
+    # Either use constant density model (i.e. rho = 1000 kg/m3)
+    # or variable density, rho = rho0 * exp( c * (p - p0) )
+    constant_density: float = True
+    # Depth is needed because hydrostatic pressure depends on the depth.
+    # We center the domain at 480m below the surface (see Krietsch et al, 2018a).
+    depth: float = 480 * pp.METER
 
     # --- Validators ---
 
@@ -286,7 +292,7 @@ class GeometryParameters(BaseParameters):
 class MechanicsParameters(GeometryParameters):
     """ Parameters for a mechanics model"""
 
-    stress: np.ndarray = stress_tensor()
+    stress: np.ndarray  # e.g.: stress_tensor()
     # See "numerics > contact_mechanics > contact_conditions.py > ColoumbContact"
     # for details on dilation angle
     dilation_angle: float = 0
@@ -301,11 +307,12 @@ class MechanicsParameters(GeometryParameters):
     }
 
     class Config:
+        # For numpy arrays (currently this doesn't work as expected).
         arbitrary_types_allowed = True
 
 
 class FlowParameters(GeometryParameters):
-    """ Parameters for the flow model
+    """Parameters for the flow model
 
     source_scalar_borehole_shearzone : Dict[str, str]
         In conjunction with method shearzone_injection_cell,
@@ -322,8 +329,8 @@ class FlowParameters(GeometryParameters):
     }
     isc_data: Optional[ISCData] = ISCData()
     well_cells: Callable[["FlowParameters", pp.GridBucket], None] = None
-    injection_protocol: InjectionRateProtocol = (
-        InjectionRateProtocol.create_protocol([0.0, 1.0], [0.0])
+    injection_protocol: InjectionRateProtocol = InjectionRateProtocol.create_protocol(
+        [0.0, 1.0], [0.0]
     )
 
     # Set constant pressure value in tunnel - shear zone intersections
@@ -340,10 +347,6 @@ class FlowParameters(GeometryParameters):
     # If radius is set to 0, this is not activated.
     near_injection_transmissivity: float = 1
     near_injection_t_radius: float = 0
-
-    # Use constant density model (i.e. rho = 1000 kg/m3)
-    # Otherwise, rho = rho0 * exp( c * (p - p0) )
-    constant_density: float = True
 
     # See 'methods to estimate permeability of shear zones at Grimsel Test Site'
     # in 'Presentasjon til underveismøte' for details on relations between
@@ -430,7 +433,7 @@ class BiotParameters(FlowParameters, MechanicsParameters):
 
 
 def nd_injection_cell_center(params: FlowParameters, gb: pp.GridBucket) -> None:
-    """ Tag the center cell of the nd-grid with 1 (injection)
+    """Tag the center cell of the nd-grid with 1 (injection)
 
     Parameters
     ----------
@@ -452,7 +455,7 @@ def nd_injection_cell_center(params: FlowParameters, gb: pp.GridBucket) -> None:
 
 
 def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
-    """ Tag the borehole - shearzone intersection cell with 1 (injection)
+    """Tag the borehole - shearzone intersection cell with 1 (injection)
 
     Parameters
     ----------
@@ -476,9 +479,11 @@ def shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -> None:
 
 
 def nd_sides_shearzone_injection_cell(
-    params: FlowParameters, gb: pp.GridBucket, reset_frac_tags: bool = True,
+    params: FlowParameters,
+    gb: pp.GridBucket,
+    reset_frac_tags: bool = True,
 ) -> None:
-    """ Tag the Nd cells surrounding a shear zone injection point
+    """Tag the Nd cells surrounding a shear zone injection point
 
     Parameters
     ----------
@@ -502,7 +507,7 @@ def nd_sides_shearzone_injection_cell(
     data_edge = gb.edge_props((fracture, nd_grid))
     mg: pp.MortarGrid = data_edge["mortar_grid"]
 
-    slave_to_master_face = mg.mortar_to_master_int() * mg.slave_to_mortar_int()
+    slave_to_master_face = mg.mortar_to_primary_int() * mg.secondary_to_mortar_int()
     face_to_cell = nd_grid.cell_faces.T
     slave_to_master_cell = face_to_cell * slave_to_master_face
     nd_tags = np.abs(slave_to_master_cell) * tags
@@ -529,7 +534,7 @@ def nd_and_shearzone_injection_cell(params: FlowParameters, gb: pp.GridBucket) -
 def center_of_shearzone_injection_cell(
     params: FlowParameters, gb: pp.GridBucket
 ) -> None:
-    """ Tag the center cell of the given shear zone with 1 (injection)
+    """Tag the center cell of the given shear zone with 1 (injection)
 
     Parameters
     ----------
@@ -552,7 +557,7 @@ def center_of_shearzone_injection_cell(
 def _tag_injection_cell(
     gb: pp.GridBucket, g: pp.Grid, pts: np.ndarray, length_scale
 ) -> None:
-    """ Helper method to tag find closest point on g to pts
+    """Helper method to tag find closest point on g to pts
 
     The tag is set locally to g and to node props on gb.
     length_scale is used to log the unscaled distance to
@@ -583,7 +588,10 @@ def _tag_injection_cell(
 
 
 def _shearzone_borehole_intersection(
-    borehole: str, shearzone: str, length_scale: float, isc_data=None,
+    borehole: str,
+    shearzone: str,
+    length_scale: float,
+    isc_data=None,
 ) -> np.ndarray:
     """ Find the cell which is the intersection of a borehole and a shear zone"""
     # Compute the intersections between boreholes and shear zones
@@ -611,43 +619,3 @@ def shearzone_borehole_intersection(params: FlowParameters) -> np.ndarray:
     length_scale = params.length_scale
     isc_data = params.isc_data
     return _shearzone_borehole_intersection(borehole, shearzone, length_scale, isc_data)
-
-
-# --- other models ---
-
-
-class GTSModel(BaseModel):
-    """ Parameters used at Grimsel Test Site.
-
-    This class defines parameter values for the Biot equations
-    which are set up to model the dynamics at the
-    In-Situ Stimulation and Circulation (ISC) experiment at
-    Grimsel Test Site (GTS).
-
-    This model assumes uniform values on the grid
-
-    The Biot equation according to Berge et al (2019):
-        Finite volume discretization for poroelastic media with fractures
-        modeled by contact mechanics
-    See Equation (1):
-        - div sigma = fu                            in interior
-        C : sym(grad u) - alpha p I = sigma         in interior
-        c dp/dt + alpha div du/dt + div q = fp      in interior
-        q = - K grad p                              in interior
-        u = guD                                     on part of boundary
-        sigma n = guN                               on part of boundary
-        p = gpD                                     on part of boundary
-        q n = gpN                                   on part of boundary
-
-    We shall define:
-    fu              body force [Pa / m]
-    C(mu, lambda)   constitutive relation, defined by Lame parameters [Pa]
-    c               mass term [1/Pa]
-    alpha           biot coefficient [-]
-    fp              scalar source
-    K               conductivity (permeability / viscosity) [m2 / (Pa s)]
-    guD             Dirichlet boundary condition, mechanics
-    guN             Neumann boundary condition, mechanics
-    gpD             Dirichlet boundary condition, scalar
-    gpN             Neumann boundary condition, scalar
-    """

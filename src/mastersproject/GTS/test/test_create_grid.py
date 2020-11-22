@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_create_grid():
-    """ Create a standard grid.
+    """Create a standard grid.
 
     Returns the ContactMechanicsBiot class with an overwritten create_grid method.
     """

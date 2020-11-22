@@ -77,7 +77,7 @@ def create_grid(
     run_gmsh_gui: bool = False,
     use_logger: bool = True,
 ) -> pp.GridBucket:
-    """ Create the ISC domain using the box model method
+    """Create the ISC domain using the box model method
 
     Parameters
     ----------

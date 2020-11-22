@@ -2,30 +2,28 @@ from pathlib import Path
 
 import porepy as pp
 import numpy as np
-from GTS import ISCBiotContactMechanics
+from GTS import FlowISC
 from GTS.isc_modelling.parameter import (
-    nd_injection_cell_center,
     GrimselGranodiorite,
-    BiotParameters,
+    FlowParameters, center_of_shearzone_injection_cell,
 )
 from GTS.time_machine import TimeMachinePhasesConstantDt, NewtonParameters
 from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
 
 
-def simple_validation():
-    """ Validation on easy setup"""
+def simple_example():
+    """ Simple flow example"""
     path = Path(__file__).parent / "results"
     # Grid
-    mesh_size = 20
-    gb, box, mesh_args = two_intersecting_blocking_fractures(str(path), mesh_size)
+    mesh_size = 80
+    gb, box, mesh_args = two_intersecting_blocking_fractures(path, mesh_size)
 
     # Injection phases and time configuration
-    start_time = -1e2 * pp.YEAR
-    phase_limits = [start_time, 0, 12 * pp.HOUR]
-    rates = [0, 0]
+    phase_limits = [0, 10 * pp.MINUTE, 4 * pp.HOUR]
+    rates = [1/6, 0]  # Injection rates, [l/s]
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
 
-    phase_time_steps = [-start_time, 2.0 * pp.MINUTE]
+    phase_time_steps = [2.0 * pp.MINUTE, 1 * pp.HOUR]
     time_params = TimeStepProtocol.create_protocol(phase_limits, phase_time_steps)
 
     # Newton
@@ -35,10 +33,8 @@ def simple_validation():
     )
 
     rock = GrimselGranodiorite()
-    rock.FRICTION_COEFFICIENT = 0.2
-    stress = np.diag(-np.array([6, 13.1, 6]) * pp.MEGA * pp.PASCAL)
     # Model parameters
-    biot_params = BiotParameters(
+    flow_params = FlowParameters(
         # BaseParameters
         length_scale=15,
         scalar_scale=1e9,
@@ -52,18 +48,16 @@ def simple_validation():
         shearzone_names=["f1", "f2"],
         box=box,
         mesh_args=mesh_args,
-        # MechanicsParameters
-        stress=stress,
-        dilation_angle=np.radians(5.0),
-        newton_options=newton_params.dict(),
         # FlowParameters
-        well_cells=nd_injection_cell_center,
+        source_scalar_borehole_shearzone={
+            "shearzone": "f1",
+            "borehole": 'NaN',
+        },
+        well_cells=center_of_shearzone_injection_cell,
         injection_protocol=injection_protocol,
         frac_transmissivity=5.17e-3,  # Gives a0=2e-3, which are Ivar's values.
-        # BiotParameters
-        alpha=0.8,
     )
-    setup = ISCBiotContactMechanics(biot_params)
+    setup = FlowISC(flow_params)
     setup.gb = gb
 
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
@@ -99,5 +93,6 @@ def two_intersecting_blocking_fractures(folder_name, mesh_size):
         "mesh_size_bound": 2 * mesh_size,
     }
 
-    gb = frac_network.mesh(mesh_args, file_name=folder_name + "/gmsh_frac_file")
+    folder_name.mkdir(parents=True, exist_ok=True)
+    gb = frac_network.mesh(mesh_args, file_name=str(folder_name / "gmsh_frac_file"))
     return gb, domain, mesh_args

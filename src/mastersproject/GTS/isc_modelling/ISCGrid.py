@@ -17,7 +17,7 @@ def create_grid(
     shearzone_names: List[str],
     folder_name: str,
 ):
-    """ Create a GridBucket of a 3D domain with fractures defined by the ISC data set.
+    """Create a GridBucket of a 3D domain with fractures defined by the ISC data set.
 
     shearzone_names are used to give names to each fracture grid. We assume that the
     order of names appearing in shearzone_names is preserved as fracture grids
@@ -81,15 +81,21 @@ def create_grid(
     return gb, network
 
 
-def create_structured_grid(length_scale: float,):
-    """ Create a structured 3d grid
+def create_structured_grid(
+    length_scale: float,
+):
+    """Create a structured 3d grid
 
     length_scale : float
         Length scale of physical dimension.
     """
     nx = np.array([20, 20, 20])
     physdims = np.array([300, 300, 300])
-    gb = pp.meshing.cart_grid([], nx=nx, physdims=physdims / length_scale,)
+    gb = pp.meshing.cart_grid(
+        [],
+        nx=nx,
+        physdims=physdims / length_scale,
+    )
     return gb
 
 
@@ -103,7 +109,11 @@ def structured_grid_1_frac(length_scale: float):
          [0, 300, 300, 0],
          [0, 0, 150, 150]])
     # fmt: on
-    gb = pp.meshing.cart_grid([frac_pts], nx=nx, physdims=physdims / length_scale,)
+    gb = pp.meshing.cart_grid(
+        [frac_pts],
+        nx=nx,
+        physdims=physdims / length_scale,
+    )
     return gb
 
 
@@ -117,12 +127,16 @@ def structured_grid_1_frac_horizontal(length_scale: float):
          [150, 150, 150, 150],
          [0, 0, 150, 150]])
     # fmt: on
-    gb = pp.meshing.cart_grid([frac_pts], nx=nx, physdims=physdims / length_scale,)
+    gb = pp.meshing.cart_grid(
+        [frac_pts],
+        nx=nx,
+        physdims=physdims / length_scale,
+    )
     return gb
 
 
 def optimize_mesh(in_file, out_file=None, method="", force=False, dim_tags=[], dim=3):
-    """ Optimize a mesh using an optimizer
+    """Optimize a mesh using an optimizer
 
     See: https://gitlab.onelab.info/gmsh/gmsh/-/blob/master/api/gmsh.py#L1444
 
@@ -185,7 +199,7 @@ def optimize_mesh(in_file, out_file=None, method="", force=False, dim_tags=[], d
 
 
 def mesh_statistics(in_file):
-    """ Compute mesh statistics for a .msh mesh realization
+    """Compute mesh statistics for a .msh mesh realization
 
     Parameters
     ----------

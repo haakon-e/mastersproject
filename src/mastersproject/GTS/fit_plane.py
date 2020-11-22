@@ -28,7 +28,7 @@ import porepy as pp
 
 
 def convex_hull(p: np.ndarray) -> np.ndarray:
-    """ Construct the convex hull of a planar set of 2D points
+    """Construct the convex hull of a planar set of 2D points
 
     Given a point cloud in a plane, compute its convex hull, and
     return the vertices in ccw order of this hull.
@@ -74,7 +74,7 @@ def convex_hull(p: np.ndarray) -> np.ndarray:
 
 
 def fit_normal_to_points(points: np.ndarray) -> np.array:
-    """ Compute a normal from a collection of points.
+    """Compute a normal from a collection of points.
 
     Source: http://www.ilikebigbits.com/2015_03_04_plane_from_points.html
 
@@ -124,7 +124,7 @@ def fit_normal_to_points(points: np.ndarray) -> np.array:
 
 
 def plane_from_points(points: np.ndarray) -> np.ndarray:
-    """ Compute a plane for a given point cloud.
+    """Compute a plane for a given point cloud.
 
     Compute the fitted plane to a point cloud, returning
     the points projected to the plane

@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class TestOptimizeMesh:
     def test_flow_model_regular_vs_optimized_mesh(self):
-        """ Investigate if optimizing the mesh can give different
+        """Investigate if optimizing the mesh can give different
         results on a problem with known issues in the solution
 
         We expect regular mesh generation to produce a mesh of
@@ -50,7 +50,9 @@ class TestOptimizeMesh:
         in_file = params.folder_name / "gmsh_frac_file.geo"
         out_file = params.folder_name / "optimized/gmsh_frac_file.msh"
         optimize_mesh(
-            in_file=in_file, out_file=out_file, method="Netgen",
+            in_file=in_file,
+            out_file=out_file,
+            method="Netgen",
         )
         gb: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
 
@@ -107,7 +109,9 @@ class TestOptimizeMesh:
         in_file = params.folder_name / "gmsh_frac_file.geo"
         out_file = params.folder_name / "gmsh_frac_file-optimized.msh"
         optimize_mesh(
-            in_file=in_file, out_file=out_file, method="Netgen",
+            in_file=in_file,
+            out_file=out_file,
+            method="Netgen",
         )
         gb2: pp.GridBucket = pp.fracture_importer.dfm_from_gmsh(str(out_file), dim=3)
 

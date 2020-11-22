@@ -12,8 +12,11 @@ from GTS import (
 )
 
 
-def best_cond_numb(assemble_A_method, initial_guess: np.array = None,) -> pd.DataFrame:
-    """ Find best condition numbers
+def best_cond_numb(
+    assemble_A_method,
+    initial_guess: np.array = None,
+) -> pd.DataFrame:
+    """Find best condition numbers
 
     assemble_A_method is a method that assembles a matrix
 
@@ -50,7 +53,7 @@ def best_cond_numb(assemble_A_method, initial_guess: np.array = None,) -> pd.Dat
 
 
 def assemble_isc_matrix(values):
-    """ Optimize the isc setup
+    """Optimize the isc setup
 
     values = (length_scale, log10(scalar_scale))
 

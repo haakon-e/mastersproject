@@ -20,7 +20,7 @@ def refine_mesh_by_splitting(
     dim: int,
     gb_set_projections: bool = True,
 ) -> Generator[pp.GridBucket, None, None]:
-    """ Refine a mesh by splitting using gmsh
+    """Refine a mesh by splitting using gmsh
 
     The method generates refinements on the fly
     by yielding GridBuckets as desired.
@@ -107,7 +107,7 @@ def refine_mesh_by_splitting(
 def gb_coarse_fine_cell_mapping(
     gb: pp.GridBucket, gb_ref: pp.GridBucket, tol=1e-8
 ) -> None:
-    """ Wrapper for coarse_fine_cell_mapping to construct mapping for grids in
+    """Wrapper for coarse_fine_cell_mapping to construct mapping for grids in
     GridBucket.
 
     Adds a node_prop to each grid in gb. The key is 'coarse_fine_cell_mapping',
@@ -160,7 +160,7 @@ def gb_coarse_fine_cell_mapping(
 def coarse_fine_cell_mapping(
     g: pp.Grid, g_ref: pp.Grid, point_in_poly_tol=1e-8
 ) -> sps.csc_matrix:
-    """ Construct a mapping between cells of a grid and its refined version
+    """Construct a mapping between cells of a grid and its refined version
 
     Assuming a regular and a refined mesh, where the refinement is executed by
     splitting.
@@ -245,7 +245,11 @@ def coarse_fine_cell_mapping(
         # Rotate coarse nodes and fine cell centers to align with the x-axis
         tangent = pp.map_geometry.compute_tangent(nodes)
         reference = [1, 0, 0]
-        R = pp.map_geometry.project_line_matrix(nodes, tangent, reference=reference,)
+        R = pp.map_geometry.project_line_matrix(
+            nodes,
+            tangent,
+            reference=reference,
+        )
         nodes = R.dot(nodes)[0, :]
         cells_ref = R.dot(cells_ref)[0, :]
 

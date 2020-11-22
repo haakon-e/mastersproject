@@ -109,7 +109,9 @@ class TestISCBiotContactMechanics:
              [0, 0, 5, 5]]) / params.length_scale
         # fmt: on
         gb = pp.meshing.cart_grid(
-            [frac_pts], nx=nx, physdims=physdims / params.length_scale,
+            [frac_pts],
+            nx=nx,
+            physdims=physdims / params.length_scale,
         )
         # --- ---
         setup.gb = gb
@@ -131,9 +133,18 @@ class TestISCBiotContactMechanics:
         # Set mechanical mortar displacement to STATE.
         # Set u_n = 1 and ||u_t|| = 0 on side 1
         # Set all zero on side 1.
-        s1 = np.vstack((np.zeros(nc), np.ones(nc), np.zeros(nc),))  # mortar side 1
+        s1 = np.vstack(
+            (
+                np.zeros(nc),
+                np.ones(nc),
+                np.zeros(nc),
+            )
+        )  # mortar side 1
         mortar_u = np.hstack(
-            (s1, np.zeros((nd, nc)),)  # mortar side 1  # mortar side 2
+            (
+                s1,
+                np.zeros((nd, nc)),
+            )  # mortar side 1  # mortar side 2
         ).ravel("F")
 
         # Set mechanical mortar displacement to previous iterate.
@@ -142,11 +153,17 @@ class TestISCBiotContactMechanics:
         # This should give an aperture of 2.
         s2 = np.vstack((3 * np.ones((nd, nc)),))
         mortar_u_prev_iter = np.hstack(
-            (np.ones((nd, nc)), s2,)  # mortar side 1  # mortar side 2
+            (
+                np.ones((nd, nc)),
+                s2,
+            )  # mortar side 1  # mortar side 2
         ).ravel("F")
 
         data_edge[pp.STATE].update(
-            {var_mortar: mortar_u, pp.ITERATE: {var_mortar: mortar_u_prev_iter},}
+            {
+                var_mortar: mortar_u,
+                pp.ITERATE: {var_mortar: mortar_u_prev_iter},
+            }
         )
 
         # Get mechanical aperture
@@ -198,7 +215,7 @@ class TestISCBiotContactMechanics:
         pp.run_time_dependent_model(setup, {})
 
     def test_realistic_setup(self):
-        """ For a 50 000 cell setup, test Contact mechanics Biot model on 5 shear zones.
+        """For a 50 000 cell setup, test Contact mechanics Biot model on 5 shear zones.
         Parameters are close to the ISC setup. Model is run for 10 minutes,
         with time steps of 1 minute. Injection to a shear zone.
         """
@@ -229,7 +246,10 @@ class TestISCBiotContactMechanics:
                 "nl_divergence_tol": 1e5,
             },
             # Flow parameters
-            source_scalar_borehole_shearzone={"shearzone": "S1_2", "borehole": "INJ1",},
+            source_scalar_borehole_shearzone={
+                "shearzone": "S1_2",
+                "borehole": "INJ1",
+            },
             well_cells=center_of_shearzone_injection_cell,
             injection_rate=(10 / 60) * 2,  # (10/60)*2 = 20l per 60s = 20 l/min
             frac_transmissivity=[1e-9, 3.7e-7],
@@ -274,7 +294,10 @@ class TestISCBiotContactMechanics:
                 "nl_divergence_tol": 1e5,
             },
             # Flow parameters
-            source_scalar_borehole_shearzone={"shearzone": "S1_2", "borehole": "INJ1",},
+            source_scalar_borehole_shearzone={
+                "shearzone": "S1_2",
+                "borehole": "INJ1",
+            },
             well_cells=nd_and_shearzone_injection_cell,
             injection_rate=(1 / 6)
             / 3,  # = 10 l/min  - Divide by 3 due to 3 injection cells.
@@ -288,7 +311,6 @@ class TestISCBiotContactMechanics:
 
 class NeverFailtBiotCM(ISCBiotContactMechanics):
     def after_newton_failure(self, solution, errors, iteration_counter):
-        """ Instead of raising error on failure, simply continue.
-        """
+        """Instead of raising error on failure, simply continue."""
         logger.error("Newton iterations did not converge")
         self.after_newton_convergence(solution, errors, iteration_counter)

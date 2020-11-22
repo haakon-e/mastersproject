@@ -44,7 +44,7 @@ class TimeMachine:
 
     @timer(logger)
     def time_iteration(self):
-        """ Solve a non-linear system using a Newton Method
+        """Solve a non-linear system using a Newton Method
 
         Equivalent to NewtonSolver.solve(setup)"""
         setup = self.setup
@@ -153,7 +153,7 @@ class TimeMachine:
     # Determine the next time step
 
     def determine_time_step(self, newton_failure, sol) -> float:
-        """ Constant step size with Newton failure adjustment
+        """Constant step size with Newton failure adjustment
 
         Parameters
         ----------
@@ -190,7 +190,7 @@ class TimeMachine:
             self.current_time_step *= 0.2
 
     def adjust_time_step_to_must_hit_times(self) -> float:
-        """ Make sure the next time step doesn't skip a must-hit time.
+        """Make sure the next time step doesn't skip a must-hit time.
 
         This method only *temporarily* changes the step size.
         """
@@ -202,7 +202,9 @@ class TimeMachine:
         # Adjust step size if we would be skipping a must-hit time.
         must_hit_times = self.time_params.phase_end_times
         current_bin, new_bin = np.searchsorted(
-            must_hit_times, [current_time, new_time], side="right",
+            must_hit_times,
+            [current_time, new_time],
+            side="right",
         )
         if current_bin < new_bin:
             new_time = must_hit_times[current_bin]
@@ -232,20 +234,3 @@ class TimeMachinePhasesConstantDt(TimeMachine):
         current_time_step = self.adjust_time_step_to_must_hit_times()
 
         return current_time_step
-
-
-class GrabowskiTimeMachine(TimeMachine):
-    def determine_time_step(self) -> float:
-        """ Grabowski step
-
-        see Grabowski et al. (1979): A fully implicit general purpose
-            finite-difference thermal model for in situ combustion and steam
-        and;
-        McClure (2012), PhD-thesis: Modeling and characterization of hydraulic
-            stimulation and induced seismicity in geothermal and shale gas
-            reservoirs
-        """
-        setup = self.setup
-        dt0 = self.time_params.time_step
-        # eta
-        return 0.0

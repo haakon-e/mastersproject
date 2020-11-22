@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_biot_parameter_scaling(**kw):
-    """ Test scaling of parameters in Biot
+    """Test scaling of parameters in Biot
 
     No methods are solved. The parameters are simply checked
     for consistency
@@ -194,9 +194,12 @@ def test_biot_parameter_scaling(**kw):
 
 
 def test_biot_condition_number(
-    test_name: str, ls: float, ss: float, shearzones: List[str] = None,
+    test_name: str,
+    ls: float,
+    ss: float,
+    shearzones: List[str] = None,
 ):
-    """ Test scaling of parameters in Biot
+    """Test scaling of parameters in Biot
 
     Note: No problem is solved. Condition number is simply computed.
 
@@ -227,7 +230,9 @@ def test_biot_condition_number(
     )
 
     params = test_util.prepare_params(
-        path_head=_folder_root, params=params, setup_loggers=True,
+        path_head=_folder_root,
+        params=params,
+        setup_loggers=True,
     )
 
     # Set up model class
@@ -253,7 +258,7 @@ def test_biot_condition_number(
 
 
 def test_biot_solution_scaling(test_name: str, ls: float, ss: float):
-    """ Test consistency of solution subject to
+    """Test consistency of solution subject to
     scalar scaling and length scaling of biot.
 
     Simplifications:
@@ -326,7 +331,7 @@ def test_biot_solution_scaling(test_name: str, ls: float, ss: float):
 
 
 def test_param_scaling_on_regular_grid():
-    """ This test intends to verify scaling of variables and solutions
+    """This test intends to verify scaling of variables and solutions
     by constructing a simple cartesian grid, scale the parameters, and check output.
 
     If the discretization method is consistent (not necessarily accurate), we should get
