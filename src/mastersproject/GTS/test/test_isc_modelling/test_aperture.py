@@ -31,7 +31,7 @@ def test_aperture_of_fracture_intersection():
 
     options = {
         "folder_name": here,
-        "shearzone_names": ["S1_1", "S3_1"],
+        "fractures": ["S1_1", "S3_1"],
         "bounding_box": {
             "xmin": 0,
             "ymin": 0,

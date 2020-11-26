@@ -110,7 +110,7 @@ def test_nd_sides_shearzone_injection_cell():
     biot_params_small = values
 
     frac_name = "S1_2"
-    biot_params_small["shearzone_names"] = [frac_name]
+    biot_params_small["fractures"] = [frac_name]
     params = BiotParameters(**biot_params_small)
     setup = ISCBiotContactMechanics(params)
     setup.create_grid()

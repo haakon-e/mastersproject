@@ -97,7 +97,7 @@ class TestOptimizeMesh:
                     "mesh_args",
                     "length_scale",
                     "bounding_box",
-                    "shearzone_names",
+                    "fractures",
                     "folder_name",
                 }
             )

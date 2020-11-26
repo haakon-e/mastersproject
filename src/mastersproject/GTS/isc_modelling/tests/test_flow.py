@@ -200,7 +200,7 @@ class TestFlowISC:
                     "mesh_args",
                     "length_scale",
                     "bounding_box",
-                    "shearzone_names",
+                    "fractures",
                     "folder_name",
                 }
             )
@@ -295,7 +295,7 @@ def _helper_run_flowisc_optimized_grid(
                 "mesh_args",
                 "length_scale",
                 "bounding_box",
-                "shearzone_names",
+                "fractures",
                 "folder_name",
             }
         )

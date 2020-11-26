@@ -50,7 +50,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                     "mesh_args",
                     "length_scale",
                     "bounding_box",
-                    "shearzone_names",
+                    "fractures",
                     "folder_name",
                 }
             )
@@ -86,7 +86,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             ), "There should be equal number of Nd-1 fractures as shearzone names"
             # We assume that order of fractures on grid creation (self.create_grid)
             # is preserved.
-            for i, sz_name in enumerate(self.params.shearzone_names):
+            for i, sz_name in enumerate(self.params.fractures):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
     def grids_by_name(self, name, key="name") -> np.ndarray:
@@ -382,7 +382,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         600       VE  25.125  118.238  33.762      S3_2
         """
         tunnel_cells_key = "tunnel_cells"
-        shearzones = self.params.shearzone_names
+        shearzones = self.params.fractures
         tunnels = ["AU", "VE"]
         # Fetch tunnel-shearzone intersections
         isc_data = self.params.isc_data

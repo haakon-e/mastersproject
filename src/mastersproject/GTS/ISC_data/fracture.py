@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # TODO: Move convex_plane to the isc class.
 def convex_plane(shearzone_names, coord_system="gts", path=None) -> pd.DataFrame:
     """Compute vertices for the convex polygon of the projected point cloud
-    to the plane of best fit for each shear-zone is shearzone_names.
+    to the plane of best fit for each shear-zone in shearzone_names.
 
     Data imported from gts.ISCData()
 

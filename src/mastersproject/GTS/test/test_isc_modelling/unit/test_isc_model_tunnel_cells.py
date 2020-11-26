@@ -68,7 +68,7 @@ def test_tag_tunnel_cells(create_setup):
     # Get data on tunnels
     strcts = setup.params.isc_data.structures
     _mask = strcts["borehole"].isin(["AU", "VE"]) & strcts["shearzone"].isin(
-        setup.params.shearzone_names
+        setup.params.fractures
     )
     data = strcts[_mask]
     data = data[["borehole", "x_gts", "y_gts", "z_gts", "shearzone"]]

@@ -45,7 +45,7 @@ def simple_example():
         gravity=False,
         rock=rock,
         # GeometryParameters
-        shearzone_names=["f1", "f2"],
+        fractures=["f1", "f2"],
         box=box,
         mesh_args=mesh_args,
         # FlowParameters

@@ -97,7 +97,7 @@ def prepare_params(
         ),  # low k: 5e-21 -- high k: 2 * 5e-21
         gravity=False,
         # GeometryParameters
-        shearzone_names=[
+        fractures=[
             "S1_1",
             "S1_2",
             "S1_3",

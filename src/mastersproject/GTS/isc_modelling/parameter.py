@@ -263,7 +263,7 @@ class GeometryParameters(BaseParameters):
     """ Parameters for geometry"""
 
     # Define identifying names for shear zones and the intact 3d matrix.
-    shearzone_names: Optional[List[str]] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
+    fractures: Optional[List[str]] = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
     intact_name: str = "intact"
 
     bounding_box: Optional[Dict[str, float]] = {
@@ -286,7 +286,7 @@ class GeometryParameters(BaseParameters):
 
     @property
     def n_frac(self):
-        return len(self.shearzone_names) if self.shearzone_names else 0
+        return len(self.fractures) if self.fractures else 0
 
 
 class MechanicsParameters(GeometryParameters):
@@ -340,7 +340,7 @@ class FlowParameters(GeometryParameters):
     # NOTE: To "turn off" this effect, set value to a negative value larger than end_time.
     tunnel_equilibrium_time: float = 30 * pp.YEAR
 
-    # Set transmissivity in fractures. List in same order as shearzone_names
+    # Set transmissivity in fractures. List in same order as fractures
     frac_transmissivity: Union[float, List[float]] = 1
 
     # Different transmissivity near injection point
@@ -381,8 +381,8 @@ class FlowParameters(GeometryParameters):
             ft = frac_T
         else:
             # get the transmissivity corresponding to the shear zone name
-            # position in the shearzone_names list.
-            ft = frac_T[self.shearzone_names.index(shear_zone)]
+            # position in the fractures list.
+            ft = frac_T[self.fractures.index(shear_zone)]
         return self.b_from_T(ft)
 
     @property
@@ -418,7 +418,7 @@ class FlowParameters(GeometryParameters):
         if v:
             assert "shearzone" in v
             assert "borehole" in v
-            assert v["shearzone"] in values["shearzone_names"]
+            assert v["shearzone"] in values["fractures"]
         return v
 
 

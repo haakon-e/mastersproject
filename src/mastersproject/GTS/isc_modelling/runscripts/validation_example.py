@@ -46,7 +46,7 @@ def simple_validation():
         gravity=True,
         rock=IvarGranite(),
         # GeometryParameters
-        shearzone_names=["f1", "f2", "f3"],
+        fractures=["f1", "f2", "f3"],
         box=box,
         mesh_args=mesh_args,
         # MechanicsParameters
