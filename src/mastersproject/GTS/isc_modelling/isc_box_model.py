@@ -259,7 +259,8 @@ def create_grid(
     # --- Add Physical Groups ------------------------------------------------------------------------------------------
 
     # Constrain the 3D volumes
-    volume_group = gmsh.model.addPhysicalGroup(3, gmsh.model.getEntities(3))
+    tags3dim = [t[1] for t in gmsh.model.getEntities(3)]
+    volume_group = gmsh.model.addPhysicalGroup(3, tags3dim)
     gmsh.model.setPhysicalName(3, volume_group, "DOMAIN")
 
     # Constrain the 2D fractures
