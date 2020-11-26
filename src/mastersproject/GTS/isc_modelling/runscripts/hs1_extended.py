@@ -37,7 +37,7 @@ def prepare_B1() -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
         convergence_tol=5e-5,
         max_iterations=300,
     )
-    base = Path.home() / "mastersproject-data/hs1"
+    base = Path.home() / "research/mastersproject-data/hs1-radT"
     head = f"final/case_B1"
 
     fraczone_bounding_box = {
