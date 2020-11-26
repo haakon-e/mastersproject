@@ -29,7 +29,6 @@ class TestRunModelForConvergenceStudy:
 
         # Note: The current mesh_args gives no negative cells, but we are not able
         # to solve a second refinement. So this test cannot be run to its full intent.
-        # See test_grid_convergence.py instead.
         """
         _run_convergence_study_helper(
             head="test_2_fracs_unit_domain",
@@ -44,7 +43,6 @@ class TestRunModelForConvergenceStudy:
 
         # Note: The current mesh_args gives no negative cells, but we are not able
         # to solve a second refinement. So this test cannot be run to its full intent.
-        # See test_grid_convergence.py instead.
         """
         _run_convergence_study_helper(
             head="test_1_frac_unit_domain",
