@@ -1,7 +1,7 @@
 # Simulation of injection-induced deformation for a stimulation experiment at the Grimsel underground laboratory
 Master of Science Thesis in Applied and Computational Mathematics
 
-Link to thesis [coming]
+Link to thesis: http://bora.uib.no/handle/1956/24463
 
 ## Installation instructions
 
