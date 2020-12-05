@@ -34,11 +34,11 @@ def prepare_B1() -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
     )
 
     newton_params = NewtonParameters(
-        convergence_tol=5e-5,
+        convergence_tol=1e-4,
         max_iterations=300,
     )
     base = Path.home() / "research/mastersproject-data/hs1-radT"
-    head = f"final/case_B1"
+    head = f"B1/test_S1-S5_longdt"
 
     fraczone_bounding_box = {
         "xmin": -1,
@@ -74,7 +74,7 @@ def prepare_B1() -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
         # GeometryParameters
         fractures=[
             # "S1_1",
-            "S1_2",
+            # "S1_2",
             "S1_3",
             "S3_1",
         ],  # "S3_2"],  # ["S1_2", "S3_1"],
@@ -94,8 +94,8 @@ def prepare_B1() -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
         injection_protocol=injection_protocol,
         frac_transmissivity=[
             # 5e-8,
-            1e-9,
-            1e-16,  # Set a low background transmissivity to S1.3
+            # 1e-9,
+            8.3e-11,  # Pre-stimulation T during HS1, observed in S1.3-INJ2
             3.7e-7,
             # 1e-9,
         ],
@@ -103,7 +103,7 @@ def prepare_B1() -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
         # ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]:
         # [5e-8,   1e-9,   5e-10,  3.7e-7, 1e-9]
         # Note background hydraulic conductivity: 1e-14 m/s
-        near_injection_transmissivity=8.3e-11,  # Pre-stimulation T during HS1, observed in S1.3-INJ2.
+        near_injection_transmissivity=5e-9,  # Transmissivity near well rough log-average of init and resulting T 
         near_injection_t_radius=10,
     )
 
@@ -122,7 +122,10 @@ def box_runscript(run=True):
     # lcin=5*5.4, lcout=50*5.4 --> 6k*3d + 500*2d + 15*1d
     # lcin=5*3, lcout=50*3 --> 12k*3d + 1.2k*2d + 27*1d
     # lcin=5*2, lcout=50*2 --> 22k*3d, 2.5k*2d + 39*1d
-    setup = ISCBoxModel(biot_params, lcin=8, lcout=100)
+
+    # For 2frac setups (S1.3, S3.1):
+    # lcin=8, lcout=20 --> 60k*3d + 2.4k*2d + 19*1d
+    setup = ISCBoxModel(biot_params, lcin=12, lcout=25)
     time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
     if run:
@@ -160,13 +163,13 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
         # S1,       5 min
         1 * _5min,
         # # S2,       5 min
-        # 2 * _5min,
-        # # S3,       5 min
-        # 3 * _5min,
+        2 * _5min,
+        # S3,       5 min
+        3 * _5min,
         # # S4,       5 min
-        # 4 * _5min,
+        4 * _5min,
         # # S5,       15 min
-        # 7 * _5min,
+        7 * _5min,
         # # shut-in,  46 min
         # 81 * _1min,
         # # Venting,  29 min
@@ -176,10 +179,10 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
         0,  # initialization
         0,  # tunnel calibration
         15,  # C3, step 1
-        # 20,  # C3, step 2
-        # 25,  # C3, step 3
-        # 30,  # C3, step 4
-        # 35,  # C3, step 5
+        20,  # C3, step 2
+        25,  # C3, step 3
+        30,  # C3, step 4
+        35,  # C3, step 5
         # 0,  # shut-in
         # 0,  # venting (currently modelled as: shut-in)
     ]
@@ -189,11 +192,11 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
     time_steps = [
         initialization_time / 2,
         tunnel_time / 2,
-        0.5 * _1min,  # S1, 5min
-        # 0.5 * _1min,  # S2, 5min
-        # 0.5 * _1min,  # S3, 5min
-        # 0.5 * _1min,  # S4, 5min
-        # 1.0 * _1min,  # S5, 15min
+        5.0 * _1min,  # S1, 5min
+        2.5 * _1min,  # S2, 5min
+        1.0 * _1min,  # S3, 5min
+        2.5 * _1min,  # S4, 5min
+        2.5 * _1min,  # S5, 15min
         # 16 * _1min,  # shut-in, 46min
         # 15 * _1min,  # venting
     ]
