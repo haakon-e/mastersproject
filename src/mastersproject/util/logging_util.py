@@ -6,7 +6,7 @@ import time
 default_logger = logging.getLogger("GTS.OVERWRITE_ME")
 
 
-def timer(logger=default_logger, level="INFO"):
+def timer(logger=default_logger, level="INFO", show_time=False):
     """Credits:
     https://realpython.com/primer-on-python-decorators/#decorators-with-arguments
     """
@@ -20,7 +20,8 @@ def timer(logger=default_logger, level="INFO"):
             if not isinstance(lvl, int):
                 lvl = logging.getLevelName("INFO")
                 logging.warning("Unrecognised logging level!")
-            logger.log(level=lvl, msg=f"Calling {func.__name__}")
+            ctime = f"({time.asctime()})" if show_time else ""
+            logger.log(level=lvl, msg=f"Calling {func.__name__} {ctime}")
             start_time = time.perf_counter()
             value = func(*args, **kwargs)
             end_time = time.perf_counter()

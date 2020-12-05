@@ -37,7 +37,7 @@ class TimeMachine:
         # Max time iteration attempts
         self.k_newton_max = max_newton_failure_retries + 1
 
-    @timer(logger)
+    @timer(logger, show_time=True)
     def iteration(self, tol):
         sol = self.setup.assemble_and_solve_linear_system(tol)
         return sol
