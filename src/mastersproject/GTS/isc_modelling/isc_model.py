@@ -643,7 +643,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         )
         self.assembler.discretize(term_filter)
         # Report on cells sticking, sliding, etc.:
-        msg = "(Open,Sticking,Gliding)/Total: "
+        msg = "(Open,Gliding,Sticking)/Total: "
         for g, d in self.gb:
             if g.dim != self.Nd - 1:
                 continue
@@ -654,7 +654,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             nsliding = np.sum(np.logical_and(sliding, penetration))
             nsticking = np.sum(np.logical_and(np.logical_not(sliding), penetration))
             nopen = np.sum(np.logical_not(penetration))
-            msg += f"{sz}: ({nopen}, {nsticking}, {nsliding})/{sliding.size}. "
+            msg += f"{sz}: ({nopen}, {nsliding}, {nsticking})/{sliding.size}. "
         logger.info(msg)
 
     def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
