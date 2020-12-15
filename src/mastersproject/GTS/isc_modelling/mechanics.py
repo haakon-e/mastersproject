@@ -359,8 +359,12 @@ class Mechanics(CommonAbstractModel):
         """ Check convergence and compute error of matrix displacement variable"""
         var_m = self.displacement_variable
         g_max = self._nd_grid()
-        # NOTE: In previous simulations, this was erronuously scalar scale.
         ls = self.params.length_scale
+
+        # Extract convergence tolerance
+        tol_convergence = nl_params.get("convergence_tol")
+        converged = False
+        diverged = False
 
         # Get the solution from current and previous iterates,
         # as well as the initial guess.
@@ -369,35 +373,34 @@ class Mechanics(CommonAbstractModel):
         u_mech_prev = prev_solution[mech_dof] * ls
         u_mech_init = init_solution[mech_dof] * ls
 
+        # Calculate norms
+        difference_in_iterates_mech = np.sqrt(np.sum((u_mech_now - u_mech_prev) ** 2)) / u_mech_now.size
+        difference_from_init_mech = np.sqrt(np.sum((u_mech_now - u_mech_init) ** 2)) / u_mech_now.size
+
         # Calculate errors
-        difference_in_iterates_mech = np.sum((u_mech_now - u_mech_prev) ** 2)
-        difference_from_init_mech = np.sum((u_mech_now - u_mech_init) ** 2)
-
-        tol_convergence = nl_params.get("convergence_tol")
-
-        converged = False
-        diverged = False
-        error_type = "relative"
-
-        # Check absolute convergence criterion
-        if difference_in_iterates_mech < tol_convergence:
+        scaled_convergence_tol = tol_convergence * ls
+        absolute_convergence = difference_in_iterates_mech < scaled_convergence_tol
+        relative_convergence = difference_in_iterates_mech < tol_convergence * difference_from_init_mech
+        abs_error = difference_in_iterates_mech
+        rel_error = difference_in_iterates_mech / difference_from_init_mech
+        if absolute_convergence:
             converged = True
-            error_mech = difference_in_iterates_mech
-            error_type = "absolute"
-
+            error_mech = abs_error
+        elif relative_convergence:
+            converged = True
+            error_mech = rel_error
         else:
-            # Check relative convergence criterion
-            if (
-                difference_in_iterates_mech
-                < tol_convergence * difference_from_init_mech
-            ):
-                converged = True
-            error_mech = difference_in_iterates_mech / difference_from_init_mech
+            error_mech = rel_error
 
-        logger.info(f"Error in matrix displacement is {error_mech:.6e} ({error_type}).")
         logger.info(
-            f"Matrix displacement {'converged' if converged else 'did not converge'}. "
+            f"3D displacement error: "
+            f"absolute={abs_error:.2e} {'<' if absolute_convergence else '>'} {scaled_convergence_tol:.2e}. "
+            f"relative={rel_error:.2e} {'<' if relative_convergence else '>'} {tol_convergence:.2e} "
+            f"({'Converged' if (absolute_convergence or relative_convergence) else 'Did not converge'})."
         )
+
+        if difference_in_iterates_mech > 1e30:
+            diverged = True
 
         return error_mech, converged, diverged
 

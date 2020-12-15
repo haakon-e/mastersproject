@@ -559,7 +559,6 @@ class Flow(CommonAbstractModel):
 
         # Extract convergence tolerance
         tol_convergence = nl_params.get("convergence_tol")
-
         converged = False
         diverged = False
 
@@ -575,38 +574,34 @@ class Flow(CommonAbstractModel):
 
         # Calculate norms
         # scalar_norm = np.sum(scalar_now ** 2)
-        difference_in_iterates_scalar = np.sum((scalar_now - scalar_prev) ** 2)
-        difference_from_init_scalar = np.sum((scalar_now - scalar_init) ** 2)
+        difference_in_iterates_scalar = np.sqrt(np.sum((scalar_now - scalar_prev) ** 2)) / scalar_now.size
+        difference_from_init_scalar = np.sqrt(np.sum((scalar_now - scalar_init) ** 2)) / scalar_now.size
 
         # -- Scalar solution --
         # The if is intended to avoid division through zero
-        if (
-            difference_in_iterates_scalar < tol_convergence
-        ):  # and scalar_norm < tol_convergence
+        scaled_convergence_tol = tol_convergence * ss
+        absolute_convergence = difference_in_iterates_scalar < scaled_convergence_tol
+        relative_convergence = difference_in_iterates_scalar < tol_convergence * difference_from_init_scalar
+        abs_error = difference_in_iterates_scalar
+        rel_error = difference_in_iterates_scalar / difference_from_init_scalar
+        if absolute_convergence:
             converged = True
-            error_scalar = difference_in_iterates_scalar
-            logger.info(f"Pressure converged absolutely")
-            logger.info(f"Absolute error in pressure is {error_scalar:.6e}.")
-        else:
-            # Relative convergence criterion:
-            if (
-                difference_in_iterates_scalar
-                < tol_convergence * difference_from_init_scalar
-            ):
-                converged = True
-                logger.info(f"Pressure converged relatively")
+            error_scalar = abs_error
+        elif relative_convergence:
+            converged = True
+            error_scalar = rel_error
+        else:  # If not convergence, report relative error
+            error_scalar = rel_error
 
-            error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
-            logger.info(
-                f"Relative error in pressure is {error_scalar:.6e}. "
-                f"(absolute error is {difference_in_iterates_scalar:.4e})"
-            )
+        logger.info(
+            f"Pressure error: "
+            f"absolute={abs_error:.2e} {'<' if absolute_convergence else '>'} {scaled_convergence_tol:.2e}. "
+            f"relative={rel_error:.2e} {'<' if relative_convergence else '>'} {tol_convergence:.2e} "
+            f"({'Converged' if (absolute_convergence or relative_convergence) else 'Did not converge'})."
+        )
 
         if difference_in_iterates_scalar > 1e30:
             diverged = True
-
-        if not converged:
-            logger.info(f"Scalar pressure did not converge.")
 
         return error_scalar, converged, diverged
 

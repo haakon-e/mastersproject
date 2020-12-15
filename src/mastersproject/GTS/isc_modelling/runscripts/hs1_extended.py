@@ -34,7 +34,7 @@ def prepare_B1() -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
     )
 
     newton_params = NewtonParameters(
-        convergence_tol=1e-4,
+        convergence_tol=1e-8,
         max_iterations=300,
     )
     base = Path.home() / "research/mastersproject-data/hs1-radT"
