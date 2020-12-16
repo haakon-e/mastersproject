@@ -18,6 +18,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         super().__init__(params)
         self.params = params
 
+        self._fracture_state = {}  # See before_newton_iteration()
+
     # --- Grid methods ---
 
     def create_grid(self):
@@ -651,10 +653,38 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             iterate = d[pp.STATE][pp.ITERATE]
             penetration = iterate["penetration"]
             sliding = iterate["sliding"]
-            nsliding = np.sum(np.logical_and(sliding, penetration))
-            nsticking = np.sum(np.logical_and(np.logical_not(sliding), penetration))
-            nopen = np.sum(np.logical_not(penetration))
-            msg += f"{sz}: ({nopen}, {nsliding}, {nsticking})/{sliding.size}. "
+            _sliding = np.logical_and(sliding, penetration)
+            _sticking = np.logical_and(np.logical_not(sliding), penetration)
+            _open = np.logical_not(penetration)
+
+            if self._fracture_state.get(sz):
+                def state_change(a, b):
+                    """ Returns number of instances where a is True and b is False."""
+                    return np.sum(a & ~b)
+                oldstate = self._fracture_state.get(sz)
+                nnew_sliding = state_change(_sliding, oldstate["sliding"])
+                nstop_sliding = state_change(oldstate["sliding"], _sliding)
+                nnew_open = state_change(_open, oldstate["open"])
+                nstop_open = state_change(oldstate["open"], _open)
+                nnew_sticking = state_change(_sticking, oldstate["sticking"])
+                nstop_sticking = state_change(oldstate["sticking"], _sticking)
+                msg += (
+                    f"{sz}: ("
+                    f"{np.sum(_open)    }[+{nnew_open    }/-{nstop_open    }], "
+                    f"{np.sum(_sliding) }[+{nnew_sliding }/-{nstop_sliding }], "
+                    f"{np.sum(_sticking)}[+{nnew_sticking}/-{nstop_sticking}]"
+                    f")/{sliding.size}. "
+                )
+            else:
+                msg += f"{sz}: ({np.sum(_open)}, {np.sum(_sliding)}, {np.sum(_sticking)})/{sliding.size}. "
+            # Save fracture state
+            self._fracture_state.update(
+                {sz: {
+                    "open": _open,
+                    "sliding": _sliding,
+                    "sticking": _sticking,
+                }})
+
         logger.info(msg)
 
     def after_newton_iteration(self, solution_vector: np.ndarray) -> None:
