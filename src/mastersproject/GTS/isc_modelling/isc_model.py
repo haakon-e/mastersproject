@@ -439,7 +439,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             alpha = self.biot_alpha(g)
             bulk = self.params.rock.BULK_MODULUS
             mass_weight = porosity * c + (alpha - porosity) / bulk
-            mass_weight = 1e-13
+            #mass_weight = 1e-13
             mass_weight *= self.specific_volume(g, scaled=True)
             scalar_params["mass_weight"] = mass_weight
 
