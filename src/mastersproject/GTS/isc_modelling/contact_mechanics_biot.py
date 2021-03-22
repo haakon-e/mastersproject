@@ -308,7 +308,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         super().export_step(write_vtk=False)
 
         if write_vtk:
-            self.viz.write_vtk(
+            self.viz.write_vtu(
                 data=self.export_fields, time_step=self.time
             )  # Write visualization
             self.export_times.append(self.time)

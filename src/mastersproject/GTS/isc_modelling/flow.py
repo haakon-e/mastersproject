@@ -702,7 +702,7 @@ class Flow(CommonAbstractModel):
             state[self.p_perturbation] = self.export_pressure_perturbation(d)
 
         if write_vtk:
-            self.viz.write_vtk(
+            self.viz.write_vtu(
                 data=self.export_fields, time_step=self.time
             )  # Write visualization
             self.export_times.append(self.time)
