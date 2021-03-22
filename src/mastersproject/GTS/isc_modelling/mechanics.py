@@ -625,16 +625,19 @@ class Mechanics(CommonAbstractModel):
         d[pp.STATE]["stress"] = stress
 
     def reconstruct_local_displacement_jump(
-        self, data_edge: Dict, from_iterate: bool = True
+        self,
+        data_edge: Dict,
+        projection: pp.TangentialNormalProjection,
+        from_iterate: bool = True,
     ):
         """Reconstruct the displacement jump in local coordinates.
 
         Parameters:
             data_edge : Dict
-                The dictionary on the gb edge. Should contain
-                    - a mortar grid
-                    - a projection, obtained by calling
-                    pp.contact_conditions.set_projections(self.gb)
+                The dictionary on the gb edge. Should contain a mortar grid.
+            projection : pp.TangentialNormalProjection
+                projection operator. Stored in lower-dimensional grid data.
+                Computed with pp.contact_conditions.set_projections(gb)
             from_iterate : bool
                 Whether to fetch displacement from state or previous
                 iterate.
@@ -658,9 +661,6 @@ class Mechanics(CommonAbstractModel):
             * mg.sign_of_mortar_sides(nd=nd)
             * mortar_u
         )
-        projection: pp.TangentialNormalProjection = data_edge[
-            "tangential_normal_projection"
-        ]
 
         # Rotated displacement jumps. these are in the local coordinates, on the fracture.
         project_to_local = projection.project_tangential_normal(int(mg.num_cells / 2))
@@ -748,10 +748,11 @@ class Mechanics(CommonAbstractModel):
                 # Get edge of node pair
                 edge = (g, nd_grid)
                 data_edge = gb.edge_props(edge)
+                projection = d["tangential_normal_projection"]
 
                 u_mortar_local = (
                     self.reconstruct_local_displacement_jump(
-                        data_edge, from_iterate
+                        data_edge, projection, from_iterate
                     ).copy()
                     * ls
                 )

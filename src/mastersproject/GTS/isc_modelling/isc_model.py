@@ -193,13 +193,15 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         gb = self.gb
         nd_grid = self._nd_grid()
 
-        def _aperture_from_edge(data: Dict):
+        def _aperture_from_edge(data: Dict, frac_data: Dict):
             """Compute the mechanical contribution to the aperture
             for a given fracture. data is the edge data.
             """
+            projection = frac_data["tangential_normal_projection"]
             # Get normal displacement component from solution
             u_mortar_local = self.reconstruct_local_displacement_jump(
                 data,
+                projection,
                 from_iterate=from_iterate,
             )
             # Jump distances in each cell (index, -1, extracts normal component)
@@ -227,7 +229,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # In 2d-fractures
         elif g.dim == nd - 1:
             data_edge = gb.edge_props((g, nd_grid))
-            aperture = _aperture_from_edge(data_edge)
+            frac_data = gb.node_props(g)
+            aperture = _aperture_from_edge(data_edge, frac_data)
             return aperture
 
         # TODO: Think about how to accurately do aperture computation (and specific volume)
@@ -241,9 +244,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             frac_cell_faces = [g_h.cell_faces for g_h in primary_grids]
 
             # get apertures on the adjacent fractures
+            frac_data = [gb.node_props(pg) for pg in primary_grids]
             data_edges = [gb.edge_props(edge) for edge in frac_edges]
             frac_apertures = [
-                _aperture_from_edge(data_edge) for data_edge in data_edges
+                _aperture_from_edge(data_edge, fd) for data_edge, fd in zip(data_edges, frac_data)
             ]
 
             # Map fracture apertures to internal faces ..
