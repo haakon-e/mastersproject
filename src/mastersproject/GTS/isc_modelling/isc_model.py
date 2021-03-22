@@ -418,6 +418,9 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             data[pp.STATE][tunnel_cells_key] |= tags
 
         tunnel_sz.apply(_tag_intersection_cell, axis=1)
+        for g, d in gb:
+            g.tags[tunnel_cells_key] = g.tags[tunnel_cells_key].astype(int)
+            d[pp.STATE][tunnel_cells_key] = d[pp.STATE][tunnel_cells_key].astype(int)
 
     # --- Set flow parameters ---
 
