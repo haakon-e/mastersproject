@@ -42,7 +42,7 @@ def prepare_params(
         end_time=time_params.end_time,
         gravity=True,
         # GeometryParameters
-        shearzone_names=["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],
+        fractures=["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"],
         mesh_args={
             "mesh_size_frac": sz,
             "mesh_size_min": 0.1 * sz,

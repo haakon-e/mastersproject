@@ -18,6 +18,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         super().__init__(params)
         self.params = params
 
+        self._fracture_state = {}  # See before_newton_iteration()
+
     # --- Grid methods ---
 
     def create_grid(self):
@@ -50,7 +52,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                     "mesh_args",
                     "length_scale",
                     "bounding_box",
-                    "shearzone_names",
+                    "fractures",
                     "folder_name",
                 }
             )
@@ -86,7 +88,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             ), "There should be equal number of Nd-1 fractures as shearzone names"
             # We assume that order of fractures on grid creation (self.create_grid)
             # is preserved.
-            for i, sz_name in enumerate(self.params.shearzone_names):
+            for i, sz_name in enumerate(self.params.fractures):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
     def grids_by_name(self, name, key="name") -> np.ndarray:
@@ -130,7 +132,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         return np.power(a, self.Nd - g.dim)
 
     def aperture(
-        self, g: pp.Grid, scaled: bool, from_iterate: bool = True,
+        self,
+        g: pp.Grid,
+        scaled: bool,
+        from_iterate: bool = True,
     ) -> np.ndarray:
         """Compute the total aperture of each cell on a grid
 
@@ -191,13 +196,15 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         gb = self.gb
         nd_grid = self._nd_grid()
 
-        def _aperture_from_edge(data: Dict):
+        def _aperture_from_edge(data: Dict, frac_data: Dict):
             """Compute the mechanical contribution to the aperture
             for a given fracture. data is the edge data.
             """
+            projection = frac_data["tangential_normal_projection"]
             # Get normal displacement component from solution
             u_mortar_local = self.reconstruct_local_displacement_jump(
                 data,
+                projection,
                 from_iterate=from_iterate,
             )
             # Jump distances in each cell (index, -1, extracts normal component)
@@ -225,7 +232,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         # In 2d-fractures
         elif g.dim == nd - 1:
             data_edge = gb.edge_props((g, nd_grid))
-            aperture = _aperture_from_edge(data_edge)
+            frac_data = gb.node_props(g)
+            aperture = _aperture_from_edge(data_edge, frac_data)
             return aperture
 
         # TODO: Think about how to accurately do aperture computation (and specific volume)
@@ -239,9 +247,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             frac_cell_faces = [g_h.cell_faces for g_h in primary_grids]
 
             # get apertures on the adjacent fractures
+            frac_data = [gb.node_props(pg) for pg in primary_grids]
             data_edges = [gb.edge_props(edge) for edge in frac_edges]
             frac_apertures = [
-                _aperture_from_edge(data_edge) for data_edge in data_edges
+                _aperture_from_edge(data_edge, fd)
+                for data_edge, fd in zip(data_edges, frac_data)
             ]
 
             # Map fracture apertures to internal faces ..
@@ -274,7 +284,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     # --- Flow parameter related methods ---
 
     def permeability(self, g, scaled, from_iterate=True) -> np.ndarray:
-        """ Set (uniform) permeability in a subdomain
+        """Set (uniform) permeability in a subdomain
 
         Modify parent method by passing from_iterate argument. This argument is
         needed by self.aperture().
@@ -336,7 +346,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         for g, d in self.gb:
             tunnels = g.tags["tunnel_cells"]  # type: np.ndarray[bool]
             if np.any(tunnels):
-                dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
+                dof_ind = self.dof_manager.dof_ind(g, self.scalar_variable)
                 glob_ind = dof_ind[tunnels]
                 glob_inds.append(glob_ind)
         rows_to_zero = (
@@ -382,7 +392,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         600       VE  25.125  118.238  33.762      S3_2
         """
         tunnel_cells_key = "tunnel_cells"
-        shearzones = self.params.shearzone_names
+        shearzones = self.params.fractures
         tunnels = ["AU", "VE"]
         # Fetch tunnel-shearzone intersections
         isc_data = self.params.isc_data
@@ -412,11 +422,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             data[pp.STATE][tunnel_cells_key] |= tags
 
         tunnel_sz.apply(_tag_intersection_cell, axis=1)
+        for g, d in gb:
+            g.tags[tunnel_cells_key] = g.tags[tunnel_cells_key].astype(int)
+            d[pp.STATE][tunnel_cells_key] = d[pp.STATE][tunnel_cells_key].astype(int)
 
     # --- Set flow parameters ---
 
     def set_scalar_parameters(self):
-        """ See parent method
+        """See parent method
 
         Overwrite mass_weight and source.
         * For mass_weight, we set a more complex storage term that depends on the Biot coefficient
@@ -437,6 +450,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             alpha = self.biot_alpha(g)
             bulk = self.params.rock.BULK_MODULUS
             mass_weight = porosity * c + (alpha - porosity) / bulk
+            # mass_weight = 1e-13
             mass_weight *= self.specific_volume(g, scaled=True)
             scalar_params["mass_weight"] = mass_weight
 
@@ -642,7 +656,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         )
         self.assembler.discretize(term_filter)
         # Report on cells sticking, sliding, etc.:
-        msg = "(Open,Sticking,Gliding)/Total: "
+        msg = "(Open,Gliding,Sticking)/Total: "
         for g, d in self.gb:
             if g.dim != self.Nd - 1:
                 continue
@@ -650,10 +664,43 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             iterate = d[pp.STATE][pp.ITERATE]
             penetration = iterate["penetration"]
             sliding = iterate["sliding"]
-            nsliding = np.sum(np.logical_and(sliding, penetration))
-            nsticking = np.sum(np.logical_and(np.logical_not(sliding), penetration))
-            nopen = np.sum(np.logical_not(penetration))
-            msg += f"{sz}: ({nopen}, {nsticking}, {nsliding})/{sliding.size}. "
+            _sliding = np.logical_and(sliding, penetration)
+            _sticking = np.logical_and(np.logical_not(sliding), penetration)
+            _open = np.logical_not(penetration)
+
+            if self._fracture_state.get(sz):
+
+                def state_change(a, b):
+                    """ Returns number of instances where a is True and b is False."""
+                    return np.sum(a & ~b)
+
+                oldstate = self._fracture_state.get(sz)
+                nnew_sliding = state_change(_sliding, oldstate["sliding"])
+                nstop_sliding = state_change(oldstate["sliding"], _sliding)
+                nnew_open = state_change(_open, oldstate["open"])
+                nstop_open = state_change(oldstate["open"], _open)
+                nnew_sticking = state_change(_sticking, oldstate["sticking"])
+                nstop_sticking = state_change(oldstate["sticking"], _sticking)
+                msg += (
+                    f"{sz}: ("
+                    f"{np.sum(_open)    }[+{nnew_open    }/-{nstop_open    }], "
+                    f"{np.sum(_sliding) }[+{nnew_sliding }/-{nstop_sliding }], "
+                    f"{np.sum(_sticking)}[+{nnew_sticking}/-{nstop_sticking}]"
+                    f")/{sliding.size}. "
+                )
+            else:
+                msg += f"{sz}: ({np.sum(_open)}, {np.sum(_sliding)}, {np.sum(_sticking)})/{sliding.size}. "
+            # Save fracture state
+            self._fracture_state.update(
+                {
+                    sz: {
+                        "open": _open,
+                        "sliding": _sliding,
+                        "sticking": _sticking,
+                    }
+                }
+            )
+
         logger.info(msg)
 
     def after_newton_iteration(self, solution_vector: np.ndarray) -> None:

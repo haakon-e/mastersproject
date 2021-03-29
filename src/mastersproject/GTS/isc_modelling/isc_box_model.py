@@ -34,12 +34,17 @@ class ISCBoxModel(ISCBiotContactMechanics):
     def create_grid(self, n_optimize=2, use_logger=True):
         """ Create GridBucket from fracture box model"""
         gb = create_grid(
-            path=self.params.folder_name,
-            ls=self.params.length_scale,
-            shearzones=self.params.shearzone_names,
+            **self.params.dict(
+                include={
+                    "bounding_box",
+                    "fraczone_bounding_box",
+                    "folder_name",
+                    "length_scale",
+                    "fractures",
+                }
+            ),
             lcin=self.lcin,
             lcout=self.lcout,
-            fraczone_bounding_box=self.params.fraczone_bounding_box,
             n_optimize_netgen=n_optimize,
             use_logger=use_logger,
         )
@@ -66,12 +71,13 @@ class ISCBoxModel(ISCBiotContactMechanics):
 
 
 def create_grid(
-    path: Optional[Path] = None,
-    ls: float = 1,
-    shearzones: Union[str, List[str]] = "all",
-    lcin: float = 5,
-    lcout: float = 50,
-    fraczone_bounding_box: dict = None,
+    bounding_box: dict,
+    fraczone_bounding_box: dict,
+    lcin: float,
+    lcout: float,
+    folder_name: Optional[Path] = None,
+    length_scale: float = 1,
+    fractures: Union[str, List[str]] = "all",
     n_optimize_netgen: int = 1,
     verbose: bool = False,
     run_gmsh_gui: bool = False,
@@ -81,17 +87,23 @@ def create_grid(
 
     Parameters
     ----------
-    path : Path
-        path to store the .msh file.
-        If unset, .msh file will not be stored.
-    ls : float
-        length scale
-    shearzones : List of strings or {"all"}
-        Which shearzones to mesh
-    lcin, lcout : float
-        mesh size parameters within, and outside the fractured zone, respectively
+    bounding_box : dict
+        dictionary of 'xmin', 'ymin', 'zmin', 'xmax', 'ymax', 'zmax'
+        Bounding box of global domain
     fraczone_bounding_box : dict
         dictionary of 'xmin', 'ymin', 'zmin', 'xmax', 'ymax', 'zmax'
+        Bounding box of fractured zone
+    lcin, lcout : float
+        mesh size parameters within, and outside the fractured zone, respectively
+        Should be unscaled (i.e.: They are automatically scaled by ls).
+        For example: lcin=5, lcout=50
+    folder_name : Path
+        path to store the .msh file.
+        If unset, .msh file will not be stored.
+    length_scale : float
+        length scale
+    fractures : List of strings or {"all"}
+        Which shearzones to mesh
     n_optimize_netgen : int
         number of times to optimize with the Netgen optimizer
     verbose : bool
@@ -101,25 +113,25 @@ def create_grid(
     use_logger : bool
         Show output of grid generation log
     """
-    if path is None:
+    if folder_name is None:
         tempdir: bool = True
         mshfile = None
-    elif path.is_dir():
+    elif folder_name.is_dir():
         tempdir: bool = False
-        mshfile = path / "gmsh_frac_file.msh"
+        mshfile = folder_name / "gmsh_frac_file.msh"
     else:
         raise ValueError("Path must be a directory")
 
     all_shearzones = ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]
-    if shearzones == "all":
-        shearzones = all_shearzones
+    if fractures == "all":
+        fractures = all_shearzones
     else:
-        for s in shearzones:
+        for s in fractures:
             assert s in all_shearzones, f"The shear zone {s} is not recognized!"
 
     # Constrain the mesh size parameter within the fractured zone
-    lcin = lcin / ls
-    lcout = lcout / ls
+    lcin = lcin / length_scale
+    lcout = lcout / length_scale
 
     # --- Initialize gmsh ----------------------------------------------------------------------------------------------
 
@@ -133,13 +145,12 @@ def create_grid(
     gmsh.option.setNumber("Geometry.OCCBoundsUseStl", 1)
 
     # Make bounding box for fractured zone
-    fraczone_bounding_box = fraczone_bounding_box or {}
-    xmin: float = fraczone_bounding_box.get("xmin") / ls
-    ymin: float = fraczone_bounding_box.get("ymin") / ls
-    zmin: float = fraczone_bounding_box.get("zmin") / ls
-    xmax: float = fraczone_bounding_box.get("xmax") / ls
-    ymax: float = fraczone_bounding_box.get("ymax") / ls
-    zmax: float = fraczone_bounding_box.get("zmax") / ls
+    xmin: float = fraczone_bounding_box.get("xmin") / length_scale
+    ymin: float = fraczone_bounding_box.get("ymin") / length_scale
+    zmin: float = fraczone_bounding_box.get("zmin") / length_scale
+    xmax: float = fraczone_bounding_box.get("xmax") / length_scale
+    ymax: float = fraczone_bounding_box.get("ymax") / length_scale
+    zmax: float = fraczone_bounding_box.get("zmax") / length_scale
 
     dx = xmax - xmin
     dy = ymax - ymin
@@ -147,9 +158,13 @@ def create_grid(
     inner_box = kernel.addBox(xmin, ymin, zmin, dx, dy, dz)
 
     # Produce big bounding box. This has tag 13.
-    outer_box = kernel.addBox(
-        -100 / ls, 0 / ls, -100 / ls, 300 / ls, 300 / ls, 300 / ls
-    )
+    gxmin: float = bounding_box.get("xmin") / length_scale
+    gymin: float = bounding_box.get("ymin") / length_scale
+    gzmin: float = bounding_box.get("zmin") / length_scale
+    gdx: float = bounding_box.get("xmax") / length_scale - gxmin
+    gdy: float = bounding_box.get("ymax") / length_scale - gymin
+    gdz: float = bounding_box.get("zmax") / length_scale - gzmin
+    outer_box = kernel.addBox(gxmin, gymin, gzmin, gdx, gdy, gdz)
 
     # Fragment the outer box with the inner box (to be fractured zone)
     # fmt: off
@@ -174,9 +189,9 @@ def create_grid(
     fracs = []
     frac_names = []
     for i in data.index:
-        xc, yc, zc = data.loc[i, ["x_c", "y_c", "z_c"]] / ls
+        xc, yc, zc = data.loc[i, ["x_c", "y_c", "z_c"]] / length_scale
         frac_name = data.loc[i, "shearzone"]  # Name of fracture
-        if frac_name not in shearzones:
+        if frac_name not in fractures:
             continue
         frac = kernel.addRectangle(xmin - dx, ymin - dy, zc, 3 * dx, 3 * dy)
         f = (2, frac)  # dimTag of fracture
@@ -246,7 +261,8 @@ def create_grid(
     # --- Add Physical Groups ------------------------------------------------------------------------------------------
 
     # Constrain the 3D volumes
-    volume_group = gmsh.model.addPhysicalGroup(3, gmsh.model.getEntities(3))
+    tags3dim = [t[1] for t in gmsh.model.getEntities(3)]
+    volume_group = gmsh.model.addPhysicalGroup(3, tags3dim)
     gmsh.model.setPhysicalName(3, volume_group, "DOMAIN")
 
     # Constrain the 2D fractures
@@ -316,8 +332,8 @@ def create_grid(
     field.setNumber(ithresh, "IField", idist)
     field.setNumber(ithresh, "LcMin", lcin / 2)
     field.setNumber(ithresh, "LcMax", lcout)
-    field.setNumber(ithresh, "DistMin", 1 / ls)
-    field.setNumber(ithresh, "DistMax", 2 / ls)
+    field.setNumber(ithresh, "DistMin", 1 / length_scale)
+    field.setNumber(ithresh, "DistMax", 2 / length_scale)
 
     # Define smaller mesh elements near fractures
     # 1. Define a distance field on the fracture surfaces
@@ -329,8 +345,8 @@ def create_grid(
     field.setNumber(fthresh, "IField", fdist)
     field.setNumber(fthresh, "LcMin", lcin / 2.5)
     field.setNumber(fthresh, "LcMax", lcout)
-    field.setNumber(fthresh, "DistMin", 1 / ls)
-    field.setNumber(fthresh, "DistMax", 2 / ls)
+    field.setNumber(fthresh, "DistMin", 1 / length_scale)
+    field.setNumber(fthresh, "DistMax", 2 / length_scale)
 
     # Use the minimum of the fields as the background mesh field
     fmin = field.add("Min")

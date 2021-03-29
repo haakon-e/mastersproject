@@ -93,7 +93,7 @@ class TestISCBiotContactMechanics:
     def test_mechanical_aperture(self, biot_params_small):
         """ Test computation of mechanical aperture in fractured rock"""
         # Prepare the model
-        biot_params_small["shearzone_names"] = ["F1"]
+        biot_params_small["fractures"] = ["F1"]
         biot_params_small["length_scale"] = 1
         params = BiotParameters(**biot_params_small)
         setup = ISCBiotContactMechanics(params)
@@ -119,7 +119,7 @@ class TestISCBiotContactMechanics:
 
         # Assign dummy displacement values to the fracture edge
         nd_grid = setup.grids_by_name(params.intact_name)[0]
-        frac = setup.grids_by_name(params.shearzone_names[0])[0]
+        frac = setup.grids_by_name(params.fractures[0])[0]
         edge = (frac, nd_grid)
         data_edge = setup.gb.edge_props(edge)
         mg: pp.MortarGrid = data_edge["mortar_grid"]

@@ -177,7 +177,8 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
     def discretize(self) -> None:
         """Discretize all terms"""
         if not self.assembler:
-            self.assembler = pp.Assembler(self.gb)
+            self.dof_manager = pp.DofManager(self.gb)
+            self.assembler = pp.Assembler(self.gb, self.dof_manager)
 
         g_max = self.gb.grids_of_dimension(self.Nd)[0]
 
@@ -308,7 +309,7 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
         super().export_step(write_vtk=False)
 
         if write_vtk:
-            self.viz.write_vtk(
+            self.viz.write_vtu(
                 data=self.export_fields, time_step=self.time
             )  # Write visualization
             self.export_times.append(self.time)

@@ -82,7 +82,7 @@ class Flow(CommonAbstractModel):
             self.time
         )  # injection rate [l / s], unscaled
         return (
-                injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
+            injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
         )
 
     def source_scalar(self, g: pp.Grid) -> np.ndarray:
@@ -94,7 +94,10 @@ class Flow(CommonAbstractModel):
     # --- aperture and specific volume ---
 
     def aperture(
-            self, g: pp.Grid, scaled: bool, **kwargs,
+        self,
+        g: pp.Grid,
+        scaled: bool,
+        **kwargs,
     ) -> np.ndarray:
         """Compute the total aperture of each cell on a grid
 
@@ -260,7 +263,9 @@ class Flow(CommonAbstractModel):
             pp.PASCAL / self.params.scalar_scale
         )
         for g, d in gb:
-            k: np.ndarray = self.permeability(g, scaled=True)  # permeability [m2] (scaled)
+            k: np.ndarray = self.permeability(
+                g, scaled=True
+            )  # permeability [m2] (scaled)
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -491,7 +496,8 @@ class Flow(CommonAbstractModel):
     def discretize(self) -> None:
         """Discretize all terms"""
         if not self.assembler:
-            self.assembler = pp.Assembler(self.gb)
+            self.dof_manager = pp.DofManager(self.gb)
+            self.assembler = pp.Assembler(self.gb, self.dof_manager)
 
         self.assembler.discretize()
 
@@ -559,14 +565,13 @@ class Flow(CommonAbstractModel):
 
         # Extract convergence tolerance
         tol_convergence = nl_params.get("convergence_tol")
-
         converged = False
         diverged = False
 
         # Find indices for pressure variables
         scalar_dof = np.array([], dtype=np.int)
         for g, _ in self.gb:
-            scalar_dof = np.hstack((scalar_dof, self.assembler.dof_ind(g, var_s)))
+            scalar_dof = np.hstack((scalar_dof, self.dof_manager.dof_ind(g, var_s)))
 
         # Unscaled pressure solutions
         scalar_now = solution[scalar_dof] * ss
@@ -575,38 +580,41 @@ class Flow(CommonAbstractModel):
 
         # Calculate norms
         # scalar_norm = np.sum(scalar_now ** 2)
-        difference_in_iterates_scalar = np.sum((scalar_now - scalar_prev) ** 2)
-        difference_from_init_scalar = np.sum((scalar_now - scalar_init) ** 2)
+        difference_in_iterates_scalar = (
+            np.sqrt(np.sum((scalar_now - scalar_prev) ** 2)) / scalar_now.size
+        )
+        difference_from_init_scalar = (
+            np.sqrt(np.sum((scalar_now - scalar_init) ** 2)) / scalar_now.size
+        )
 
         # -- Scalar solution --
         # The if is intended to avoid division through zero
-        if (
-            difference_in_iterates_scalar < tol_convergence
-        ):  # and scalar_norm < tol_convergence
+        scaled_convergence_tol = tol_convergence * ss
+        absolute_convergence = difference_in_iterates_scalar < scaled_convergence_tol
+        relative_convergence = (
+            difference_in_iterates_scalar
+            < tol_convergence * difference_from_init_scalar
+        )
+        abs_error = difference_in_iterates_scalar
+        rel_error = difference_in_iterates_scalar / difference_from_init_scalar
+        if absolute_convergence:
             converged = True
-            error_scalar = difference_in_iterates_scalar
-            logger.info(f"Pressure converged absolutely")
-            logger.info(f"Absolute error in pressure is {error_scalar:.6e}.")
-        else:
-            # Relative convergence criterion:
-            if (
-                difference_in_iterates_scalar
-                < tol_convergence * difference_from_init_scalar
-            ):
-                converged = True
-                logger.info(f"Pressure converged relatively")
+            error_scalar = abs_error
+        elif relative_convergence:
+            converged = True
+            error_scalar = rel_error
+        else:  # If not convergence, report relative error
+            error_scalar = rel_error
 
-            error_scalar = difference_in_iterates_scalar / difference_from_init_scalar
-            logger.info(
-                f"Relative error in pressure is {error_scalar:.6e}. "
-                f"(absolute error is {difference_in_iterates_scalar:.4e})"
-            )
+        logger.info(
+            f"Pressure error: "
+            f"absolute={abs_error:.2e} {'<' if absolute_convergence else '>'} {scaled_convergence_tol:.2e}. "
+            f"relative={rel_error:.2e} {'<' if relative_convergence else '>'} {tol_convergence:.2e} "
+            f"({'Converged' if (absolute_convergence or relative_convergence) else 'Did not converge'})."
+        )
 
         if difference_in_iterates_scalar > 1e30:
             diverged = True
-
-        if not converged:
-            logger.info(f"Scalar pressure did not converge.")
 
         return error_scalar, converged, diverged
 
@@ -707,7 +715,7 @@ class Flow(CommonAbstractModel):
             state[self.p_perturbation] = self.export_pressure_perturbation(d)
 
         if write_vtk:
-            self.viz.write_vtk(
+            self.viz.write_vtu(
                 data=self.export_fields, time_step=self.time
             )  # Write visualization
             self.export_times.append(self.time)
@@ -763,7 +771,7 @@ class FlowISC(Flow):
                     "mesh_args",
                     "length_scale",
                     "bounding_box",
-                    "shearzone_names",
+                    "fractures",
                     "folder_name",
                 }
             )
@@ -799,7 +807,7 @@ class FlowISC(Flow):
             ), "There should be equal number of Nd-1 fractures as shearzone names"
             # We assume that order of fractures on grid creation (self.create_grid)
             # is preserved.
-            for i, sz_name in enumerate(self.params.shearzone_names):
+            for i, sz_name in enumerate(self.params.fractures):
                 self.gb.set_node_prop(fracture_grids[i], key="name", val=sz_name)
 
     def grids_by_name(self, name, key="name") -> np.ndarray:

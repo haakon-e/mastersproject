@@ -10,6 +10,7 @@ the method "box_runscript" with the parameter 'case' as "A1", "A2", "B1" or "B2"
 import logging
 from pathlib import Path
 from typing import Tuple
+import pickle
 
 import porepy as pp
 import numpy as np
@@ -23,52 +24,7 @@ from GTS.time_protocols import TimeStepProtocol, InjectionRateProtocol
 logger = logging.getLogger(__name__)
 
 
-def prepare_params_thesis_cases(case: str, length_scale, scalar_scale):
-    """ Prepare parameters corresponding to the runcases in the thesis"""
-    small_bounding_box = {
-        "xmin": -1,
-        "ymin": 80,
-        "zmin": -5,  # -5, # Extended frac zone boundary box test
-        "xmax": 86,  # +10,
-        "ymax": 151,  # +5,
-        "zmax": 41,  # +5,
-    }
-    large_bounding_box = {
-        "xmin": -1,
-        "ymin": 80,
-        "zmin": -5 - 5,
-        "xmax": 86 + 10,
-        "ymax": 151 + 5,
-        "zmax": 41 + 5,
-    }
-    small_k = 1e-21
-    large_k = 5e-21
-
-    if case == "A1":
-        k = small_k
-        box = small_bounding_box
-    elif case == "A2":
-        k = large_k
-        box = small_bounding_box
-    elif case == "B1":
-        k = small_k
-        box = large_bounding_box
-    elif case == "B2":
-        k = large_k
-        box = large_bounding_box
-    else:
-        raise ValueError("Unknown simulation case")
-
-    return prepare_params(length_scale, scalar_scale, k, box, case)
-
-
-def prepare_params(
-    length_scale,
-    scalar_scale,
-    k,
-    box,
-    case=None,
-) -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
+def prepare_B1() -> Tuple[BiotParameters, NewtonParameters, TimeStepProtocol]:
     """Hydro shearing experiment HS1
 
     HS1 targeted S1.3 through INJ2 at 39.75 - 40.75 m.
@@ -79,31 +35,52 @@ def prepare_params(
     )
 
     newton_params = NewtonParameters(
-        convergence_tol=5e-5,
-        max_iterations=300,
+        convergence_tol=5e-9,
+        max_iterations=150,
     )
-    base = Path.home() / "mastersproject-data/hs1"
-    head = f"final/case_{case or '0'}"
+    base = Path.home() / "research/mastersproject-data/hs1-radT"
+    head = f"2frac_full-sim_gravity_tol_1e-9_deep-fraczone"
+
+    fraczone_bounding_box = {
+        "xmin": -1      -5,
+        "ymin": 80      -5,
+        "zmin": -5 - 5  -20,
+        "xmax": 86 + 10 +5,
+        "ymax": 151 + 5 +5,
+        "zmax": 41 + 5  +5,
+    }
+    fbb = fraczone_bounding_box
+    radius = 150 + 10
+    bounding_box = {
+        "xmin": (fbb["xmin"] + fbb["xmax"]) / 2 - radius,
+        "ymin": (fbb["ymin"] + fbb["ymax"]) / 2 - radius,
+        "zmin": (fbb["zmin"] + fbb["zmax"]) / 2 - radius,
+        "xmax": (fbb["xmin"] + fbb["xmax"]) / 2 + radius,
+        "ymax": (fbb["ymin"] + fbb["ymax"]) / 2 + radius,
+        "zmax": (fbb["zmin"] + fbb["zmax"]) / 2 + radius,
+    }  # Make global bounding box 150m in every direction from center of the fractured zone.
+
     biot_params = BiotParameters(
         # BaseParameters
-        length_scale=length_scale,
-        scalar_scale=scalar_scale,
+        length_scale=1.0,
+        scalar_scale=1e11,
         base=base,
         head=head,
         time_step=time_params.initial_time_step,
         end_time=time_params.end_time,
         rock=GrimselGranodiorite(
-            PERMEABILITY=k,
+            PERMEABILITY=1e-21,
         ),  # low k: 5e-21 -- high k: 2 * 5e-21
-        gravity=False,
+        gravity=True,
         # GeometryParameters
         fractures=[
-            "S1_1",
-            "S1_2",
+            # "S1_1",
+            # "S1_2",
             "S1_3",
-            "S3_1",
-        ],  # "S3_2"],  # ["S1_2", "S3_1"],
-        fraczone_bounding_box=box,
+            # "S3_1",
+            "S3_2"],  # ["S1_2", "S3_1"],
+        bounding_box=bounding_box,
+        fraczone_bounding_box=fraczone_bounding_box,
         # MechanicsParameters
         stress=stress_tensor(),
         dilation_angle=np.radians(3),
@@ -117,32 +94,32 @@ def prepare_params(
         tunnel_equilibrium_time=tunnel_equilibration_time,
         injection_protocol=injection_protocol,
         frac_transmissivity=[
-            5e-8,
-            1e-9,
-            8.3e-11,  # Pre-stimulation T during HS1, observed in S1.3-INJ2.
-            3.7e-7,
+            # 5e-8,
             # 1e-9,
+            8.3e-11,  # Pre-stimulation T during HS1, observed in S1.3-INJ2
+            # 3.7e-7,
+            1e-9,
         ],
         # Initial transmissivites for
         # ["S1_1", "S1_2", "S1_3", "S3_1", "S3_2"]:
         # [5e-8,   1e-9,   5e-10,  3.7e-7, 1e-9]
         # Note background hydraulic conductivity: 1e-14 m/s
-        # near_injection_transmissivity=8.3e-11,
-        # near_injection_t_radius=3,
+        near_injection_transmissivity=5e-9,  # Transmissivity near well rough log-average of init and resulting T 
+        near_injection_t_radius=20,
     )
 
     return biot_params, newton_params, time_params
 
 
-def box_runscript(case, run=True):
-    biot_params, newton_params, time_params = prepare_params_thesis_cases(
-        case,
-        length_scale=1.0,
-        scalar_scale=1e11,
-    )
+def box_runscript(run=True):
+    biot_params, newton_params, time_params = prepare_B1()
     # *2 gives ~25kc on 4fracs.
     # l=0.3, lcin 5*5*l, lcout 50*10*l
     # lcin = 5*10 lcout = 50*20
+
+    # For 5frac setups:
+    # lcin=15 , lcout=50 --> 16k*3d + 2k*2d + 60*1d
+    # lcin=15 , lcout=30 --> 22k*3d + 2k*2d + 60*1d
 
     # For 4frac setups:
     # lcin=5*1.4, lcout=50*1.4 --> 44k*3d + 5k*2d + 50*1d
@@ -150,9 +127,16 @@ def box_runscript(case, run=True):
     # lcin=5*5.4, lcout=50*5.4 --> 6k*3d + 500*2d + 15*1d
     # lcin=5*3, lcout=50*3 --> 12k*3d + 1.2k*2d + 27*1d
     # lcin=5*2, lcout=50*2 --> 22k*3d, 2.5k*2d + 39*1d
-    setup = ISCBoxModel(biot_params, lcin=5 * 2, lcout=50 * 2)
-    time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
 
+    # For 2frac setups (S1.3, S3.1):
+    # lcin=8, lcout=20 --> 60k*3d + 2.4k*2d + 19*1d
+    # lcin=12, lcout=25 --> 27k*rd + 1.1k*2d + 13*1d
+    setup = ISCBoxModel(biot_params, lcin=12, lcout=30)
+    time_machine = TimeMachinePhasesConstantDt(setup, newton_params, time_params)
+    store = biot_params.folder_name / 'params.pickle'
+    with store.open(mode='wb') as f:
+        pickle.dump(biot_params, f)
+    
     if run:
         time_machine.run_simulation()
     return time_machine
@@ -176,6 +160,7 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
         tunnel_time : float
             AU, VE tunnels were constructed 30 years ago.
     """
+    n_phases = 7
     assert tunnel_time > 0
     _1min = pp.MINUTE
     _5min = 5 * _1min
@@ -187,19 +172,20 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
         0,
         # S1,       5 min
         1 * _5min,
-        # S2,       5 min
+        # # S2,       5 min
         2 * _5min,
         # S3,       5 min
         3 * _5min,
-        # S4,       5 min
+        # # S4,       5 min
         4 * _5min,
-        # S5,       15 min
+        # # S5,       15 min
         7 * _5min,
-        # shut-in,  46 min
+        # # shut-in,  46 min
         81 * _1min,
-        # Venting,  29 min
+        # # Venting,  29 min
         11 * _10min,
     ]
+    phase_limits = phase_limits[:3+n_phases]
     rates = [
         0,  # initialization
         0,  # tunnel calibration
@@ -211,20 +197,22 @@ def isc_dt_and_injection_protocol(tunnel_time: float):
         0,  # shut-in
         0,  # venting (currently modelled as: shut-in)
     ]
+    rates = rates[:2+n_phases]
     rates = [r / 60 for r in rates]  # Convert to litres / second
     injection_protocol = InjectionRateProtocol.create_protocol(phase_limits, rates)
 
     time_steps = [
-        initialization_time / 2,
-        tunnel_time / 2,
-        1 * _1min,  # S1, 5min
-        5 * _1min,  # S2, 5min
-        5 * _1min,  # S3, 5min
-        5 * _1min,  # S4, 5min
-        15 * _1min,  # S5, 15min
-        16 * _1min,  # shut-in, 46min
-        15 * _1min,  # venting
+        initialization_time/2,
+        tunnel_time/2,
+        2.5 * _1min,  # S1, 5min
+        2.5 * _1min,  # S2, 5min
+        2.5 * _1min,  # S3, 5min
+        2.5 * _1min,  # S4, 5min
+        2.5 * _1min,  # S5, 15min
+        10 * _1min,  # shut-in, 46min
+        30 * _1min,  # venting
     ]
+    time_steps = time_steps[:2+n_phases]
     time_step_protocol = TimeStepProtocol.create_protocol(phase_limits, time_steps)
 
     return injection_protocol, time_step_protocol

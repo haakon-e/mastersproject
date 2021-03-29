@@ -12,6 +12,7 @@ from porepy.models.abstract_model import AbstractModel
 from pypardiso import spsolve
 
 logger = logging.getLogger(__name__)
+module_sections = ["models", "numerics"]
 
 
 class CommonAbstractModel(AbstractModel):
@@ -27,7 +28,8 @@ class CommonAbstractModel(AbstractModel):
         self.viz: Optional[pp.Exporter] = None
         self.export_fields: List = []
 
-    def get_state_vector(self):
+    @pp.time_logger(sections=module_sections)
+    def get_state_vector(self, use_iterate: bool = False) -> np.ndarray:
         """Get a vector of the current state of the variables; with the same ordering
             as in the assembler.
 
@@ -37,14 +39,21 @@ class CommonAbstractModel(AbstractModel):
         """
         size = self.assembler.num_dof()
         state = np.zeros(size)
-        for g, var in self.assembler.block_dof.keys():
+        for g, var in self.dof_manager.block_dof.keys():
             # Index of
-            ind = self.assembler.dof_ind(g, var)
+            ind = self.dof_manager.dof_ind(g, var)
 
             if isinstance(g, tuple):
-                values = self.gb.edge_props(g)[pp.STATE][var]
+                if use_iterate:
+                    values = self.gb.edge_props(g)[pp.STATE][pp.ITERATE][var]
+                else:
+                    values = self.gb.edge_props(g)[pp.STATE][var]
             else:
-                values = self.gb.node_props(g)[pp.STATE][var]
+                if use_iterate:
+                    values = self.gb.node_props(g)[pp.STATE][pp.ITERATE][var]
+                else:
+                    values = self.gb.node_props(g)[pp.STATE][var]
+
             state[ind] = values
 
         return state
@@ -90,9 +99,9 @@ class CommonAbstractModel(AbstractModel):
                 solution vector for the current iterate.
 
         """
-        self.update_state(solution_vector)
+        self.update_iterate(solution_vector)
 
-    def update_state(self, solution_vector: np.ndarray) -> None:
+    def update_iterate(self, solution_vector: np.ndarray) -> None:
         """ Update variables for the current Newton iteration"""
         pass
 

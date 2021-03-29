@@ -10,6 +10,7 @@ from mastersproject.util.logging_util import timer
 from porepy.params.data import add_nonpresent_dictionary
 
 logger = logging.getLogger(__name__)
+module_sections = ["models", "numerics"]
 
 
 class Mechanics(CommonAbstractModel):
@@ -128,6 +129,7 @@ class Mechanics(CommonAbstractModel):
                         "bc_values": bc_val,
                         "source": source_val,
                         "fourth_order_tensor": constit,
+                        "p_reference": np.zeros(g.num_cells),
                         # "max_memory": 7e7,
                     },
                 )
@@ -240,7 +242,8 @@ class Mechanics(CommonAbstractModel):
     def discretize(self) -> None:
         """Discretize all terms"""
         if not self.assembler:
-            self.assembler = pp.Assembler(self.gb)
+            self.dof_manager = pp.DofManager(self.gb)
+            self.assembler = pp.Assembler(self.gb, self.dof_manager)
 
         self.assembler.discretize()
 
@@ -274,6 +277,7 @@ class Mechanics(CommonAbstractModel):
                 d[state].update(
                     {
                         var_m: initial_displacement_value,
+                        iterate: {var_m: initial_displacement_value.copy()},
                     }
                 )
 
@@ -359,45 +363,54 @@ class Mechanics(CommonAbstractModel):
         """ Check convergence and compute error of matrix displacement variable"""
         var_m = self.displacement_variable
         g_max = self._nd_grid()
-        # NOTE: In previous simulations, this was erronuously scalar scale.
         ls = self.params.length_scale
+
+        # Extract convergence tolerance
+        tol_convergence = nl_params.get("convergence_tol")
+        converged = False
+        diverged = False
 
         # Get the solution from current and previous iterates,
         # as well as the initial guess.
-        mech_dof = self.assembler.dof_ind(g_max, var_m)
+        mech_dof = self.dof_manager.dof_ind(g_max, var_m)
         u_mech_now = solution[mech_dof] * ls
         u_mech_prev = prev_solution[mech_dof] * ls
         u_mech_init = init_solution[mech_dof] * ls
 
-        # Calculate errors
-        difference_in_iterates_mech = np.sum((u_mech_now - u_mech_prev) ** 2)
-        difference_from_init_mech = np.sum((u_mech_now - u_mech_init) ** 2)
-
-        tol_convergence = nl_params.get("convergence_tol")
-
-        converged = False
-        diverged = False
-        error_type = "relative"
-
-        # Check absolute convergence criterion
-        if difference_in_iterates_mech < tol_convergence:
-            converged = True
-            error_mech = difference_in_iterates_mech
-            error_type = "absolute"
-
-        else:
-            # Check relative convergence criterion
-            if (
-                difference_in_iterates_mech
-                < tol_convergence * difference_from_init_mech
-            ):
-                converged = True
-            error_mech = difference_in_iterates_mech / difference_from_init_mech
-
-        logger.info(f"Error in matrix displacement is {error_mech:.6e} ({error_type}).")
-        logger.info(
-            f"Matrix displacement {'converged' if converged else 'did not converge'}. "
+        # Calculate norms
+        difference_in_iterates_mech = (
+            np.sqrt(np.sum((u_mech_now - u_mech_prev) ** 2)) / u_mech_now.size
         )
+        difference_from_init_mech = (
+            np.sqrt(np.sum((u_mech_now - u_mech_init) ** 2)) / u_mech_now.size
+        )
+
+        # Calculate errors
+        scaled_convergence_tol = tol_convergence * ls
+        absolute_convergence = difference_in_iterates_mech < scaled_convergence_tol
+        relative_convergence = (
+            difference_in_iterates_mech < tol_convergence * difference_from_init_mech
+        )
+        abs_error = difference_in_iterates_mech
+        rel_error = difference_in_iterates_mech / difference_from_init_mech
+        if absolute_convergence:
+            converged = True
+            error_mech = abs_error
+        elif relative_convergence:
+            converged = True
+            error_mech = rel_error
+        else:
+            error_mech = rel_error
+
+        logger.info(
+            f"3D displacement error: "
+            f"absolute={abs_error:.2e} {'<' if absolute_convergence else '>'} {scaled_convergence_tol:.2e}. "
+            f"relative={rel_error:.2e} {'<' if relative_convergence else '>'} {tol_convergence:.2e} "
+            f"({'Converged' if (absolute_convergence or relative_convergence) else 'Did not converge'})."
+        )
+
+        if difference_in_iterates_mech > 1e30:
+            diverged = True
 
         return error_mech, converged, diverged
 
@@ -413,7 +426,7 @@ class Mechanics(CommonAbstractModel):
                 contact_dof = np.hstack(
                     (
                         contact_dof,
-                        self.assembler.dof_ind(e[1], self.contact_traction_variable),
+                        self.dof_manager.dof_ind(e[1], self.contact_traction_variable),
                     )
                 )
 
@@ -514,7 +527,8 @@ class Mechanics(CommonAbstractModel):
         )
         self.assembler.discretize(term_filter)
 
-    def update_state(self, solution_vector: np.ndarray) -> None:
+    @pp.time_logger(sections=module_sections)
+    def update_iterate(self, solution_vector: np.ndarray) -> None:
         """Update variables for the current Newton iteration.
 
         Extract parts of the solution for current iterate.
@@ -532,16 +546,17 @@ class Mechanics(CommonAbstractModel):
         """
         var_mortar = self.mortar_displacement_variable
         var_contact = self.contact_traction_variable
+        var_displacement = self.displacement_variable
 
-        assembler = self.assembler
+        dof_manager = self.dof_manager
         variable_names = []
-        for pair in assembler.block_dof.keys():
+        for pair in dof_manager.block_dof.keys():
             variable_names.append(pair[1])
 
-        dof = np.cumsum(np.append(0, np.asarray(assembler.full_dof)))
+        dof = np.cumsum(np.append(0, np.asarray(dof_manager.full_dof)))
 
         for var_name in set(variable_names):
-            for pair, bi in assembler.block_dof.items():
+            for pair, bi in dof_manager.block_dof.items():
                 g, name = pair
                 if name != var_name:
                     continue
@@ -553,10 +568,16 @@ class Mechanics(CommonAbstractModel):
                         data[pp.STATE][pp.ITERATE][var_mortar] = mortar_u
                 else:
                     # g is a node/grid (not edge)
-                    # For the fractures, update the contact force
-                    if (g.dim < self.Nd) and (name == var_contact):
+                    data = self.gb.node_props(g)
+                    if (g.dim == self.Nd) and name == var_displacement:
+                        # In the matrix, update displacement
+                        displacement = solution_vector[dof[bi] : dof[bi + 1]]
+                        data[pp.STATE][pp.ITERATE][
+                            var_displacement
+                        ] = displacement.copy()
+                    elif (g.dim < self.Nd) and (name == var_contact):
+                        # For the fractures, update the contact force
                         contact = (solution_vector[dof[bi] : dof[bi + 1]]).copy()
-                        data = self.gb.node_props(g)
                         data[pp.STATE][pp.ITERATE][var_contact] = contact
 
     def _is_nonlinear_problem(self) -> bool:
@@ -622,16 +643,19 @@ class Mechanics(CommonAbstractModel):
         d[pp.STATE]["stress"] = stress
 
     def reconstruct_local_displacement_jump(
-        self, data_edge: Dict, from_iterate: bool = True
+        self,
+        data_edge: Dict,
+        projection: pp.TangentialNormalProjection,
+        from_iterate: bool = True,
     ):
         """Reconstruct the displacement jump in local coordinates.
 
         Parameters:
             data_edge : Dict
-                The dictionary on the gb edge. Should contain
-                    - a mortar grid
-                    - a projection, obtained by calling
-                    pp.contact_conditions.set_projections(self.gb)
+                The dictionary on the gb edge. Should contain a mortar grid.
+            projection : pp.TangentialNormalProjection
+                projection operator. Stored in lower-dimensional grid data.
+                Computed with pp.contact_conditions.set_projections(gb)
             from_iterate : bool
                 Whether to fetch displacement from state or previous
                 iterate.
@@ -655,9 +679,6 @@ class Mechanics(CommonAbstractModel):
             * mg.sign_of_mortar_sides(nd=nd)
             * mortar_u
         )
-        projection: pp.TangentialNormalProjection = data_edge[
-            "tangential_normal_projection"
-        ]
 
         # Rotated displacement jumps. these are in the local coordinates, on the fracture.
         project_to_local = projection.project_tangential_normal(int(mg.num_cells / 2))
@@ -745,10 +766,11 @@ class Mechanics(CommonAbstractModel):
                 # Get edge of node pair
                 edge = (g, nd_grid)
                 data_edge = gb.edge_props(edge)
+                projection = d["tangential_normal_projection"]
 
                 u_mortar_local = (
                     self.reconstruct_local_displacement_jump(
-                        data_edge, from_iterate
+                        data_edge, projection, from_iterate
                     ).copy()
                     * ls
                 )
