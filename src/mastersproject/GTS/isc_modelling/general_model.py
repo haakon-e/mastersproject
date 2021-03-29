@@ -12,7 +12,7 @@ from porepy.models.abstract_model import AbstractModel
 from pypardiso import spsolve
 
 logger = logging.getLogger(__name__)
-
+module_sections = ["models", "numerics"]
 
 class CommonAbstractModel(AbstractModel):
     def __init__(self, params: BaseParameters):
@@ -27,7 +27,8 @@ class CommonAbstractModel(AbstractModel):
         self.viz: Optional[pp.Exporter] = None
         self.export_fields: List = []
 
-    def get_state_vector(self):
+    @pp.time_logger(sections=module_sections)
+    def get_state_vector(self, use_iterate: bool = False) -> np.ndarray:
         """Get a vector of the current state of the variables; with the same ordering
             as in the assembler.
 
@@ -42,9 +43,16 @@ class CommonAbstractModel(AbstractModel):
             ind = self.dof_manager.dof_ind(g, var)
 
             if isinstance(g, tuple):
-                values = self.gb.edge_props(g)[pp.STATE][var]
+                if use_iterate:
+                    values = self.gb.edge_props(g)[pp.STATE][pp.ITERATE][var]
+                else:
+                    values = self.gb.edge_props(g)[pp.STATE][var]
             else:
-                values = self.gb.node_props(g)[pp.STATE][var]
+                if use_iterate:
+                    values = self.gb.node_props(g)[pp.STATE][pp.ITERATE][var]
+                else:
+                    values = self.gb.node_props(g)[pp.STATE][var]
+
             state[ind] = values
 
         return state
