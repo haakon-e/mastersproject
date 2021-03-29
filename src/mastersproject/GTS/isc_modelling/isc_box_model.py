@@ -34,13 +34,15 @@ class ISCBoxModel(ISCBiotContactMechanics):
     def create_grid(self, n_optimize=2, use_logger=True):
         """ Create GridBucket from fracture box model"""
         gb = create_grid(
-            **self.params.dict(include={
-                "bounding_box",
-                "fraczone_bounding_box",
-                "folder_name",
-                "length_scale",
-                "fractures",
-            }),
+            **self.params.dict(
+                include={
+                    "bounding_box",
+                    "fraczone_bounding_box",
+                    "folder_name",
+                    "length_scale",
+                    "fractures",
+                }
+            ),
             lcin=self.lcin,
             lcout=self.lcout,
             n_optimize_netgen=n_optimize,
@@ -69,17 +71,17 @@ class ISCBoxModel(ISCBiotContactMechanics):
 
 
 def create_grid(
-        bounding_box: dict,
-        fraczone_bounding_box: dict,
-        lcin: float,
-        lcout: float,
-        folder_name: Optional[Path] = None,
-        length_scale: float = 1,
-        fractures: Union[str, List[str]] = "all",
-        n_optimize_netgen: int = 1,
-        verbose: bool = False,
-        run_gmsh_gui: bool = False,
-        use_logger: bool = True,
+    bounding_box: dict,
+    fraczone_bounding_box: dict,
+    lcin: float,
+    lcout: float,
+    folder_name: Optional[Path] = None,
+    length_scale: float = 1,
+    fractures: Union[str, List[str]] = "all",
+    n_optimize_netgen: int = 1,
+    verbose: bool = False,
+    run_gmsh_gui: bool = False,
+    use_logger: bool = True,
 ) -> pp.GridBucket:
     """Create the ISC domain using the box model method
 

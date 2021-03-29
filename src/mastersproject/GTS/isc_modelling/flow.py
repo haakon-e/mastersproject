@@ -82,7 +82,7 @@ class Flow(CommonAbstractModel):
             self.time
         )  # injection rate [l / s], unscaled
         return (
-                injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
+            injection_rate * pp.MILLI * (pp.METER / self.params.length_scale) ** self.Nd
         )
 
     def source_scalar(self, g: pp.Grid) -> np.ndarray:
@@ -94,7 +94,10 @@ class Flow(CommonAbstractModel):
     # --- aperture and specific volume ---
 
     def aperture(
-            self, g: pp.Grid, scaled: bool, **kwargs,
+        self,
+        g: pp.Grid,
+        scaled: bool,
+        **kwargs,
     ) -> np.ndarray:
         """Compute the total aperture of each cell on a grid
 
@@ -260,7 +263,9 @@ class Flow(CommonAbstractModel):
             pp.PASCAL / self.params.scalar_scale
         )
         for g, d in gb:
-            k: np.ndarray = self.permeability(g, scaled=True)  # permeability [m2] (scaled)
+            k: np.ndarray = self.permeability(
+                g, scaled=True
+            )  # permeability [m2] (scaled)
 
             # Multiply by the volume of the flattened dimension (specific volume)
             k *= self.specific_volume(g, scaled=True)
@@ -575,14 +580,21 @@ class Flow(CommonAbstractModel):
 
         # Calculate norms
         # scalar_norm = np.sum(scalar_now ** 2)
-        difference_in_iterates_scalar = np.sqrt(np.sum((scalar_now - scalar_prev) ** 2)) / scalar_now.size
-        difference_from_init_scalar = np.sqrt(np.sum((scalar_now - scalar_init) ** 2)) / scalar_now.size
+        difference_in_iterates_scalar = (
+            np.sqrt(np.sum((scalar_now - scalar_prev) ** 2)) / scalar_now.size
+        )
+        difference_from_init_scalar = (
+            np.sqrt(np.sum((scalar_now - scalar_init) ** 2)) / scalar_now.size
+        )
 
         # -- Scalar solution --
         # The if is intended to avoid division through zero
         scaled_convergence_tol = tol_convergence * ss
         absolute_convergence = difference_in_iterates_scalar < scaled_convergence_tol
-        relative_convergence = difference_in_iterates_scalar < tol_convergence * difference_from_init_scalar
+        relative_convergence = (
+            difference_in_iterates_scalar
+            < tol_convergence * difference_from_init_scalar
+        )
         abs_error = difference_in_iterates_scalar
         rel_error = difference_in_iterates_scalar / difference_from_init_scalar
         if absolute_convergence:

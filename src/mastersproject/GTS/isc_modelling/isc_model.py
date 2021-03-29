@@ -132,7 +132,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         return np.power(a, self.Nd - g.dim)
 
     def aperture(
-        self, g: pp.Grid, scaled: bool, from_iterate: bool = True,
+        self,
+        g: pp.Grid,
+        scaled: bool,
+        from_iterate: bool = True,
     ) -> np.ndarray:
         """Compute the total aperture of each cell on a grid
 
@@ -247,7 +250,8 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             frac_data = [gb.node_props(pg) for pg in primary_grids]
             data_edges = [gb.edge_props(edge) for edge in frac_edges]
             frac_apertures = [
-                _aperture_from_edge(data_edge, fd) for data_edge, fd in zip(data_edges, frac_data)
+                _aperture_from_edge(data_edge, fd)
+                for data_edge, fd in zip(data_edges, frac_data)
             ]
 
             # Map fracture apertures to internal faces ..
@@ -280,7 +284,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     # --- Flow parameter related methods ---
 
     def permeability(self, g, scaled, from_iterate=True) -> np.ndarray:
-        """ Set (uniform) permeability in a subdomain
+        """Set (uniform) permeability in a subdomain
 
         Modify parent method by passing from_iterate argument. This argument is
         needed by self.aperture().
@@ -425,7 +429,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     # --- Set flow parameters ---
 
     def set_scalar_parameters(self):
-        """ See parent method
+        """See parent method
 
         Overwrite mass_weight and source.
         * For mass_weight, we set a more complex storage term that depends on the Biot coefficient
@@ -446,7 +450,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             alpha = self.biot_alpha(g)
             bulk = self.params.rock.BULK_MODULUS
             mass_weight = porosity * c + (alpha - porosity) / bulk
-            #mass_weight = 1e-13
+            # mass_weight = 1e-13
             mass_weight *= self.specific_volume(g, scaled=True)
             scalar_params["mass_weight"] = mass_weight
 
@@ -665,9 +669,11 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             _open = np.logical_not(penetration)
 
             if self._fracture_state.get(sz):
+
                 def state_change(a, b):
                     """ Returns number of instances where a is True and b is False."""
                     return np.sum(a & ~b)
+
                 oldstate = self._fracture_state.get(sz)
                 nnew_sliding = state_change(_sliding, oldstate["sliding"])
                 nstop_sliding = state_change(oldstate["sliding"], _sliding)
@@ -686,11 +692,14 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
                 msg += f"{sz}: ({np.sum(_open)}, {np.sum(_sliding)}, {np.sum(_sticking)})/{sliding.size}. "
             # Save fracture state
             self._fracture_state.update(
-                {sz: {
-                    "open": _open,
-                    "sliding": _sliding,
-                    "sticking": _sticking,
-                }})
+                {
+                    sz: {
+                        "open": _open,
+                        "sliding": _sliding,
+                        "sticking": _sticking,
+                    }
+                }
+            )
 
         logger.info(msg)
 

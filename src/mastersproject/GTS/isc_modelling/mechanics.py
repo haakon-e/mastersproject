@@ -277,7 +277,7 @@ class Mechanics(CommonAbstractModel):
                 d[state].update(
                     {
                         var_m: initial_displacement_value,
-                        iterate: {var_m: initial_displacement_value.copy()}
+                        iterate: {var_m: initial_displacement_value.copy()},
                     }
                 )
 
@@ -378,13 +378,19 @@ class Mechanics(CommonAbstractModel):
         u_mech_init = init_solution[mech_dof] * ls
 
         # Calculate norms
-        difference_in_iterates_mech = np.sqrt(np.sum((u_mech_now - u_mech_prev) ** 2)) / u_mech_now.size
-        difference_from_init_mech = np.sqrt(np.sum((u_mech_now - u_mech_init) ** 2)) / u_mech_now.size
+        difference_in_iterates_mech = (
+            np.sqrt(np.sum((u_mech_now - u_mech_prev) ** 2)) / u_mech_now.size
+        )
+        difference_from_init_mech = (
+            np.sqrt(np.sum((u_mech_now - u_mech_init) ** 2)) / u_mech_now.size
+        )
 
         # Calculate errors
         scaled_convergence_tol = tol_convergence * ls
         absolute_convergence = difference_in_iterates_mech < scaled_convergence_tol
-        relative_convergence = difference_in_iterates_mech < tol_convergence * difference_from_init_mech
+        relative_convergence = (
+            difference_in_iterates_mech < tol_convergence * difference_from_init_mech
+        )
         abs_error = difference_in_iterates_mech
         rel_error = difference_in_iterates_mech / difference_from_init_mech
         if absolute_convergence:
@@ -566,7 +572,9 @@ class Mechanics(CommonAbstractModel):
                     if (g.dim == self.Nd) and name == var_displacement:
                         # In the matrix, update displacement
                         displacement = solution_vector[dof[bi] : dof[bi + 1]]
-                        data[pp.STATE][pp.ITERATE][var_displacement] = displacement.copy()
+                        data[pp.STATE][pp.ITERATE][
+                            var_displacement
+                        ] = displacement.copy()
                     elif (g.dim < self.Nd) and (name == var_contact):
                         # For the fractures, update the contact force
                         contact = (solution_vector[dof[bi] : dof[bi + 1]]).copy()

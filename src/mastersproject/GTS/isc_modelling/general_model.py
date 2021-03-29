@@ -14,6 +14,7 @@ from pypardiso import spsolve
 logger = logging.getLogger(__name__)
 module_sections = ["models", "numerics"]
 
+
 class CommonAbstractModel(AbstractModel):
     def __init__(self, params: BaseParameters):
         self.params = params
