@@ -241,7 +241,8 @@ class Mechanics(CommonAbstractModel):
     def discretize(self) -> None:
         """Discretize all terms"""
         if not self.assembler:
-            self.assembler = pp.Assembler(self.gb)
+            self.dof_manager = pp.DofManager(self.gb)
+            self.assembler = pp.Assembler(self.gb, self.dof_manager)
 
         self.assembler.discretize()
 

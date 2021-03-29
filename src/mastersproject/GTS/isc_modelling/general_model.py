@@ -37,9 +37,9 @@ class CommonAbstractModel(AbstractModel):
         """
         size = self.assembler.num_dof()
         state = np.zeros(size)
-        for g, var in self.assembler.block_dof.keys():
+        for g, var in self.dof_manager.block_dof.keys():
             # Index of
-            ind = self.assembler.dof_ind(g, var)
+            ind = self.dof_manager.dof_ind(g, var)
 
             if isinstance(g, tuple):
                 values = self.gb.edge_props(g)[pp.STATE][var]

@@ -491,7 +491,8 @@ class Flow(CommonAbstractModel):
     def discretize(self) -> None:
         """Discretize all terms"""
         if not self.assembler:
-            self.assembler = pp.Assembler(self.gb)
+            self.dof_manager = pp.DofManager(self.gb)
+            self.assembler = pp.Assembler(self.gb, self.dof_manager)
 
         self.assembler.discretize()
 
@@ -565,7 +566,7 @@ class Flow(CommonAbstractModel):
         # Find indices for pressure variables
         scalar_dof = np.array([], dtype=np.int)
         for g, _ in self.gb:
-            scalar_dof = np.hstack((scalar_dof, self.assembler.dof_ind(g, var_s)))
+            scalar_dof = np.hstack((scalar_dof, self.dof_manager.dof_ind(g, var_s)))
 
         # Unscaled pressure solutions
         scalar_now = solution[scalar_dof] * ss

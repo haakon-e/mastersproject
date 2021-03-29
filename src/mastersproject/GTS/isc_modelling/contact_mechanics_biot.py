@@ -177,7 +177,8 @@ class ContactMechanicsBiotBase(Flow, Mechanics):
     def discretize(self) -> None:
         """Discretize all terms"""
         if not self.assembler:
-            self.assembler = pp.Assembler(self.gb)
+            self.dof_manager = pp.DofManager(self.gb)
+            self.assembler = pp.Assembler(self.gb, self.dof_manager)
 
         g_max = self.gb.grids_of_dimension(self.Nd)[0]
 

@@ -342,7 +342,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         for g, d in self.gb:
             tunnels = g.tags["tunnel_cells"]  # type: np.ndarray[bool]
             if np.any(tunnels):
-                dof_ind = self.assembler.dof_ind(g, self.scalar_variable)
+                dof_ind = self.dof_manager.dof_ind(g, self.scalar_variable)
                 glob_ind = dof_ind[tunnels]
                 glob_inds.append(glob_ind)
         rows_to_zero = (
