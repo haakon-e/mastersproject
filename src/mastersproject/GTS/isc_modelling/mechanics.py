@@ -10,6 +10,7 @@ from mastersproject.util.logging_util import timer
 from porepy.params.data import add_nonpresent_dictionary
 
 logger = logging.getLogger(__name__)
+module_sections = ["models", "numerics"]
 
 
 class Mechanics(CommonAbstractModel):
@@ -276,6 +277,7 @@ class Mechanics(CommonAbstractModel):
                 d[state].update(
                     {
                         var_m: initial_displacement_value,
+                        iterate: {var_m: initial_displacement_value.copy()}
                     }
                 )
 
@@ -370,7 +372,7 @@ class Mechanics(CommonAbstractModel):
 
         # Get the solution from current and previous iterates,
         # as well as the initial guess.
-        mech_dof = self.assembler.dof_ind(g_max, var_m)
+        mech_dof = self.dof_manager.dof_ind(g_max, var_m)
         u_mech_now = solution[mech_dof] * ls
         u_mech_prev = prev_solution[mech_dof] * ls
         u_mech_init = init_solution[mech_dof] * ls
@@ -418,7 +420,7 @@ class Mechanics(CommonAbstractModel):
                 contact_dof = np.hstack(
                     (
                         contact_dof,
-                        self.assembler.dof_ind(e[1], self.contact_traction_variable),
+                        self.dof_manager.dof_ind(e[1], self.contact_traction_variable),
                     )
                 )
 
@@ -519,7 +521,8 @@ class Mechanics(CommonAbstractModel):
         )
         self.assembler.discretize(term_filter)
 
-    def update_state(self, solution_vector: np.ndarray) -> None:
+    @pp.time_logger(sections=module_sections)
+    def update_iterate(self, solution_vector: np.ndarray) -> None:
         """Update variables for the current Newton iteration.
 
         Extract parts of the solution for current iterate.
@@ -537,16 +540,17 @@ class Mechanics(CommonAbstractModel):
         """
         var_mortar = self.mortar_displacement_variable
         var_contact = self.contact_traction_variable
+        var_displacement = self.displacement_variable
 
-        assembler = self.assembler
+        dof_manager = self.dof_manager
         variable_names = []
-        for pair in assembler.block_dof.keys():
+        for pair in dof_manager.block_dof.keys():
             variable_names.append(pair[1])
 
-        dof = np.cumsum(np.append(0, np.asarray(assembler.full_dof)))
+        dof = np.cumsum(np.append(0, np.asarray(dof_manager.full_dof)))
 
         for var_name in set(variable_names):
-            for pair, bi in assembler.block_dof.items():
+            for pair, bi in dof_manager.block_dof.items():
                 g, name = pair
                 if name != var_name:
                     continue
@@ -558,10 +562,14 @@ class Mechanics(CommonAbstractModel):
                         data[pp.STATE][pp.ITERATE][var_mortar] = mortar_u
                 else:
                     # g is a node/grid (not edge)
-                    # For the fractures, update the contact force
-                    if (g.dim < self.Nd) and (name == var_contact):
+                    data = self.gb.node_props(g)
+                    if (g.dim == self.Nd) and name == var_displacement:
+                        # In the matrix, update displacement
+                        displacement = solution_vector[dof[bi] : dof[bi + 1]]
+                        data[pp.STATE][pp.ITERATE][var_displacement] = displacement.copy()
+                    elif (g.dim < self.Nd) and (name == var_contact):
+                        # For the fractures, update the contact force
                         contact = (solution_vector[dof[bi] : dof[bi + 1]]).copy()
-                        data = self.gb.node_props(g)
                         data[pp.STATE][pp.ITERATE][var_contact] = contact
 
     def _is_nonlinear_problem(self) -> bool:
