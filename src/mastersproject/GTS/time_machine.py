@@ -124,7 +124,7 @@ class TimeMachine:
                     )
                     # If Newton method failed, reset the iterate to STATE variables.
                     init_sol = setup.get_state_vector()
-                    setup.update_state(init_sol)
+                    setup.update_iterate(init_sol)
                     newton_failure = True
 
                     # If we have tried too many times. Raise.

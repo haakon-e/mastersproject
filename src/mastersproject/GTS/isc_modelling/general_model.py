@@ -98,9 +98,9 @@ class CommonAbstractModel(AbstractModel):
                 solution vector for the current iterate.
 
         """
-        self.update_state(solution_vector)
+        self.update_iterate(solution_vector)
 
-    def update_state(self, solution_vector: np.ndarray) -> None:
+    def update_iterate(self, solution_vector: np.ndarray) -> None:
         """ Update variables for the current Newton iteration"""
         pass
 
