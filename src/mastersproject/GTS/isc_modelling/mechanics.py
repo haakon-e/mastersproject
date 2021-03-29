@@ -128,6 +128,7 @@ class Mechanics(CommonAbstractModel):
                         "bc_values": bc_val,
                         "source": source_val,
                         "fourth_order_tensor": constit,
+                        "p_reference": np.zeros(g.num_cells),
                         # "max_memory": 7e7,
                     },
                 )
