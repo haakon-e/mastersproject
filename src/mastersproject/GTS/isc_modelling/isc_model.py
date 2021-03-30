@@ -119,17 +119,45 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
     def biot_alpha(self, g: pp.Grid) -> float:
         return self.params.alpha if g.dim == self.Nd else 1.0
 
-    # --- Aperture related methods ---
+    # --- Aperture and thickness related methods ---
 
     def specific_volume(self, g: pp.Grid, scaled, from_iterate=True) -> np.ndarray:
         """
         The specific volume of a cell accounts for the dimension reduction and has
         dimensions [m^(Nd - d)].
-        Typically equals 1 in Nd, the aperture in codimension 1 and the square/cube
-        of aperture in codimensions 2 and 3.
+        Typically equals 1 in Nd, the thickness in codimension 1 and the square/cube
+        of thickness in codimensions 2 and 3.
         """
-        a = self.aperture(g, scaled, from_iterate)
-        return np.power(a, self.Nd - g.dim)
+        b = self.thickness(g, scaled, from_iterate)
+        return np.power(b, self.Nd - g.dim)
+
+    def thickness(
+        self,
+        g: pp.Grid,
+        scaled: bool,
+        from_iterate: bool = True,
+    ) -> np.ndarray:
+        """Compute the total thickness of each cell on a grid
+
+        Parameters
+        ----------
+        g : pp.Grid
+            grid
+        scaled : bool
+            whether to scale the thickness, which has units [m]
+        from_iterate : bool
+            whether to compute values from iterate.
+
+        In faults, thickness is
+            b = b_0 + da
+        where `b_0` is `compute_initial_thickness`,
+        and `da = a - a_0` is the change in aperture from its initial value.
+        """
+        b_init = self.compute_initial_thickness(g, scaled=scaled)
+        da = self.mechanical_aperture(g, scaled=scaled, from_iterate=from_iterate)
+
+        b_total = b_init + da
+        return b_total
 
     def aperture(
         self,
@@ -167,7 +195,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
         For 3d-matrix: zeros (aperture isn't really defined in 3d)
         For 2d-fracture: compute from the local displacement jump
-        For 1d-intersection: Get the max from the two adjacent fractures
+        For 1d-intersection: Get the mean from the two adjacent fractures
 
         Parameters
         ----------
@@ -196,16 +224,13 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         gb = self.gb
         nd_grid = self._nd_grid()
 
-        def _aperture_from_edge(data: Dict, frac_data: Dict):
+        def _aperture_from_edge(data_edge: Dict, projection: pp.TangentialNormalProjection):
             """Compute the mechanical contribution to the aperture
-            for a given fracture. data is the edge data.
+            for a given fracture.
             """
-            projection = frac_data["tangential_normal_projection"]
             # Get normal displacement component from solution
             u_mortar_local = self.reconstruct_local_displacement_jump(
-                data,
-                projection,
-                from_iterate=from_iterate,
+                data_edge, projection, from_iterate=from_iterate,
             )
             # Jump distances in each cell (index, -1, extracts normal component)
             aperture_contribution = np.abs(u_mortar_local[-1, :])
@@ -233,11 +258,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
         elif g.dim == nd - 1:
             data_edge = gb.edge_props((g, nd_grid))
             frac_data = gb.node_props(g)
-            aperture = _aperture_from_edge(data_edge, frac_data)
+            projection = frac_data["tangential_normal_projection"]
+            aperture = _aperture_from_edge(data_edge, projection)
             return aperture
 
-        # TODO: Think about how to accurately do aperture computation (and specific volume)
-        #  for fracture intersections where either side of fracture has different aperture.
         # In fracture intersections
         elif g.dim == nd - 2:
             # (g is the secondary grid.)
@@ -250,7 +274,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             frac_data = [gb.node_props(pg) for pg in primary_grids]
             data_edges = [gb.edge_props(edge) for edge in frac_edges]
             frac_apertures = [
-                _aperture_from_edge(data_edge, fd)
+                _aperture_from_edge(data_edge, fd["tangential_normal_projection"])
                 for data_edge, fd in zip(data_edges, frac_data)
             ]
 
@@ -283,13 +307,95 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
 
     # --- Flow parameter related methods ---
 
-    def permeability(self, g, scaled, from_iterate=True) -> np.ndarray:
-        """Set (uniform) permeability in a subdomain
+    def set_permeability_from_aperture(self, from_iterate=True) -> None:
+        """Set permeability by cubic law in fractures."""
+        gb = self.gb
+        scalar_key = self.scalar_parameter_key
 
-        Modify parent method by passing from_iterate argument. This argument is
-        needed by self.aperture().
+        # Scaled dynamic viscosity
+        viscosity = self.params.fluid.dynamic_viscosity * (
+            pp.PASCAL / self.params.scalar_scale
+        )
+        for g, d in gb:
+            k = self.permeability(g, scaled=True, from_iterate=from_iterate)
+
+            # Multiply by the volume of the flattened dimension (specific volume)
+            b0 = self.compute_initial_thickness(g, scaled=True)
+            k *= np.power(b0, self.Nd - g.dim)
+
+            kxx = k / viscosity
+            diffusivity = pp.SecondOrderTensor(kxx)
+            d[pp.PARAMETERS][scalar_key]["second_order_tensor"] = diffusivity
+
+        # Normal permeability inherited from the neighboring fracture g_l
+        for e, data_edge in gb.edges():
+            mg = data_edge["mortar_grid"]
+            g_l, g_h = gb.nodes_of_edge(e)  # get the neighbors
+
+            # TODO: Verify the parameters below:
+            #   - b_l: use b_l or b0_l ? (must coordinate with `vector_source`)
+            #   - V_h: Should specific_volume = (b0 + da) or = b0 ?
+            # get thickness from lower dim neighbour
+            b_l = self.thickness(g_l, scaled=True, **kwargs)  # one value per grid cell
+
+            # Take trace of and then project specific volumes from g_h to mg
+            V_h = (
+                mg.primary_to_mortar_avg()
+                * np.abs(g_h.cell_faces)
+                * self.specific_volume(g_h, scaled=True)
+            )
+
+            # Compute diffusivity on g_l
+            diffusivity = self.permeability(g_l, scaled=True, from_iterate=from_iterate) / viscosity
+
+            # Division through half the thickness represents taking the (normal) gradient
+            # Then, project to mg.
+            normal_diffusivity = mg.secondary_to_mortar_int() * np.divide(
+                diffusivity, b_l / 2
+            )
+
+            # The interface flux is to match fluxes across faces of g_h,
+            # and therefore need to be weighted by the corresponding
+            # specific volumes
+            normal_diffusivity *= V_h
+
+            # Set the data
+            pp.initialize_data(
+                mg,
+                data_edge,
+                scalar_key,
+                {"normal_diffusivity": normal_diffusivity},
+            )
+
+    def permeability(self, g, scaled, from_iterate=True) -> np.ndarray:
+        """Compute permeability `k` of a grid
+
+        3d: uniformly given by params
+        2d: Computed as: k = k_init + da^2 / 12
+        1d: mean `k` from adjacent cells of higher-dim grids
         """
-        return super().permeability(g, scaled, from_iterate=from_iterate)
+        nd = self.Nd
+        if g.dim == nd:  # 3d
+            k = self.params.rock.PERMEABILITY * np.ones(g.num_cells)
+            if scaled:
+                k *= (pp.METER / self.params.length_scale) ** 2
+        elif g.dim == nd - 1:  # 2d
+            # b*k = (b0+da)*k = b0 * (k_init + da^2 / 12)
+            a_init = self.compute_initial_aperture(g, scaled=scaled)
+            k_init = self.params.cubic_law(a_init)
+            da = self.mechanical_aperture(g, scaled=scaled, from_iterate=from_iterate)  # `da`
+            dk = self.params.cubic_law(da)
+
+            k = k_init + dk
+        elif g.dim == nd - 2:  # 1d
+            # Take mean of adjacent higher-dim permeability
+            primary_grids = gb.node_neighbors(g, only_higher=True)
+            primary_k = [
+                self.permeability(g, scaled=scaled, from_iterate=from_iterate) for g in primary_grids
+            ]
+            k = self.mean_from_neighbors(g, primary_k)
+
+        return k
 
     def intersection_volume_iterate(self, g):
         if g.dim == self.Nd - 2:

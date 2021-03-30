@@ -4,7 +4,7 @@ from __future__ import annotations  # forward reference to not-yet-constructed m
 import logging
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union
-from scipy import spatial
+# from scipy import spatial
 
 import numpy as np
 
@@ -341,49 +341,63 @@ class FlowParameters(GeometryParameters):
     tunnel_equilibrium_time: float = 30 * pp.YEAR
 
     # Set transmissivity in fractures. List in same order as fractures
-    frac_transmissivity: Union[float, List[float]] = 1
+    # frac_transmissivity: Union[float, List[float]] = 1
+
+    # Set initial fault thickness `b` and fracture aperture `a`
+    fault_thickness: List[float]
+    frac_aperture: List[float]
+
+    def initial_fault_thickness(self, g: pp.Grid, fault: str) -> np.ndarray:
+        """Compute initial fault thickness in each grid cell"""
+        fault_thickness = self.fault_thickness[self.fractures.index(fault)]
+        return fault_thickness * np.ones(g.num_cells)
+
+    def initial_aperture(self, g: pp.Grid, fault: str) -> np.ndarray:
+        """Compute initial fault aperture in each grid cell"""
+        aperture = self.frac_aperture[self.fractures.index(fault)]
+        return aperture * np.ones(g.num_cells)
 
     # Different transmissivity near injection point
     # If radius is set to 0, this is not activated.
-    near_injection_transmissivity: float = 1
-    near_injection_t_radius: float = 0
+    # near_injection_transmissivity: float = 1
+    # near_injection_t_radius: float = 0
 
     # See 'methods to estimate permeability of shear zones at Grimsel Test Site'
     # in 'Presentasjon til underveismøte' for details on relations between
     # aperture, transmissivity, permeability and hydraulic conductivity
 
-    def compute_initial_aperture(self, g: pp.Grid, shear_zone: str) -> np.ndarray:
-        """ Compute initial aperture"""
-        injection_shearzone = self.source_scalar_borehole_shearzone.get("shearzone")
-
-        # First, get the background aperture.
-        aperture = np.ones(g.num_cells)
-
-        # Set background aperture
-        background_aperture = self.initial_background_aperture(shear_zone)
-        aperture *= background_aperture
-
-        # Then, adjust for a heterogeneous permeability near the injection point
-        if self.near_injection_t_radius > 0 and shear_zone == injection_shearzone:
-            radius = self.near_injection_t_radius / self.length_scale
-            pts = shearzone_borehole_intersection(self)  # already scaled
-            cells = g.cell_centers.T
-            tree = spatial.cKDTree(cells)
-            inside_idx = tree.query_ball_point(pts.T, radius)[0]
-            aperture[inside_idx] = self.b_from_T(self.near_injection_transmissivity)
-
-        return aperture
-
-    def initial_background_aperture(self, shear_zone):
-        """ Compute initial fracture aperture for a given shear zone"""
-        frac_T: Union[float, List[float]] = self.frac_transmissivity
-        if isinstance(frac_T, (float, int)):
-            ft = frac_T
-        else:
-            # get the transmissivity corresponding to the shear zone name
-            # position in the fractures list.
-            ft = frac_T[self.fractures.index(shear_zone)]
-        return self.b_from_T(ft)
+    # def compute_initial_aperture(self, g: pp.Grid, shear_zone: str) -> np.ndarray:
+    #     """ Compute initial aperture"""
+    #
+    #     # First, get the background aperture.
+    #     aperture = np.ones(g.num_cells)
+    #
+    #     # Set background aperture
+    #     background_aperture = self.initial_background_aperture(shear_zone)
+    #     aperture *= background_aperture
+    #
+    #     # Then, adjust for a heterogeneous permeability near the injection point
+    #     injection_shearzone = self.source_scalar_borehole_shearzone.get("shearzone")
+    #     if self.near_injection_t_radius > 0 and shear_zone == injection_shearzone:
+    #         radius = self.near_injection_t_radius / self.length_scale
+    #         pts = shearzone_borehole_intersection(self)  # already scaled
+    #         cells = g.cell_centers.T
+    #         tree = spatial.cKDTree(cells)
+    #         inside_idx = tree.query_ball_point(pts.T, radius)[0]
+    #         aperture[inside_idx] = self.b_from_T(self.near_injection_transmissivity)
+    #
+    #     return aperture
+    #
+    # def initial_background_aperture(self, shear_zone):
+    #     """ Compute initial fracture aperture for a given shear zone"""
+    #     frac_T: Union[float, List[float]] = self.frac_transmissivity
+    #     if isinstance(frac_T, float):
+    #         ft = frac_T
+    #     else:
+    #         # get the transmissivity corresponding to the shear zone name
+    #         # position in the fractures list.
+    #         ft = frac_T[self.fractures.index(shear_zone)]
+    #     return self.b_from_T(ft)
 
     @property
     def rho_g_over_mu(self):
@@ -397,20 +411,33 @@ class FlowParameters(GeometryParameters):
         return 1 / self.rho_g_over_mu
 
     def T_from_K_b(self, K, b):
+        """Compute `transmissivity` from `hydraulic conductivity` and `fault thickness`"""
         return K * b
 
     def K_from_k(self, k):
+        """Compute `hydraulic conductivity` from `permeability`"""
         return k * self.rho_g_over_mu
 
     def cubic_law(self, a):
-        # k from a
-        return a ** 2 / 12
+        """Compute `permeability` from `hydraulic aperture`"""
+        return np.power(a, 2) / 12
 
-    def T_from_b(self, b):
-        return self.T_from_K_b(self.K_from_k(self.cubic_law(b)), b)
+    def K_from_a(self, a):
+        """Compute `hydraulic conductivity` from `hydraulic aperture`"""
+        return self.K_from_k(self.cubic_law(a))
 
-    def b_from_T(self, T):
-        return np.cbrt(T * 12 * self.mu_over_rho_g)
+    def T_from_a_b(self, a, b):
+        """Compute `transmissivity` from `hydraulic aperture` and `fault thickness` using the cubic law"""
+        return self.T_from_K_b(self.K_from_a(a), b)
+
+    # inverse relations
+    def a_from_k(self, k):
+        """Compute `hydraulic aperture` from `permeability`"""
+        return np.sqrt(12 * k)
+
+    def k_from_K(self, K):
+        """Compute `permeability` from `hydraulic conductivity`"""
+        return K / self.rho_g_over_mu
 
     # Validators
     @validator("source_scalar_borehole_shearzone")
