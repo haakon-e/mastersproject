@@ -293,7 +293,7 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             ]
             # The reshape and max operations implicitly project the aperture to
             # the intersection grid (assuming a conforming mesh).
-            intx_max_apertures = np.max(
+            intx_max_apertures = np.mean(
                 np.vstack(
                     [mortar_ap.reshape((2, -1)) for mortar_ap in mortar_apertures]
                 ),
@@ -306,66 +306,6 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             raise ValueError("Not implemented 1d intersection points")
 
     # --- Flow parameter related methods ---
-
-    def set_permeability_from_aperture(self, from_iterate=True) -> None:
-        """Set permeability by cubic law in fractures."""
-        gb = self.gb
-        scalar_key = self.scalar_parameter_key
-
-        # Scaled dynamic viscosity
-        viscosity = self.params.fluid.dynamic_viscosity * (
-            pp.PASCAL / self.params.scalar_scale
-        )
-        for g, d in gb:
-            k = self.permeability(g, scaled=True, from_iterate=from_iterate)
-
-            # Multiply by the volume of the flattened dimension (specific volume)
-            b0 = self.compute_initial_thickness(g, scaled=True)
-            k *= np.power(b0, self.Nd - g.dim)
-
-            kxx = k / viscosity
-            diffusivity = pp.SecondOrderTensor(kxx)
-            d[pp.PARAMETERS][scalar_key]["second_order_tensor"] = diffusivity
-
-        # Normal permeability inherited from the neighboring fracture g_l
-        for e, data_edge in gb.edges():
-            mg = data_edge["mortar_grid"]
-            g_l, g_h = gb.nodes_of_edge(e)  # get the neighbors
-
-            # TODO: Verify the parameters below:
-            #   - b_l: use b_l or b0_l ? (must coordinate with `vector_source`)
-            #   - V_h: Should specific_volume = (b0 + da) or = b0 ?
-            # get thickness from lower dim neighbour
-            b_l = self.thickness(g_l, scaled=True, **kwargs)  # one value per grid cell
-
-            # Take trace of and then project specific volumes from g_h to mg
-            V_h = (
-                mg.primary_to_mortar_avg()
-                * np.abs(g_h.cell_faces)
-                * self.specific_volume(g_h, scaled=True)
-            )
-
-            # Compute diffusivity on g_l
-            diffusivity = self.permeability(g_l, scaled=True, from_iterate=from_iterate) / viscosity
-
-            # Division through half the thickness represents taking the (normal) gradient
-            # Then, project to mg.
-            normal_diffusivity = mg.secondary_to_mortar_int() * np.divide(
-                diffusivity, b_l / 2
-            )
-
-            # The interface flux is to match fluxes across faces of g_h,
-            # and therefore need to be weighted by the corresponding
-            # specific volumes
-            normal_diffusivity *= V_h
-
-            # Set the data
-            pp.initialize_data(
-                mg,
-                data_edge,
-                scalar_key,
-                {"normal_diffusivity": normal_diffusivity},
-            )
 
     def permeability(self, g, scaled, from_iterate=True) -> np.ndarray:
         """Compute permeability `k` of a grid
@@ -380,14 +320,10 @@ class ISCBiotContactMechanics(ContactMechanicsBiotBase):
             if scaled:
                 k *= (pp.METER / self.params.length_scale) ** 2
         elif g.dim == nd - 1:  # 2d
-            # b*k = (b0+da)*k = b0 * (k_init + da^2 / 12)
-            a_init = self.compute_initial_aperture(g, scaled=scaled)
-            k_init = self.params.cubic_law(a_init)
-            da = self.mechanical_aperture(g, scaled=scaled, from_iterate=from_iterate)  # `da`
-            dk = self.params.cubic_law(da)
-
-            k = k_init + dk
+            aperture = self.aperture(g, scaled=scaled, **kwargs)
+            k = self.params.cubic_law(aperture)
         elif g.dim == nd - 2:  # 1d
+            # TODO: 1d k by taking mean of aperture or of permeability?
             # Take mean of adjacent higher-dim permeability
             primary_grids = gb.node_neighbors(g, only_higher=True)
             primary_k = [

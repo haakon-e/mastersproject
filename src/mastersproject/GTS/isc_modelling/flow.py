@@ -168,10 +168,10 @@ class Flow(CommonAbstractModel):
             b *= self.params.initial_fault_thickness(g, fault)
         elif g.dim == nd - 2:
             primary_grids = gb.node_neighbors(g, only_higher=True)
-            primary_aps = [
-                self.compute_initial_aperture(g, scaled=scaled) for g in primary_grids
+            primary_b = [
+                self.compute_initial_thickness(g, scaled=scaled) for g in primary_grids
             ]
-            mean_b = self.mean_from_neighbors(g, primary_aps)
+            mean_b = self.mean_from_neighbors(g, primary_b)
             b *= mean_b
         else:
             raise ValueError("Not implemented 0d intersection points")
