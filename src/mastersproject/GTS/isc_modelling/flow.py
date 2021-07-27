@@ -1,6 +1,5 @@
 import logging
-import time
-from typing import Dict, Optional
+from typing import Dict, List
 
 import numpy as np
 
@@ -91,7 +90,37 @@ class Flow(CommonAbstractModel):
         values = flow_rate * g.tags["well_cells"] * self.time_step
         return values
 
-    # --- aperture and specific volume ---
+    # --- aperture, thickness, and specific volume ---
+
+    def thickness(
+        self,
+        g: pp.Grid,
+        scaled: bool,
+        **kwargs,
+    ) -> np.ndarray:
+        """Compute the fault thickness `b` for the grid `g`.
+
+        Parameters
+        ----------
+        g : pp.Grid
+            grid
+        scaled : bool
+            whether to scale the aperture, which has units [m]
+        **kwargs:
+            Optional keyword arguments
+
+        In the matrix, b=1
+        In fractures/faults, b = b_0 + da
+            where `b_0` is the initial thickness,
+            and `da` is the change in aperture
+        In fracture intersections, `b` is the mean of the
+        neighboring faults.
+        See also `specific_volume`.
+        """
+        b_init = self.compute_initial_thickness(g, scaled=scaled)
+
+        b_total = b_init
+        return b_total
 
     def aperture(
         self,
@@ -120,8 +149,40 @@ class Flow(CommonAbstractModel):
         a_total = a_init
         return a_total
 
-    def compute_initial_aperture(self, g: pp.Grid, scaled) -> np.ndarray:
-        """Fetch the initial aperture
+    def compute_initial_thickness(self, g: pp.Grid, scaled: bool) -> np.ndarray:
+        """Fetch the initial thickness `b_0`
+
+        For 3d-matrix: unitary (thickness is not defined in 3d)
+        For 2d-fracture: fetch from the parameter dictionary
+        For 1d-intersection: Get the mean from the two adjacent faults
+        """
+        nd = self.Nd
+        gb = self.gb
+        b = np.ones(g.num_cells)
+
+        # Get the aperture in the corresponding fracture (is 1 for 3D matrix)
+        if g.dim == nd:
+            return b
+        elif g.dim == nd - 1:
+            fault = gb.node_props(g, "name")
+            b *= self.params.initial_fault_thickness(g, fault)
+        elif g.dim == nd - 2:
+            primary_grids = gb.node_neighbors(g, only_higher=True)
+            primary_b = [
+                self.compute_initial_thickness(g, scaled=scaled) for g in primary_grids
+            ]
+            mean_b = self.mean_from_neighbors(g, primary_b)
+            b *= mean_b
+        else:
+            raise ValueError("Not implemented 0d intersection points")
+
+        if scaled:
+            b *= pp.METER / self.params.length_scale
+
+        return b
+
+    def compute_initial_aperture(self, g: pp.Grid, scaled: bool) -> np.ndarray:
+        """Fetch the initial aperture `a_0`
 
         For 3d-matrix: unitary (aperture isn't really defined in 3d)
         For 2d-fracture: fetch from the parameter dictionary
@@ -136,30 +197,14 @@ class Flow(CommonAbstractModel):
             return aperture
         elif g.dim == nd - 1:
             fracture = gb.node_props(g, "name")
-            aperture *= self.params.compute_initial_aperture(g, fracture)
+            aperture *= self.params.initial_aperture(g, fracture)
         elif g.dim == nd - 2:
-            # Compute initial intersection aperture by projecting apertures from primary grids
-            # i.e. fractures. Then take the cell-by-cell mean.
             primary_grids = gb.node_neighbors(g, only_higher=True)
             primary_aps = [
                 self.compute_initial_aperture(g, scaled=scaled) for g in primary_grids
             ]
-            primary_edges = [(g, g_h) for g_h in primary_grids]
-            primary_cell_faces = [g_h.cell_faces for g_h in primary_grids]
-            mortar_grids = [
-                gb.edge_props(edge)["mortar_grid"] for edge in primary_edges
-            ]
-            projected_aps = [
-                mg.mortar_to_secondary_int()
-                * mg.primary_to_mortar_int()
-                * np.abs(cell_face)
-                * ap
-                for mg, ap, cell_face in zip(
-                    mortar_grids, primary_aps, primary_cell_faces
-                )
-            ]
-            apertures = np.vstack(projected_aps)
-            aperture *= np.mean(apertures, axis=0)
+            mean_aps = self.mean_from_neighbors(g, primary_aps)
+            aperture *= mean_aps
         else:
             raise ValueError("Not implemented 0d intersection points")
 
@@ -168,14 +213,41 @@ class Flow(CommonAbstractModel):
 
         return aperture
 
-    def specific_volume(self, g: pp.Grid, scaled: bool) -> np.ndarray:
+    def mean_from_neighbors(self, g: pp.Grid, quantity: List[np.ndarray]):
+        """Compute fracture intersection quantity by taking mean from higher-dim neighbors
+
+        The quantity, typically aperture or thickness, is computed by averaging the values
+        in adjacent higher-dimensional cells (i.e. from the two faults producing the
+        intersection).
+        """
+        gb = self.gb
+
+        primary_grids = gb.node_neighbors(g, only_higher=True)
+        primary_edges = [(g, g_h) for g_h in primary_grids]
+        primary_cell_faces = [g_h.cell_faces for g_h in primary_grids]
+        mortar_grids = [
+            gb.edge_props(edge)["mortar_grid"] for edge in primary_edges
+        ]
+        projected_quants = [
+            mg.mortar_to_secondary_int()
+            * mg.primary_to_mortar_int()
+            * np.abs(cell_face)
+            * q
+            for mg, q, cell_face in zip(
+                mortar_grids, quantity, primary_cell_faces
+            )
+        ]
+        quantities = np.vstack(projected_quants)
+        return np.mean(quantities, axis=0)
+
+    def specific_volume(self, g: pp.Grid, scaled: bool, **kwargs) -> np.ndarray:
         """
         The specific volume of a cell accounts for the dimension reduction and has
         dimensions [m^(Nd - d)].
-        Typically equals 1 in Nd, the aperture in codimension 1 and the square/cube
-        of aperture in codimensions 2 and 3.
+        Typically equals 1 in Nd, the thickness in codimension 1 and the square/cube
+        of thickness in codimensions 2 and 3.
         """
-        a = self.aperture(g, scaled)
+        a = self.thickness(g, scaled, **kwargs)
         return np.power(a, self.Nd - g.dim)
 
     # --- Set parameters ---
@@ -238,22 +310,19 @@ class Flow(CommonAbstractModel):
                 k *= (pp.METER / self.params.length_scale) ** 2
         # fractures get permeability from cubic law
         else:
-
-            def cubic_law(a):
-                return np.power(a, 2) / 12
-
             aperture = self.aperture(g, scaled=scaled, **kwargs)
-            k = cubic_law(aperture)
+            k = self.params.cubic_law(aperture)
         return k
 
     def porosity(self, g) -> np.ndarray:
         porosity = self.params.rock.POROSITY if g.dim == self.Nd else 1.0
         return np.ones(g.num_cells) * porosity
 
-    def set_permeability_from_aperture(self) -> None:
+    def set_permeability_from_aperture(self, **kwargs) -> None:
         """Set permeability by cubic law in fractures.
 
-        Currently, we simply set the initial permeability.
+        **kwargs is passed to
+            `permeability`, `specific_volume`, `thickness`
         """
         gb = self.gb
         scalar_key = self.scalar_parameter_key
@@ -264,11 +333,11 @@ class Flow(CommonAbstractModel):
         )
         for g, d in gb:
             k: np.ndarray = self.permeability(
-                g, scaled=True
+                g, scaled=True, **kwargs,
             )  # permeability [m2] (scaled)
 
             # Multiply by the volume of the flattened dimension (specific volume)
-            k *= self.specific_volume(g, scaled=True)
+            k *= self.specific_volume(g, scaled=True, **kwargs)
 
             kxx = k / viscosity
             diffusivity = pp.SecondOrderTensor(kxx)
@@ -279,8 +348,8 @@ class Flow(CommonAbstractModel):
             mg = data_edge["mortar_grid"]
             g_l, g_h = gb.nodes_of_edge(e)  # get the neighbors
 
-            # get aperture from lower dim neighbour
-            a_l = self.aperture(g_l, scaled=True)  # one value per grid cell
+            # get thickness from lower dim neighbour
+            b_l = self.thickness(g_l, scaled=True, **kwargs)  # one value per grid cell
 
             # Take trace of and then project specific volumes from g_h to mg
             V_h = (
@@ -290,12 +359,12 @@ class Flow(CommonAbstractModel):
             )
 
             # Compute diffusivity on g_l
-            diffusivity = self.permeability(g_l, scaled=True) / viscosity
+            diffusivity = self.permeability(g_l, scaled=True, **kwargs) / viscosity
 
-            # Division through half the aperture represents taking the (normal) gradient
+            # Division through half the thickness represents taking the (normal) gradient
             # Then, project to mg.
             normal_diffusivity = mg.secondary_to_mortar_int() * np.divide(
-                diffusivity, a_l / 2
+                diffusivity, b_l / 2
             )
 
             # The interface flux is to match fluxes across faces of g_h,
@@ -335,14 +404,14 @@ class Flow(CommonAbstractModel):
         for e, de in gb.edges():
             mg: pp.MortarGrid = de["mortar_grid"]
             g_l, _ = gb.nodes_of_edge(e)
-            a_l = self.aperture(g_l, scaled=True)
+            b_l = self.thickness(g_l, scaled=True)
 
             # Compute gravity on the secondary grid
             rho_g = -pp.GRAVITY_ACCELERATION * self.density(g_l) * (ls / ss)
 
-            # Multiply by (a/2) to "cancel out" the normal gradient of the diffusivity
+            # Multiply by (b/2) to "cancel out" the normal gradient of the diffusivity
             # (see also self.set_permeability_from_aperture)
-            gravity_l = rho_g * (a_l / 2)
+            gravity_l = rho_g * (b_l / 2)
 
             # Take the gravity from the secondary grid and project to the interface
             gravity_mg = mg.secondary_to_mortar_avg() * gravity_l
@@ -701,7 +770,8 @@ class Flow(CommonAbstractModel):
             aperture = self.aperture(g, scaled=False)
             state[self.aperture_exp] = aperture
             # Export transmissivity
-            transmissivity = self.params.T_from_b(aperture)
+            thickness = self.thickness(g, scaled=False)
+            transmissivity = self.params.T_from_a_b(aperture, thickness)
             state[self.transmissivity_exp] = transmissivity
             # Export pressure variable
             if self.scalar_variable in state:
@@ -722,7 +792,7 @@ class Flow(CommonAbstractModel):
 
     def export_pvd(self):
         """ Implementation of export pvd"""
-        self.viz.write_pvd(self.export_times)
+        self.viz.write_pvd(np.array(self.export_times))
 
 
 class FlowISC(Flow):
@@ -848,82 +918,82 @@ class FlowISC(Flow):
     def after_simulation(self):
         super().after_simulation()
 
-        # --- Print (and save to file) a summary of the simulation ---
-
-        # Intro:
-        summary_intro = f"Time of simulation: {time.asctime()}\n"
-
-        # Get negative values
-        g: pp.Grid = self._nd_grid()
-        d = self.gb.node_props(g)
-        p: np.ndarray = d[pp.STATE][self.p_exp]
-        neg_ind = np.where(p < 0)[0]
-        negneg_ind = np.where(p < -1e-10)[0]
-
-        p_neg = p[neg_ind]
-
-        summary_p_common = (
-            f"\nInformation on negative values:\n"
-            f"pressure values. "
-            f"max: {np.max(p):.2e}. "
-            f"Mean: {np.mean(p):.2e}. "
-            f"Min: {np.min(p):.2e}\n"
-        )
-        if neg_ind.size > 0:
-            summary_p = (
-                f"{summary_p_common}"
-                f"all negative indices: p<0: count:{neg_ind.size}, indices: {neg_ind}\n"
-                f"very negative indices: p<-1e-10: count: {negneg_ind.size}, "
-                f"indices: {negneg_ind}\n"
-                f"neg pressure range: [{p_neg.min():.2e}, {p_neg.max():.2e}]\n"
-            )
-        else:
-            summary_p = (
-                f"{summary_p_common}"
-                f"No negative pressure values. count:{neg_ind.size}\n"
-            )
-
-        self.neg_ind = neg_ind  # noqa
-        self.negneg_ind = negneg_ind  # noqa
-
-        # Condition number
-        A, _ = self.assembler.assemble_matrix_rhs()  # noqa
-        row_sum = np.sum(np.abs(A), axis=1)
-        pp_cond = np.max(row_sum) / np.min(row_sum)
-        diag = np.abs(A.diagonal())
-        umfpack_cond = np.max(diag) / np.min(diag)
-
-        summary_param = (
-            f"\nSummary of relevant parameters:\n"
-            f"length scale: {self.params.length_scale:.2e}\n"
-            f"scalar scale: {self.params.scalar_scale:.2e}\n"
-            f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
-            f"3d cells: {g.num_cells}\n"
-            f"pp condition number: {pp_cond:.2e}\n"
-            f"umfpack condition number: {umfpack_cond:.2e}\n"
-        )
-
-        scalar_parameters = d[pp.PARAMETERS][self.scalar_parameter_key]
-        diffusive_term = scalar_parameters["second_order_tensor"].values[0, 0, 0]
-        mass_term = scalar_parameters["mass_weight"][0]
-        source_term = scalar_parameters["source"]
-        nnz_source = np.where(source_term != 0)[0].size
-        cv = g.cell_volumes
-        summary_terms = (
-            f"\nEstimates on term sizes, 3d grid:\n"
-            f"diffusive term: {diffusive_term:.2e}\n"
-            f"mass term: {mass_term:.2e}\n"
-            f"source; max: {source_term.max():.2e}; "
-            f"number of non-zero sources: {nnz_source}\n"
-            f"cell volumes. "
-            f"max:{cv.max():.2e}, "
-            f"min:{cv.min():.2e}, "
-            f"mean:{cv.mean():.2e}\n"
-        )
-
-        # Write summary to file
-        summary_path = self.params.folder_name / "summary.txt"
-        summary_text = summary_intro + summary_p + summary_param + summary_terms
-        logger.info(summary_text)
-        with summary_path.open(mode="w") as f:
-            f.write(summary_text)
+        # # --- Print (and save to file) a summary of the simulation ---
+        #
+        # # Intro:
+        # summary_intro = f"Time of simulation: {time.asctime()}\n"
+        #
+        # # Get negative values
+        # g: pp.Grid = self._nd_grid()
+        # d = self.gb.node_props(g)
+        # p: np.ndarray = d[pp.STATE][self.p_exp]
+        # neg_ind = np.where(p < 0)[0]
+        # negneg_ind = np.where(p < -1e-10)[0]
+        #
+        # p_neg = p[neg_ind]
+        #
+        # summary_p_common = (
+        #     f"\nInformation on negative values:\n"
+        #     f"pressure values. "
+        #     f"max: {np.max(p):.2e}. "
+        #     f"Mean: {np.mean(p):.2e}. "
+        #     f"Min: {np.min(p):.2e}\n"
+        # )
+        # if neg_ind.size > 0:
+        #     summary_p = (
+        #         f"{summary_p_common}"
+        #         f"all negative indices: p<0: count:{neg_ind.size}, indices: {neg_ind}\n"
+        #         f"very negative indices: p<-1e-10: count: {negneg_ind.size}, "
+        #         f"indices: {negneg_ind}\n"
+        #         f"neg pressure range: [{p_neg.min():.2e}, {p_neg.max():.2e}]\n"
+        #     )
+        # else:
+        #     summary_p = (
+        #         f"{summary_p_common}"
+        #         f"No negative pressure values. count:{neg_ind.size}\n"
+        #     )
+        #
+        # self.neg_ind = neg_ind  # noqa
+        # self.negneg_ind = negneg_ind  # noqa
+        #
+        # # Condition number
+        # A, _ = self.assembler.assemble_matrix_rhs()  # noqa
+        # row_sum = np.sum(np.abs(A), axis=1)
+        # pp_cond = np.max(row_sum) / np.min(row_sum)
+        # diag = np.abs(A.diagonal())
+        # umfpack_cond = np.max(diag) / np.min(diag)
+        #
+        # summary_param = (
+        #     f"\nSummary of relevant parameters:\n"
+        #     f"length scale: {self.params.length_scale:.2e}\n"
+        #     f"scalar scale: {self.params.scalar_scale:.2e}\n"
+        #     f"time step: {self.time_step / pp.HOUR:.4f} hours\n"
+        #     f"3d cells: {g.num_cells}\n"
+        #     f"pp condition number: {pp_cond:.2e}\n"
+        #     f"umfpack condition number: {umfpack_cond:.2e}\n"
+        # )
+        #
+        # scalar_parameters = d[pp.PARAMETERS][self.scalar_parameter_key]
+        # diffusive_term = scalar_parameters["second_order_tensor"].values[0, 0, 0]
+        # mass_term = scalar_parameters["mass_weight"][0]
+        # source_term = scalar_parameters["source"]
+        # nnz_source = np.where(source_term != 0)[0].size
+        # cv = g.cell_volumes
+        # summary_terms = (
+        #     f"\nEstimates on term sizes, 3d grid:\n"
+        #     f"diffusive term: {diffusive_term:.2e}\n"
+        #     f"mass term: {mass_term:.2e}\n"
+        #     f"source; max: {source_term.max():.2e}; "
+        #     f"number of non-zero sources: {nnz_source}\n"
+        #     f"cell volumes. "
+        #     f"max:{cv.max():.2e}, "
+        #     f"min:{cv.min():.2e}, "
+        #     f"mean:{cv.mean():.2e}\n"
+        # )
+        #
+        # # Write summary to file
+        # summary_path = self.params.folder_name / "summary.txt"
+        # summary_text = summary_intro + summary_p + summary_param + summary_terms
+        # logger.info(summary_text)
+        # with summary_path.open(mode="w") as f:
+        #     f.write(summary_text)
